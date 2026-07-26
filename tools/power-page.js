@@ -7,14 +7,16 @@
  * feedbacks, so all four displayed system state rather than what they did. "Projectors On"
  * sat red whenever the projectors were off, which reads exactly backwards.
  *
- * After: one button per system.
- *   tap        -> turn on
- *   hold 1s    -> turn off
+ * After: one button per system, a single press toggles.
  *
- * The hold is the guard. Turning projectors off mid-service is not just disruptive, it
- * costs a warm-up cycle to undo, and it was previously one stray press away. Making the
- * destructive direction require a deliberate hold removes that whole class of accident
- * without adding a confirmation step to the safe direction.
+ * The press works out which direction to go from the polled state rather than from a step
+ * counter, so it cannot drift out of sync if something is powered on or off elsewhere.
+ * `internal: exec` declares useVariables (plain interpolation) but NOT expression support,
+ * so the on/off word is computed into a variable by an expression-capable action first and
+ * then interpolated into the command — the same shape used for the grandMA2 knobs.
+ *
+ * If the state is unknown (empty, or the PDU unreachable) the press turns things ON, which
+ * is the safe default.
  *
  * State still comes from the existing `custom:projector_state` / `custom:pa_state`
  * feedbacks (polled every 10s by triggers), so the colour and icon keep working exactly as
@@ -28,10 +30,8 @@ if (!src || !out) {
 	process.exit(1)
 }
 
-/** Hold duration, in ms, before the "off" action fires. */
-const HOLD_MS = 1000
-
 const v = (value) => ({ value, isExpression: false })
+const expr = (value) => ({ value, isExpression: true })
 
 const full = JSON.parse(await fs.readFile(src, 'utf8'))
 const page = structuredClone(full.pages['1'])
@@ -50,8 +50,14 @@ function execActionFrom(control) {
 }
 
 const SYSTEMS = [
-	{ label: 'Projectors', on: ['0', '1'], off: ['1', '1'], target: ['0', '1'] },
-	{ label: 'PA', on: ['0', '2'], off: ['1', '2'], target: ['0', '2'] },
+	{
+		label: 'Projectors', on: ['0', '1'], off: ['1', '1'], target: ['0', '1'],
+		state: 'projector_state', action: 'projector_action',
+	},
+	{
+		label: 'PA', on: ['0', '2'], off: ['1', '2'], target: ['0', '2'],
+		state: 'pa_state', action: 'pa_action',
+	},
 ]
 
 let seq = 0
@@ -75,22 +81,31 @@ for (const sys of SYSTEMS) {
 		if (layer.type === 'text') layer.text = v(sys.label)
 	}
 
-	/*
-	 * Companion maps these sets to:
-	 *   down          -> "Press actions"                fires the instant the key goes down
-	 *   up            -> "Short release actions"        fires on a quick tap-and-release
-	 *   <ms>          -> "Release after <ms> actions"   fires on release after holding
-	 *
-	 * ON therefore has to live in `up`, not `down`. With ON in `down` a hold would fire ON
-	 * immediately and OFF on release — a power cycle rather than a guard. Verified by
-	 * reading the labels Companion itself puts on these groups.
-	 */
+	// The command is the "on" script with its trailing argument swapped for the variable,
+	// so the real script path is reused rather than retyped.
+	const template = String(onAction.options.path.value ?? onAction.options.path)
+	const command = template.replace(/(\.py )on\b/, `$1$(internal:custom_${sys.action})`)
+	if (command === template) throw new Error(`${sys.label}: could not substitute the on/off argument`)
+
 	merged.steps = {
 		0: {
 			action_sets: {
-				down: [],
-				up: [onAction],
-				[String(HOLD_MS)]: [offAction],
+				down: [
+					{
+						id: freshId(),
+						definitionId: 'custom_variable_set_value',
+						connectionId: 'internal',
+						options: {
+							name: v(sys.action),
+							create: v(true),
+							value: expr(`$(internal:custom_${sys.state}) == "on" ? "off" : "on"`),
+						},
+						upgradeIndex: null,
+						type: 'action',
+					},
+					{ ...onAction, options: { ...onAction.options, path: v(command) } },
+				],
+				up: [],
 			},
 			options: { runWhileHeld: [] },
 		},
@@ -114,5 +129,5 @@ await fs.writeFile(
 )
 
 console.log(`wrote ${out}`)
-for (const sys of SYSTEMS) console.log(`  ${sys.label.padEnd(11)} tap = on, hold ${HOLD_MS}ms = off`)
+for (const sys of SYSTEMS) console.log(`  ${sys.label.padEnd(11)} press toggles via custom:${sys.state}`)
 console.log(`  freed 2 keys; state colours and icons unchanged`)
