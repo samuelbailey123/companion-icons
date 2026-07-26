@@ -31,7 +31,15 @@ if (!src || !out) {
 	process.exit(1)
 }
 
-const STEP = 10
+/**
+ * How much one detent moves an executor, in percent.
+ *
+ * 5 gives 20 detents across the full 0..100 travel — fine enough to land on a level by feel
+ * during a service, without making a full fade an unreasonable amount of turning. The clamp
+ * means 100 and 0 are still reachable exactly from any starting value, since every level the
+ * knob can produce is a multiple of this.
+ */
+const STEP = 5
 
 /** The four executors, in knob order. */
 const FADERS = [
