@@ -1,9 +1,12 @@
 /**
- * Which library icon goes on which button, for the rig this was built for.
+ * Which library icon goes on which button.
  *
- * Keyed by page number, then row, then column, matching the live layout exported from
- * that install. `label` is only given where the existing text needs changing — usually to
- * shorten it now that an icon carries the meaning, or to undo a blank-line padding hack.
+ * Keyed by page number, then row, then column, matching the page layout exported from the
+ * Companion install this was built for. Adapt it to your own rig by exporting your config
+ * and remapping the coordinates.
+ *
+ * `label` is only given where the existing text needs changing — usually to shorten it now
+ * that an icon carries the meaning, or to undo a blank-line padding hack.
  *
  * Deliberate choices worth knowing:
  * - `Stage Notes Macro` and `All Screens Macro` get *different* glyphs. They previously
