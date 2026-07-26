@@ -12,6 +12,9 @@ const CRADLE = 'M32 56 A28 28 0 0 0 88 56'
 
 const BATTERY_SHELL = [{ rect: [16, 44, 76, 32, 6] }, { rect: [96, 54, 8, 12, 3], fill: true }]
 
+const RF_MAST = { line: [32, 36, 32, 92] }
+const RF_FORK = 'M20 24 L32 36 L44 24'
+
 export default {
 	mic: {
 		paths: [CAPSULE, CRADLE, { line: [60, 84, 60, 98] }],
@@ -44,8 +47,16 @@ export default {
 		},
 	},
 
+	/**
+	 * Antenna mast with a receiving fork, plus one bar per level.
+	 *
+	 * The fork is not decoration. An earlier version drew a bare vertical mast, which at
+	 * zero bars was a single line carrying 2.9% ink on the touchstrip — below the legibility
+	 * floor, and visually almost nothing. "No signal" is the state you most need to read at
+	 * a glance, so it has to be a recognisable antenna even with no bars beside it.
+	 */
 	rf: {
-		paths: [{ line: [24, 30, 24, 92] }],
+		paths: [RF_MAST, RF_FORK],
 		/**
 		 * @param {number} level Bars shown, 0..3.
 		 * @returns {{paths: Array<object|string>}}
@@ -53,9 +64,9 @@ export default {
 		levels(level) {
 			const bars = []
 			for (let i = 0; i < level; i++) {
-				bars.push({ line: [46 + i * 20, 92, 46 + i * 20, 74 - i * 18] })
+				bars.push({ line: [54 + i * 20, 92, 54 + i * 20, 74 - i * 18] })
 			}
-			return { paths: [{ line: [24, 30, 24, 92] }, ...bars] }
+			return { paths: [RF_MAST, RF_FORK, ...bars] }
 		},
 	},
 }
