@@ -1,0 +1,16 @@
+{
+  "name": "companion-icons",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Icon library for a Bitfocus Companion v5 Stream Deck + rig",
+  "scripts": {
+    "build": "node src/build.js",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4",
+    "@vitest/coverage-v8": "^3.2.4"
+  }
+}
