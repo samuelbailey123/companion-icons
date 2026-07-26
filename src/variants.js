@@ -25,14 +25,17 @@ const power = [
 	icon('projector-on', 'projector', 'on', 'power', 'Projectors on'),
 	icon('projector-warming', 'projector', 'warn', 'power', 'Projectors warming up'),
 	icon('projector-cooling', 'projector', 'warn', 'power', 'Projectors cooling down'),
-	icon('projector-off', 'projector', 'idle', 'power', 'Projectors off'),
+	icon('projector-off', 'projector', 'off', 'power', 'Turn projectors off'),
+	icon('projector-idle', 'projector', 'idle', 'power', 'Projectors currently off'),
 	icon('pa-on', 'pa', 'on', 'power', 'PA system on'),
 	icon('pa-off', 'pa', 'off', 'power', 'PA system off'),
 	icon('amp-on', 'amp', 'on', 'power', 'Amplifiers on'),
 	icon('amp-off', 'amp', 'off', 'power', 'Amplifiers off'),
 	icon('house-lights-on', 'house-lights', 'on', 'power', 'House lights up'),
-	icon('house-lights-off', 'house-lights', 'idle', 'power', 'House lights down'),
+	icon('house-lights-off', 'house-lights', 'off', 'power', 'Take house lights down'),
+	icon('house-lights-idle', 'house-lights', 'idle', 'power', 'House lights currently down'),
 	icon('standby', 'standby', 'warn', 'power', 'Standby'),
+	icon('mains-power', 'plug', 'neutral', 'power', 'Mains power'),
 ]
 
 /**
@@ -64,6 +67,8 @@ const video = [
 	icon('tally-preview', 'tally', 'on', 'video', 'Tally preview'),
 	icon('macro-run', 'macro-run', 'video', 'video', 'Run macro'),
 	icon('macro-stop', 'macro-stop', 'off', 'video', 'Stop macro'),
+	icon('transition', 'transition', 'video', 'video', 'Transition'),
+	icon('still', 'still', 'video', 'video', 'Still / background image'),
 ]
 
 const routing = [
