@@ -57,21 +57,15 @@ const nextLevel = (variable, dir) =>
 		: `max(0, $(internal:custom_${variable}) - ${STEP})`
 
 function rotateActions(fader, dir, connectionId) {
+	// ORDER MATTERS. The variable is clamped and stored FIRST, then the command reads it
+	// back by plain interpolation.
+	//
+	// The grandMA2 module declares module-API 1.8.0, which predates expression-typed
+	// options — it cannot evaluate `isExpression: true`, so an expression here is simply
+	// never formed and the desk receives nothing at all. Plain `$(...)` interpolation is
+	// handled by Companion core before the module ever sees the value, so it works on any
+	// module regardless of API version.
 	return [
-		// Send first, computing from the CURRENT variable value, so this never races the
-		// variable update below. Both use identical arithmetic, so they cannot disagree.
-		{
-			id: id('act'),
-			definitionId: 'command',
-			connectionId,
-			// concat(), NOT `&`. In Companion expressions `&` is bitwise AND, so
-			// `"Executor 1.1 At " & 20` evaluates to 0 and would send a garbage command to
-			// the desk. Verified by rendering all the candidates: & -> 0, + -> NaN,
-			// concat() -> "At 20".
-			options: { command: expr(`concat("Executor ${fader.exec} At ", ${nextLevel(fader.variable, dir)})`) },
-			upgradeIndex: null,
-			type: 'action',
-		},
 		{
 			id: id('act'),
 			definitionId: 'custom_variable_set_value',
@@ -80,6 +74,14 @@ function rotateActions(fader, dir, connectionId) {
 				name: v(fader.variable),
 				value: expr(dir === 'up' ? `min(100, $(this:current) + ${STEP})` : `max(0, $(this:current) - ${STEP})`),
 			},
+			upgradeIndex: null,
+			type: 'action',
+		},
+		{
+			id: id('act'),
+			definitionId: 'command',
+			connectionId,
+			options: { command: v(`Executor ${fader.exec} At $(internal:custom_${fader.variable})`) },
 			upgradeIndex: null,
 			type: 'action',
 		},
