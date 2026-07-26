@@ -63,6 +63,7 @@ describe('glyph shapes', () => {
 			'slide-next', 'slide-prev', 'slide-first', 'slide-last', 'clear', 'clear-slide',
 			'clear-props', 'clear-audio', 'logo', 'stage-display', 'message', 'timer-start',
 			'timer-stop', 'timer-reset', 'media', 'prop', 'playlist',
+			'focus-next', 'focus-prev',
 			// audio
 			'speaker', 'mute', 'fader', 'mix', 'scene-recall', 'gain', 'aux-send', 'talkback',
 			'pfl', 'phantom', 'meter', 'dca', 'mono', 'mains',

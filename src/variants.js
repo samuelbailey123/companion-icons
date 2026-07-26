@@ -99,6 +99,8 @@ const present = [
 	icon('media', 'media', 'present', 'present', 'Play media'),
 	icon('prop', 'prop', 'present', 'present', 'Trigger prop'),
 	icon('playlist', 'playlist', 'present', 'present', 'Playlist'),
+	icon('focus-next', 'focus-next', 'present', 'present', 'Focus the next presentation'),
+	icon('focus-prev', 'focus-prev', 'present', 'present', 'Focus the previous presentation'),
 ]
 
 const audio = [
