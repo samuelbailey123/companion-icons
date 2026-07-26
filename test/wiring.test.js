@@ -104,6 +104,15 @@ describe('wireButton', () => {
 		expect(out.style.layers.find((l) => l.type === 'text').text).toEqual(v('All Screens'))
 	})
 
+	it('sets the label size high so it fills the strip rather than floating in it', () => {
+		const t = wireButton(button([canvas, box, text('X')]), { icon: 'y' }).style.layers.find(
+			(l) => l.type === 'text'
+		)
+		// A ceiling, not a fixed size — shrink-to-fit is on.
+		expect(t.fontsize.value).toBe(70)
+		expect(t.fontsizeAllowShrink.value).toBe(true)
+	})
+
 	it('moves the text into the lower strip', () => {
 		const t = wireButton(button([canvas, box, text('X')]), { icon: 'y' }).style.layers.find(
 			(l) => l.type === 'text'

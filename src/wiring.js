@@ -72,11 +72,15 @@ export function feedbackBackgrounds(control) {
  * The image occupies the upper area and the text sits in a strip beneath it. The previous
  * setup faked this by padding labels with blank lines ("Previous\n\n\nSlide"), which breaks
  * the moment a font size or label length changes.
+ *
+ * `fontsize` is a ceiling, not a fixed size: `fontsizeAllowShrink` is on, so Companion uses
+ * the largest size up to this that fits the strip. Setting it high therefore means "fill
+ * the space", which is what you want on a key you read at a glance.
  */
 export const LAYOUT = {
-	image: { x: 0, y: 4, width: 100, height: 56 },
-	text: { x: 0, y: 62, width: 100, height: 34 },
-	fontsize: 18,
+	image: { x: 0, y: 2, width: 100, height: 56 },
+	text: { x: 0, y: 60, width: 100, height: 38 },
+	fontsize: 70,
 }
 
 /** Strip the blank-line padding hack out of a label. */
