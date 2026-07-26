@@ -8,7 +8,7 @@ import { createRequire } from 'node:module'
 import { renderIcon } from './render.js'
 import { resolveShape } from './variants.js'
 import { COLORS } from './palette.js'
-import { buildCollection, buildImageEntry, buildPageExport } from './companionconfig.js'
+import { buildCollection, buildImageEntry, buildLibraryExport } from './companionconfig.js'
 
 const requireCompanion = createRequire('/Applications/Companion.app/Contents/Resources/')
 const { Canvas, loadImage } = requireCompanion('@napi-rs/canvas')
@@ -68,5 +68,5 @@ export async function buildLibrary(icons) {
 		)
 	}
 
-	return { files, config: buildPageExport(entries, [...collections.values()]) }
+	return { files, config: buildLibraryExport(entries, [...collections.values()]) }
 }

@@ -5,7 +5,7 @@ import {
 	base64ByteLength,
 	buildCollection,
 	buildImageEntry,
-	buildPageExport,
+	buildLibraryExport,
 } from '../src/companionconfig.js'
 import { makeLabelSafe } from './helpers/labelsafe.js'
 
@@ -89,28 +89,38 @@ describe('buildCollection', () => {
 	})
 })
 
-describe('buildPageExport', () => {
-	const out = () => buildPageExport([entry()], [buildCollection('present', 'present', 0)])
+describe('buildLibraryExport', () => {
+	const out = () => buildLibraryExport([entry()], [buildCollection('present', 'present', 0)])
 
 	it('declares the file protocol version Companion 5.0.1 actually reads', () => {
 		expect(FILE_VERSION).toBe(12)
 		expect(out().version).toBe(12)
 	})
 
-	it('is a page export carrying the library', () => {
-		expect(out().type).toBe('page')
+	it('is a FULL export, because page import never restores the image library', () => {
+		// Verified against a live Companion: importing a page export offers only
+		// "Replace page N with imported page" and no library option at all.
+		expect(out().type).toBe('full')
 		expect(out().imageLibrary).toHaveLength(1)
 		expect(out().imageLibraryCollections).toHaveLength(1)
 	})
 
-	it('ships an empty page and no connections, so nothing can be overwritten', () => {
-		expect(out().page.controls).toEqual({})
-		expect(out().instances).toEqual({})
-		expect(out().connectionCollections).toEqual([])
-	})
-
-	it('declares a Stream Deck + sized grid so import cannot grow the user grid', () => {
-		expect(out().page.gridSize).toEqual({ minColumn: 0, maxColumn: 3, minRow: 0, maxRow: 3 })
+	it('carries no other section, so no other section can be imported', () => {
+		// Companion derives the offered import sections from which keys are present.
+		for (const key of [
+			'pages',
+			'instances',
+			'triggers',
+			'triggerCollections',
+			'custom_variables',
+			'expressionVariables',
+			'surfaces',
+			'surfaceGroups',
+			'surfacesRemote',
+			'surfaceInstances',
+		]) {
+			expect(out(), key).not.toHaveProperty(key)
+		}
 	})
 
 	it('serialises to valid JSON', () => {

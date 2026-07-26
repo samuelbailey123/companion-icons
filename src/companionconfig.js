@@ -92,34 +92,30 @@ export function buildCollection(id, label, sortOrder) {
 }
 
 /**
- * Build a page export whose only real payload is the image library.
+ * Build a full export whose only payload is the image library.
  *
- * The page itself is deliberately empty. Companion's importer treats `imageLibrary` as a
- * section independent of `buttons`, so importing this with buttons set to `unchanged`
- * loads the library and leaves every existing control alone.
+ * **This must be a full export, not a page export.** A page export can legally carry
+ * `imageLibrary` — the type allows it, and Companion populates it when exporting a page
+ * whose buttons reference library images — but the page *import* path
+ * (`#performPageImport`) only restores the page itself. The
+ * `if (isImporting(config.imageLibrary))` branch that actually calls `importImageLibrary`
+ * lives in the full-import path. Verified empirically: importing a page export offers a
+ * single "Replace page N with imported page" action and no library option whatsoever.
  *
- * The grid is declared at the Stream Deck + size. Page import grows the user's configured
- * grid to fit an incoming page, so declaring something larger here would silently resize
- * their surface layout.
+ * Deliberately omitting `pages`, `instances`, `triggers`, `custom_variables` and the
+ * surface keys. Companion's import screen derives which sections to offer from which keys
+ * are present (`importContainsKey`), so a file carrying only the library cannot offer —
+ * and therefore cannot perform — a destructive import of anything else.
  *
  * @param {object[]} imageLibrary
  * @param {object[]} imageLibraryCollections
  * @returns {object}
  */
-export function buildPageExport(imageLibrary, imageLibraryCollections) {
+export function buildLibraryExport(imageLibrary, imageLibraryCollections) {
 	return {
 		version: FILE_VERSION,
-		type: 'page',
+		type: 'full',
 		companionBuild: 'companion-icons',
-		oldPageNumber: 99,
-		page: {
-			id: 'companion-icons-library',
-			name: 'Icon Library',
-			controls: {},
-			gridSize: { minColumn: 0, maxColumn: 3, minRow: 0, maxRow: 3 },
-		},
-		instances: {},
-		connectionCollections: [],
 		imageLibrary,
 		imageLibraryCollections,
 	}

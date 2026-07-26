@@ -49,10 +49,16 @@ describe('buildLibrary', () => {
 		}
 	})
 
-	it('ships no controls and no connections, so an import cannot overwrite buttons', async () => {
+	it('ships nothing but the library, so an import cannot overwrite buttons', async () => {
 		const { config } = await buildLibrary(ICONS)
-		expect(config.page.controls).toEqual({})
-		expect(config.instances).toEqual({})
+		expect(config.type).toBe('full')
+		expect(Object.keys(config).sort()).toEqual([
+			'companionBuild',
+			'imageLibrary',
+			'imageLibraryCollections',
+			'type',
+			'version',
+		])
 	})
 
 	it('handles an empty icon list without inventing collections', async () => {
