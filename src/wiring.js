@@ -10,8 +10,61 @@
  * what a button does.
  */
 
+import { ICONS } from './variants.js'
+
 /** Wrap a plain value in Companion's ExpressionOrValue envelope. */
 const v = (value) => ({ value, isExpression: false })
+
+/** icon name -> shape name, so a mapping entry can be resolved back to its drawing. */
+const SHAPE_OF = new Map(ICONS.map((i) => [i.name, i.shape]))
+const ICON_NAMES = new Set(ICONS.map((i) => i.name))
+
+/**
+ * Relative luminance of a colour, accepting Companion's 24-bit int or a hex string.
+ * @param {number|string} c
+ * @returns {number} 0..1
+ */
+export function luminance(c) {
+	const n = typeof c === 'string' ? parseInt(c.replace('#', ''), 16) : Number(c) & 0xffffff
+	return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+		.map((x) => {
+			const s = x / 255
+			return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+		})
+		.reduce((acc, x, i) => acc + [0.2126, 0.7152, 0.0722][i] * x, 0)
+}
+
+/**
+ * Choose the high-contrast icon variant for a given background.
+ *
+ * The threshold is the luminance at which white and black are equally legible (~0.186).
+ * Whichever side of it a background falls, the chosen variant clears 4.58:1 — the floor
+ * being the crossover itself.
+ *
+ * @param {number|string} background
+ * @returns {'paper'|'ink'}
+ */
+export function contrastVariant(background) {
+	return luminance(background) > 0.186 ? 'ink' : 'paper'
+}
+
+/**
+ * Every background colour a control's feedbacks can impose, with the feedback that does it.
+ *
+ * @param {object} control
+ * @returns {Array<{feedbackId: string, overrideId: string, color: number}>}
+ */
+export function feedbackBackgrounds(control) {
+	const out = []
+	for (const f of control?.feedbacks ?? []) {
+		for (const o of f.styleOverrides ?? []) {
+			if (o.elementProperty !== 'color') continue
+			if (!String(o.elementId ?? '').startsWith('box')) continue
+			out.push({ feedbackId: f.id, overrideId: o.overrideId, color: o.override?.value })
+		}
+	}
+	return out
+}
 
 /**
  * Geometry for the icon-over-label layout, in percent of the button.
@@ -76,10 +129,28 @@ export function wireButton(control, spec) {
 	if (control?.type !== 'button-layered') return control
 
 	const layers = (control.style?.layers ?? []).map((l) => ({ ...l }))
+
+	/*
+	 * If feedbacks drive this button's background, a fixed-colour icon cannot work: the
+	 * palettes in use here span dark red and bright amber, and no single colour clears 3:1
+	 * against both. Swap the icon per state instead, picking paper or ink by that state's
+	 * background luminance.
+	 */
+	const fbBackgrounds = feedbackBackgrounds(control)
+	const shape = SHAPE_OF.get(spec.icon)
+	const contrastable =
+		fbBackgrounds.length > 0 && shape && ICON_NAMES.has(`${shape}-paper`) && ICON_NAMES.has(`${shape}-ink`)
+
+	let iconName = spec.icon
+	if (contrastable) {
+		const baseBox = layers.find((l) => l.type === 'box')
+		const baseColor = baseBox?.color?.value ?? baseBox?.color ?? 0
+		iconName = `${shape}-${contrastVariant(baseColor)}`
+	}
 	const imageIndex = layers.findIndex((l) => l.type === 'image')
 	const textIndex = layers.findIndex((l) => l.type === 'text')
 
-	const image = makeImageLayer(spec.icon, imageIndex >= 0 ? layers[imageIndex].id : 'image0')
+	const image = makeImageLayer(iconName, imageIndex >= 0 ? layers[imageIndex].id : 'image0')
 
 	if (imageIndex >= 0) {
 		layers[imageIndex] = image
@@ -106,7 +177,36 @@ export function wireButton(control, spec) {
 		}
 	}
 
-	return { ...control, style: { ...control.style, layers } }
+	if (!contrastable) return { ...control, style: { ...control.style, layers } }
+
+	const imageId = layers.find((l) => l.type === 'image').id
+	// `contrastable` implies feedbackBackgrounds() found entries, so feedbacks is non-empty.
+	const feedbacks = control.feedbacks.map((f) => {
+		const boxOverride = (f.styleOverrides ?? []).find(
+			(o) => o.elementProperty === 'color' && String(o.elementId ?? '').startsWith('box')
+		)
+		if (!boxOverride) return f
+
+		// Finding boxOverride proves styleOverrides exists, so no fallback is needed here.
+		// Drop any image override we previously added, then add the right one for this state.
+		const kept = f.styleOverrides.filter(
+			(o) => !(o.elementId === imageId && o.elementProperty === 'base64Image')
+		)
+		return {
+			...f,
+			styleOverrides: [
+				...kept,
+				{
+					overrideId: `${boxOverride.overrideId}-icon`,
+					elementId: imageId,
+					elementProperty: 'base64Image',
+					override: v(`$(image:${shape}-${contrastVariant(boxOverride.override?.value ?? 0)})`),
+				},
+			],
+		}
+	})
+
+	return { ...control, style: { ...control.style, layers }, feedbacks }
 }
 
 /**

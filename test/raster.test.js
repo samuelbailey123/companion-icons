@@ -44,9 +44,29 @@ describe('layout', () => {
 })
 
 describe('contrast against the intended button background', () => {
-	it.each(cases)('%s clears the legibility threshold', (name, entry) => {
+	// The `contrast` collection is exempt from this check by design: those icons are not
+	// for the default dark background at all. They are the paper/ink pair used on buttons
+	// whose background is feedback-driven, and are asserted separately below against the
+	// backgrounds they are actually chosen for.
+	const fixed = cases.filter(([, entry]) => entry.collection !== 'contrast')
+
+	it.each(fixed)('%s clears the legibility threshold', (name, entry) => {
 		const ratio = contrastRatio(COLORS[entry.color], DEFAULT_BG)
 		expect(ratio, `${name} ratio=${ratio.toFixed(2)}`).toBeGreaterThanOrEqual(MIN_CONTRAST)
+	})
+
+	it('the paper/ink pair covers the whole luminance range between them', () => {
+		// Sweep every grey from black to white: at each one, at least one of the pair must
+		// clear the threshold. That is what lets `contrastVariant` guarantee legibility on
+		// any feedback colour, not just the ones this rig happens to use today.
+		for (let i = 0; i <= 255; i += 5) {
+			const bg = `#${i.toString(16).padStart(2, '0').repeat(3)}`
+			const best = Math.max(
+				contrastRatio(COLORS.paper, bg),
+				contrastRatio(COLORS.ink, bg)
+			)
+			expect(best, `no legible variant for ${bg}`).toBeGreaterThanOrEqual(4.5)
+		}
 	})
 
 	it('would have rejected the defect this library replaces', () => {

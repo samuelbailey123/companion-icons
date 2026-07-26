@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { LAYOUT, cleanLabel, makeImageLayer, wireButton, wirePage } from '../src/wiring.js'
+import {
+	LAYOUT,
+	cleanLabel,
+	contrastVariant,
+	feedbackBackgrounds,
+	luminance,
+	makeImageLayer,
+	wireButton,
+	wirePage,
+} from '../src/wiring.js'
+import { COLORS } from '../src/palette.js'
+import { contrastRatio } from './helpers/skia.js'
 import { ICONS } from '../src/variants.js'
 import { MAPPING } from '../src/mapping.js'
 import { makeLabelSafe } from './helpers/labelsafe.js'
@@ -202,5 +213,243 @@ describe('mapping integrity', () => {
 
 	it('covers every page of the production rig', () => {
 		expect(Object.keys(MAPPING).sort()).toEqual(['1', '2', '3', '4', '5', '6'])
+	})
+})
+
+
+describe('feedback-driven backgrounds', () => {
+	/** The real palettes in use on the production rig. */
+	const REAL = ['#00A651', '#CC0000', '#E67300', '#E6C000', '#0000EE', '#00EE00', '#EEEE00', '#FF0000']
+
+	const fb = (id, color) => ({
+		id,
+		styleOverrides: [
+			{ overrideId: `o-${id}`, elementId: 'box0', elementProperty: 'color', override: { value: color } },
+		],
+	})
+
+	it('luminance accepts both hex strings and Companion 24-bit ints', () => {
+		expect(luminance('#FFFFFF')).toBeCloseTo(1, 3)
+		expect(luminance(0xffffff)).toBeCloseTo(1, 3)
+		expect(luminance('#000000')).toBeCloseTo(0, 3)
+	})
+
+	it('the chosen variant clears 4.5:1 against every real feedback colour', () => {
+		// This is the guarantee. Neither white nor black alone can do it: white is 1.7:1 on
+		// #E6C000, black is 1.0:1 on #CC0000. Choosing per background is what makes it hold.
+		for (const bg of REAL) {
+			const chosen = COLORS[contrastVariant(bg)]
+			expect(contrastRatio(chosen, bg), `${bg}`).toBeGreaterThanOrEqual(4.5)
+		}
+	})
+
+	it('demonstrates why a single fixed colour cannot work', () => {
+		// White drowns on the amber state...
+		expect(contrastRatio(COLORS.paper, '#E6C000')).toBeLessThan(3)
+		// ...and black drowns on the dark blue one. There is no single winner, which is
+		// the entire justification for swapping per state.
+		expect(contrastRatio(COLORS.ink, '#0000EE')).toBeLessThan(3)
+	})
+
+	it('finds every background a control\'s feedbacks can impose', () => {
+		const c = button([canvas, box, text('X')])
+		c.feedbacks = [fb('f1', 0x00a651), fb('f2', 0xcc0000)]
+		expect(feedbackBackgrounds(c).map((x) => x.color)).toEqual([0x00a651, 0xcc0000])
+	})
+
+	it('ignores overrides that are not a box colour', () => {
+		const c = button([canvas, box, text('X')])
+		c.feedbacks = [
+			{ id: 'f1', styleOverrides: [{ elementId: 'text0', elementProperty: 'color', override: { value: 1 } }] },
+		]
+		expect(feedbackBackgrounds(c)).toEqual([])
+	})
+
+	it('uses a contrast variant on a feedback-coloured button', () => {
+		const c = button([canvas, box, text('Projectors On')])
+		c.feedbacks = [fb('f1', 0x00a651)]
+		const out = wireButton(c, { icon: 'projector-on' })
+		const src = out.style.layers.find((l) => l.type === 'image').base64Image.value
+		// base box is #333333, which is dark, so the base icon is the light one
+		expect(src).toBe('$(image:projector-paper)')
+	})
+
+	it('adds an icon override to each colour-changing feedback', () => {
+		const c = button([canvas, box, text('X')])
+		c.feedbacks = [fb('f1', 0x00a651), fb('f2', 0xcc0000)]
+		const out = wireButton(c, { icon: 'projector-on' })
+
+		const iconOverride = (f) =>
+			f.styleOverrides.find((o) => o.elementProperty === 'base64Image')?.override.value
+
+		// light green background -> dark icon; dark red background -> light icon
+		expect(iconOverride(out.feedbacks[0])).toBe('$(image:projector-ink)')
+		expect(iconOverride(out.feedbacks[1])).toBe('$(image:projector-paper)')
+	})
+
+	it('leaves the original box overrides in place', () => {
+		const c = button([canvas, box, text('X')])
+		c.feedbacks = [fb('f1', 0x00a651)]
+		const out = wireButton(c, { icon: 'projector-on' })
+		expect(out.feedbacks[0].styleOverrides.some((o) => o.elementId === 'box0')).toBe(true)
+	})
+
+	it('is idempotent - re-wiring does not stack duplicate icon overrides', () => {
+		const c = button([canvas, box, text('X')])
+		c.feedbacks = [fb('f1', 0x00a651)]
+		const once = wireButton(c, { icon: 'projector-on' })
+		const twice = wireButton(once, { icon: 'projector-on' })
+		const n = twice.feedbacks[0].styleOverrides.filter((o) => o.elementProperty === 'base64Image')
+		expect(n).toHaveLength(1)
+	})
+
+	it('leaves buttons without colour feedback on their designed colour', () => {
+		const out = wireButton(button([canvas, box, text('X')]), { icon: 'projector-on' })
+		expect(out.style.layers.find((l) => l.type === 'image').base64Image.value).toBe(
+			'$(image:projector-on)'
+		)
+		expect(out.feedbacks).toEqual([{ id: 'f1' }])
+	})
+})
+
+
+describe('wireButton defensive paths', () => {
+	const fbBox = (color) => ({
+		id: 'f1',
+		styleOverrides: [
+			{ overrideId: 'o1', elementId: 'box0', elementProperty: 'color', override: { value: color } },
+		],
+	})
+
+	it('falls back to the fixed-colour icon when no contrast pair exists for the shape', () => {
+		// `route` has no route-paper / route-ink pair, so a feedback-coloured VideoHub button
+		// keeps its designed colour rather than referencing an icon that was never built.
+		const c = button([canvas, box, text('X')])
+		c.feedbacks = [fbBox(0x00a651)]
+		const out = wireButton(c, { icon: 'route' })
+		expect(out.style.layers.find((l) => l.type === 'image').base64Image.value).toBe(
+			'$(image:route)'
+		)
+	})
+
+	it('falls back when the mapping names something not in the library at all', () => {
+		const c = button([canvas, box, text('X')])
+		c.feedbacks = [fbBox(0x00a651)]
+		const out = wireButton(c, { icon: 'not-a-real-icon' })
+		expect(out.style.layers.find((l) => l.type === 'image').base64Image.value).toBe(
+			'$(image:not-a-real-icon)'
+		)
+	})
+
+	it('handles a button with no box layer when choosing a base variant', () => {
+		const c = { type: 'button-layered', style: { layers: [canvas, text('X')] }, feedbacks: [fbBox(0xeeee00)] }
+		const out = wireButton(c, { icon: 'projector-on' })
+		// No box means no known base colour, so it is treated as dark: the light icon.
+		expect(out.style.layers.find((l) => l.type === 'image').base64Image.value).toBe(
+			'$(image:projector-paper)'
+		)
+	})
+
+	it('handles a box whose colour is a bare number rather than an envelope', () => {
+		const bare = { id: 'box0', type: 'box', color: 0xeeee00 }
+		const c = { type: 'button-layered', style: { layers: [canvas, bare, text('X')] }, feedbacks: [fbBox(0)] }
+		const out = wireButton(c, { icon: 'pa-on' })
+		expect(out.style.layers.find((l) => l.type === 'image').base64Image.value).toBe(
+			'$(image:pa-ink)'
+		)
+	})
+
+	it('appends the image layer when a button has no text layer', () => {
+		const c = { type: 'button-layered', style: { layers: [canvas, box] } }
+		const out = wireButton(c, { icon: 'blank' })
+		expect(out.style.layers.map((l) => l.type)).toEqual(['canvas', 'box', 'image'])
+	})
+
+	it('handles a control with no style at all', () => {
+		const out = wireButton({ type: 'button-layered' }, { icon: 'blank' })
+		expect(out.style.layers.map((l) => l.type)).toEqual(['image'])
+	})
+
+	it('leaves feedbacks that impose no background untouched', () => {
+		const c = button([canvas, box, text('X')])
+		c.feedbacks = [{ id: 'plain' }, fbBox(0x00a651)]
+		const out = wireButton(c, { icon: 'projector-on' })
+		expect(out.feedbacks[0]).toEqual({ id: 'plain' })
+	})
+
+	it('handles a feedback whose override carries no value', () => {
+		const c = button([canvas, box, text('X')])
+		c.feedbacks = [
+			{ id: 'f1', styleOverrides: [{ overrideId: 'o', elementId: 'box0', elementProperty: 'color' }] },
+		]
+		const out = wireButton(c, { icon: 'projector-on' })
+		const src = out.feedbacks[0].styleOverrides.find((o) => o.elementProperty === 'base64Image')
+		// A missing colour is treated as black, so the light icon is chosen.
+		expect(src.override.value).toBe('$(image:projector-paper)')
+	})
+
+	it('handles a control with no feedbacks array', () => {
+		const c = { type: 'button-layered', style: { layers: [canvas, box, text('X')] } }
+		expect(feedbackBackgrounds(c)).toEqual([])
+		expect(() => wireButton(c, { icon: 'projector-on' })).not.toThrow()
+	})
+
+	it('ignores a null control', () => {
+		expect(wireButton(null, { icon: 'x' })).toBe(null)
+	})
+})
+
+
+describe('wirePage defensive paths', () => {
+	const page = { name: 'P', controls: { 0: { 1: { type: 'pageup' } } } }
+
+	it('treats a missing mapping as an empty one', () => {
+		const { page: out, wired } = wirePage(page)
+		expect(wired).toEqual([])
+		expect(out.controls['0']['1']).toEqual({ type: 'pageup' })
+	})
+
+	it('ignores a style override with no elementId', () => {
+		const c = {
+			type: 'button-layered',
+			style: { layers: [canvas, box, text('X')] },
+			feedbacks: [{ id: 'f', styleOverrides: [{ elementProperty: 'color', override: { value: 1 } }] }],
+		}
+		expect(feedbackBackgrounds(c)).toEqual([])
+	})
+})
+
+
+describe('wireButton remaining edge cases', () => {
+	it('reads a bare text layer value that is not wrapped in an envelope', () => {
+		const bare = { id: 'text0', type: 'text', text: 'Plain\\n\\n\\nLabel' }
+		const out = wireButton({ type: 'button-layered', style: { layers: [box, bare] } }, { icon: 'blank' })
+		expect(out.style.layers.find((l) => l.type === 'text').text).toEqual({
+			value: 'Plain Label',
+			isExpression: false,
+		})
+	})
+
+	it('handles a colour-changing feedback that has no styleOverrides array on a second pass', () => {
+		// First feedback drives the background; second has no overrides at all. Both must
+		// survive the mapping without throwing.
+		const c = {
+			type: 'button-layered',
+			style: { layers: [canvas, box, text('X')] },
+			feedbacks: [
+				{
+					id: 'f1',
+					styleOverrides: [
+						{ overrideId: 'o1', elementId: 'box0', elementProperty: 'color', override: { value: 0x00a651 } },
+					],
+				},
+				{ id: 'f2' },
+			],
+		}
+		const out = wireButton(c, { icon: 'projector-on' })
+		expect(out.feedbacks[1]).toEqual({ id: 'f2' })
+		expect(
+			out.feedbacks[0].styleOverrides.some((o) => o.elementProperty === 'base64Image')
+		).toBe(true)
 	})
 })

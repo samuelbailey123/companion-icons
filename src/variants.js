@@ -146,8 +146,28 @@ const utility = [
 	icon('alert', 'alert', 'warn', 'utility', 'Alert'),
 ]
 
+/**
+ * Shapes that land on buttons whose background is feedback-driven, and therefore need
+ * high-contrast variants for the per-state swap. See `contrastVariant` in wiring.js.
+ */
+const CONTRAST_SHAPES = ['projector', 'pa', 'clear-slide', 'clear-audio', 'camera', 'media', 'macro-run']
+
+const contrast = CONTRAST_SHAPES.flatMap((shape) => [
+	icon(`${shape}-paper`, shape, 'paper', 'contrast', `${shape} (light, for dark backgrounds)`),
+	icon(`${shape}-ink`, shape, 'ink', 'contrast', `${shape} (dark, for light backgrounds)`),
+])
+
 /** @type {Icon[]} */
-export const ICONS = [...power, ...video, ...routing, ...present, ...audio, ...wireless, ...utility]
+export const ICONS = [
+	...power,
+	...video,
+	...routing,
+	...present,
+	...audio,
+	...wireless,
+	...utility,
+	...contrast,
+]
 
 /**
  * Resolve an icon to concrete geometry, expanding the `battery-N` / `rf-N` level families.

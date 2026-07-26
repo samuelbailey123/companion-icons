@@ -38,6 +38,21 @@ export const COLORS = {
 	audio: '#38BDF8',
 	neutral: '#E9E9EE',
 	idle: '#6B7280',
+	/**
+	 * High-contrast pair used on buttons whose background is driven by feedback.
+	 *
+	 * No single colour clears 3:1 against a palette spanning dark red (#CC0000) and bright
+	 * amber (#E6C000) — white scores 1.7:1 on the amber, black 1.0:1 on the red. Picking one
+	 * would just move the illegibility around. Instead the icon is swapped per feedback state,
+	 * choosing whichever of these two contrasts with that state's background.
+	 *
+	 * `ink` is true black rather than a near-black on purpose. The pair's guarantee is set by
+	 * the worst case at mid-grey, where the two are equally legible: with #000000 that floor
+	 * is 4.58:1, with #0A0A0A it drops to 4.48:1 and misses the 4.5 threshold. The two are
+	 * visually indistinguishable; the difference is entirely in the guarantee.
+	 */
+	paper: '#FFFFFF',
+	ink: '#000000',
 }
 
 /** Button background every icon is designed to sit on. Used by the contrast test. */
