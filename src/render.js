@@ -1,10 +1,48 @@
 import { INTRINSIC, STROKE, VIEWBOX } from './palette.js'
 
 /**
- * @typedef {string | {d: string, fill: true}} GlyphPath
- * A plain string is a stroked path. A `{d, fill: true}` entry is filled and unstroked,
- * used only for inherently-solid forms such as a tally dot or a battery cell.
+ * @typedef {string
+ *   | {d: string, fill?: true}
+ *   | {rect: [number, number, number, number, number?], fill?: true}
+ *   | {circle: [number, number, number], fill?: true}
+ *   | {line: [number, number, number, number]}
+ * } GlyphPath
+ *
+ * A plain string is a stroked path. The primitive forms exist because most glyphs in this
+ * set are built from rects, circles and lines, and expressing those as arc path data by
+ * hand is unreadable and easy to get subtly wrong across seventy drawings.
+ *
+ * `fill: true` makes an element solid and unstroked, for inherently-solid forms such as a
+ * tally dot or a battery cell.
  */
+
+/**
+ * Serialise one glyph element to SVG.
+ * @param {GlyphPath} p
+ * @param {string} colorHex
+ * @returns {string}
+ */
+function element(p, colorHex) {
+	const paint = p.fill ? ` fill="${colorHex}" stroke="none"` : ''
+
+	if (typeof p === 'string') return `<path d="${p}"/>`
+	if (p.d) return `<path d="${p.d}"${paint}/>`
+
+	if (p.rect) {
+		const [x, y, w, h, r = 0] = p.rect
+		return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}"${paint}/>`
+	}
+	if (p.circle) {
+		const [cx, cy, r] = p.circle
+		return `<circle cx="${cx}" cy="${cy}" r="${r}"${paint}/>`
+	}
+	if (p.line) {
+		const [x1, y1, x2, y2] = p.line
+		return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`
+	}
+
+	throw new Error(`Unrecognised glyph element: ${JSON.stringify(p)}`)
+}
 
 /**
  * @typedef {{paths: GlyphPath[], levels?: (level: number) => {paths: GlyphPath[]}}} Glyph
@@ -24,13 +62,7 @@ export function renderIcon(shape, colorHex, opts = {}) {
 	const stroke = opts.stroke ?? STROKE
 	const size = opts.size ?? INTRINSIC
 
-	const body = shape.paths
-		.map((p) =>
-			typeof p === 'string'
-				? `<path d="${p}"/>`
-				: `<path d="${p.d}" fill="${colorHex}" stroke="none"/>`
-		)
-		.join('')
+	const body = shape.paths.map((p) => element(p, colorHex)).join('')
 
 	return (
 		`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" ` +

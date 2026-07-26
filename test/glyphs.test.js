@@ -1,0 +1,94 @@
+import { describe, expect, it } from 'vitest'
+import { COLLECTIONS, SHAPES } from '../src/glyphs/index.js'
+import { VIEWBOX } from '../src/palette.js'
+
+/** Extract every coordinate-ish number from a glyph element for bounds checking. */
+function coords(p) {
+	if (typeof p === 'string') return p.match(/-?\d+(\.\d+)?/g)?.map(Number) ?? []
+	if (p.d) return p.d.match(/-?\d+(\.\d+)?/g)?.map(Number) ?? []
+	return p.rect ?? p.circle ?? p.line ?? []
+}
+
+describe('glyph shapes', () => {
+	it('every shape has between one and six elements', () => {
+		for (const [name, shape] of Object.entries(SHAPES)) {
+			expect(shape.paths.length, name).toBeGreaterThan(0)
+			expect(shape.paths.length, name).toBeLessThanOrEqual(6)
+		}
+	})
+
+	it('no element declares its own stroke width', () => {
+		for (const [name, shape] of Object.entries(SHAPES)) {
+			for (const p of shape.paths) {
+				expect(JSON.stringify(p), name).not.toContain('stroke-width')
+			}
+		}
+	})
+
+	it('every coordinate stays within the viewBox', () => {
+		for (const [name, shape] of Object.entries(SHAPES)) {
+			for (const p of shape.paths) {
+				for (const v of coords(p)) {
+					expect(v, `${name}: ${v}`).toBeGreaterThanOrEqual(0)
+					expect(v, `${name}: ${v}`).toBeLessThanOrEqual(VIEWBOX)
+				}
+			}
+		}
+	})
+
+	it('exposes collections as Companion image-library folders', () => {
+		expect(Object.keys(COLLECTIONS).sort()).toEqual([
+			'audio',
+			'power',
+			'present',
+			'routing',
+			'utility',
+			'video',
+			'wireless',
+		])
+	})
+
+	it('includes every expected shape, and no unexpected ones', () => {
+		const expected = [
+			// power
+			'power', 'projector', 'pa', 'amp', 'house-lights', 'standby', 'plug', 'bolt',
+			// utility
+			'page-up', 'page-down', 'home', 'back', 'macro', 'lock', 'blank', 'settings', 'alert',
+			// video
+			'camera', 'program', 'preview', 'cut', 'auto', 'ftb', 'dsk', 'key', 'aux', 'tally',
+			'macro-run', 'macro-stop', 'transition', 'still',
+			// routing
+			'route', 'take', 'unlock', 'source', 'destination', 'matrix', 'route-locked',
+			// present
+			'slide-next', 'slide-prev', 'slide-first', 'slide-last', 'clear', 'clear-slide',
+			'clear-props', 'clear-audio', 'logo', 'stage-display', 'message', 'timer-start',
+			'timer-stop', 'timer-reset', 'media', 'prop', 'playlist',
+			// audio
+			'speaker', 'mute', 'fader', 'mix', 'scene-recall', 'gain', 'aux-send', 'talkback',
+			'pfl', 'phantom', 'meter', 'dca', 'mono', 'mains',
+			// wireless
+			'mic', 'mic-muted', 'tx-fault', 'battery', 'rf',
+		]
+		expect(Object.keys(SHAPES).sort()).toEqual([...expected].sort())
+	})
+
+	it('exposes level families as functions producing distinct geometry', () => {
+		for (const name of ['battery', 'rf']) {
+			expect(typeof SHAPES[name].levels, name).toBe('function')
+			const low = JSON.stringify(SHAPES[name].levels(0))
+			const high = JSON.stringify(SHAPES[name].levels(3))
+			expect(low, name).not.toBe(high)
+		}
+	})
+
+	it('level families grow monotonically with level', () => {
+		for (const name of ['battery', 'rf']) {
+			let previous = 0
+			for (let n = 0; n <= 3; n++) {
+				const count = SHAPES[name].levels(n).paths.length
+				expect(count, `${name}-${n}`).toBeGreaterThan(previous - 1)
+				previous = count
+			}
+		}
+	})
+})

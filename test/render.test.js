@@ -40,3 +40,35 @@ describe('renderIcon', () => {
 		expect(renderIcon(shape, '#FFFFFF')).toMatch(/^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)
 	})
 })
+
+describe('renderIcon primitives', () => {
+	it('renders a rounded rect', () => {
+		const svg = renderIcon({ paths: [{ rect: [20, 30, 60, 40, 8] }] }, '#FFFFFF')
+		expect(svg).toContain('<rect x="20" y="30" width="60" height="40" rx="8"/>')
+	})
+
+	it('defaults rect corner radius to 0', () => {
+		expect(renderIcon({ paths: [{ rect: [10, 10, 20, 20] }] }, '#FFF')).toContain('rx="0"')
+	})
+
+	it('renders a circle', () => {
+		expect(renderIcon({ paths: [{ circle: [60, 60, 25] }] }, '#FFF')).toContain(
+			'<circle cx="60" cy="60" r="25"/>'
+		)
+	})
+
+	it('renders a line', () => {
+		expect(renderIcon({ paths: [{ line: [10, 20, 30, 40] }] }, '#FFF')).toContain(
+			'<line x1="10" y1="20" x2="30" y2="40"/>'
+		)
+	})
+
+	it('fills primitives when fill is set', () => {
+		const svg = renderIcon({ paths: [{ circle: [60, 60, 10], fill: true }] }, '#4ADE80')
+		expect(svg).toContain('<circle cx="60" cy="60" r="10" fill="#4ADE80" stroke="none"/>')
+	})
+
+	it('rejects an unrecognised primitive rather than emitting nothing', () => {
+		expect(() => renderIcon({ paths: [{ blob: [1, 2] }] }, '#FFF')).toThrow(/unrecognised/i)
+	})
+})
