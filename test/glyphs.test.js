@@ -39,6 +39,7 @@ describe('glyph shapes', () => {
 	it('exposes collections as Companion image-library folders', () => {
 		expect(Object.keys(COLLECTIONS).sort()).toEqual([
 			'audio',
+			'folders',
 			'power',
 			'present',
 			'routing',
@@ -67,6 +68,9 @@ describe('glyph shapes', () => {
 			// audio
 			'speaker', 'mute', 'fader', 'mix', 'scene-recall', 'gain', 'aux-send', 'talkback',
 			'pfl', 'phantom', 'meter', 'dca', 'mono', 'mains',
+			// folders
+			'folder-power', 'folder-present', 'folder-lighting', 'folder-video',
+			'folder-audio', 'folder-routing',
 			// wireless
 			'mic', 'mic-muted', 'tx-fault', 'battery', 'rf',
 		]

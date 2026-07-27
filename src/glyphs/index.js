@@ -1,4 +1,5 @@
 import audio from './audio.js'
+import folders from './folders.js'
 import power from './power.js'
 import present from './present.js'
 import routing from './routing.js'
@@ -7,7 +8,7 @@ import video from './video.js'
 import wireless from './wireless.js'
 
 /** Collection name → shape table. Collection names match Companion image-library folders. */
-export const COLLECTIONS = { power, video, routing, present, audio, wireless, utility }
+export const COLLECTIONS = { power, video, routing, present, audio, wireless, utility, folders }
 
 /**
  * Merge collections into one flat shape table.

@@ -81,6 +81,19 @@ const routing = [
 	icon('matrix', 'matrix', 'route', 'routing', 'Routing matrix'),
 ]
 
+/**
+ * Home-page folders. Colour is the system's identity, matched to how each page already
+ * reads on the deck, so the folder and the page it opens agree.
+ */
+const folders = [
+	icon('folder-power', 'folder-power', 'on', 'folders', 'Open the Power page'),
+	icon('folder-present', 'folder-present', 'present', 'folders', 'Open the ProPresenter page'),
+	icon('folder-lighting', 'folder-lighting', 'warn', 'folders', 'Open the lighting page'),
+	icon('folder-video', 'folder-video', 'video', 'folders', 'Open the ATEM page'),
+	icon('folder-audio', 'folder-audio', 'audio', 'folders', 'Open the audio page'),
+	icon('folder-routing', 'folder-routing', 'route', 'folders', 'Open the router page'),
+]
+
 const present = [
 	icon('slide-next', 'slide-next', 'present', 'present', 'Next slide'),
 	icon('slide-prev', 'slide-prev', 'present', 'present', 'Previous slide'),
@@ -165,6 +178,7 @@ export const ICONS = [
 	...video,
 	...routing,
 	...present,
+	...folders,
 	...audio,
 	...wireless,
 	...utility,
