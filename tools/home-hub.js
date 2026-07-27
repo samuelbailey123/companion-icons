@@ -102,11 +102,21 @@ const button = (style, actions) => ({
 /**
  * Is this control page navigation?
  *
- * Two shapes have to be recognised. Companion's built-in keys serialise as
- * `{"type":"pageup"}`. Pages already converted to plain buttons carry a single `inc_page` or
- * `dec_page` action instead. Missing the second kind would leave old nav buttons stranded on
- * pages that had already been converted.
+ * Three shapes have to be recognised, because this tool runs against configs at different
+ * stages of conversion:
+ *   - Companion's built-in keys, which serialise as `{"type":"pageup"}`.
+ *   - Pages converted to plain buttons, carrying a single `inc_page` / `dec_page`.
+ *   - Pages already converted to the hub, carrying a single `set_page` Home key.
+ *
+ * The third case matters for re-runs. Renumbering the pages — moving Home to page 1, say —
+ * leaves every Home key pointing at the wrong page, and this tool is how they get repointed.
+ * Without it every page reports "no nav keys" and is silently skipped.
+ *
+ * The rule is that the control's ENTIRE behaviour is one page-navigation action. That is what
+ * keeps it from matching a button which navigates as part of doing something else.
  */
+const NAV_ACTIONS = ['inc_page', 'dec_page', 'set_page']
+
 function isNav(control) {
 	if (control?.type === 'pageup' || control?.type === 'pagedown') return true
 	if (control?.type !== 'button-layered') return false
@@ -116,7 +126,7 @@ function isNav(control) {
 			if (Array.isArray(set)) actions.push(...set)
 		}
 	}
-	return actions.length === 1 && ['inc_page', 'dec_page'].includes(actions[0].definitionId)
+	return actions.length === 1 && NAV_ACTIONS.includes(actions[0].definitionId)
 }
 
 /** Keys physically on the deck, in reading order. */
