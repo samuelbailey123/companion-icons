@@ -102,6 +102,29 @@ const METRICS = [
 		warn: '{v} == "n/a"', bad: '{v} != "OK" && {v} != "n/a"',
 	},
 	{
+		key: 'net', label: 'Internet', image: 'route', variable: 'sys_net',
+		// Network HEALTH, not usage. Whole-building throughput would need the UDM Pro's API,
+		// which is behind credentials nobody here can mint. Latency and loss need none, and
+		// for a streaming rig they are the more useful signal anyway: packet loss is what
+		// kills a stream, total Mbps is not.
+		//
+		// Emits "31ms" when healthy, "31ms 4%" when losing packets, "DOWN" when the internet
+		// is unreachable, or "n/a" if ping itself cannot run. The n/a case matters: treating
+		// a missing tool as an outage would cry wolf every 30 seconds.
+		cmd:
+			`p=$(ping -c 3 -W 2 1.1.1.1 2>/dev/null); ` +
+			`if [ -z "$p" ]; then echo n/a; else ` +
+			`l=$(echo "$p" | grep -o "[0-9]*% packet loss" | cut -d% -f1); ` +
+			`r=$(echo "$p" | awk -F/ "/rtt|round-trip/ {printf \\"%.0f\\", \\$5}"); ` +
+			`if [ -z "$r" ]; then echo DOWN; ` +
+			`elif [ "$l" != "0" ]; then echo "\${r}ms \${l}%"; ` +
+			`else echo "\${r}ms"; fi; fi`,
+		suffix: '',
+		// Anything carrying a % has lost packets; anything non-numeric is worse.
+		warn: '{v} != "" && indexOf({v}, "%") >= 0',
+		bad: '{v} == "DOWN" || {v} == "n/a"',
+	},
+	{
 		key: 'uptime', label: 'Uptime', image: 'uptime', variable: 'sys_uptime',
 		cmd: `awk '{d=int($1/86400); h=int(($1%86400)/3600); m=int(($1%3600)/60); if (d>0) printf "%dd %dh", d, h; else printf "%dh %dm", h, m}' /proc/uptime`,
 		suffix: '',
