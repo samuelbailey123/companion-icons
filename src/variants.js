@@ -94,6 +94,20 @@ const folders = [
 	icon('folder-routing', 'folder-routing', 'route', 'folders', 'Open the router page'),
 ]
 
+/**
+ * Host metrics for the Raspberry Pi that Companion runs on. Colour is neutral here on
+ * purpose: these keys are coloured by feedback from the live value, so a fixed hue would
+ * fight the state it is meant to show.
+ */
+const system = [
+	icon('cpu', 'cpu', 'neutral', 'system', 'Processor load'),
+	icon('temperature', 'thermometer', 'neutral', 'system', 'CPU temperature'),
+	icon('memory', 'memory', 'neutral', 'system', 'Memory in use'),
+	icon('disk', 'disk', 'neutral', 'system', 'Disk in use'),
+	icon('uptime', 'clock', 'neutral', 'system', 'Time since boot'),
+	icon('folder-system', 'folder-system', 'audio', 'folders', 'Open the system page'),
+]
+
 const present = [
 	icon('slide-next', 'slide-next', 'present', 'present', 'Next slide'),
 	icon('slide-prev', 'slide-prev', 'present', 'present', 'Previous slide'),
@@ -179,6 +193,7 @@ export const ICONS = [
 	...routing,
 	...present,
 	...folders,
+	...system,
 	...audio,
 	...wireless,
 	...utility,

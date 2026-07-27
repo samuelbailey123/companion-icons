@@ -41,6 +41,7 @@ const FOLDERS = {
 	ATEM: { image: 'folder-video', bg: 0x0e2742 },
 	SQ7: { image: 'folder-audio', bg: 0x062b3a },
 	VH: { image: 'folder-routing', bg: 0x241a42 },
+	System: { image: 'folder-system', bg: 0x1c2b2b },
 }
 
 /** Slate, matching the nav chrome elsewhere on the deck. */

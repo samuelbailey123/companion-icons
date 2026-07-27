@@ -20,6 +20,7 @@ import video from './video.js'
 import present from './present.js'
 import audio from './audio.js'
 import routing from './routing.js'
+import system from './system.js'
 
 /**
  * The folder outline: a tab rising on the left, then a rounded body.
@@ -64,4 +65,5 @@ export default {
 	'folder-video': withEmblem(video['camera'].paths),
 	'folder-audio': withEmblem(audio['speaker'].paths),
 	'folder-routing': withEmblem(routing['route'].paths),
+	'folder-system': withEmblem(system['cpu'].paths),
 }
