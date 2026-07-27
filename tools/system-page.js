@@ -118,6 +118,19 @@ const full = JSON.parse(await fs.readFile(src, 'utf8'))
 const template = full.pages[Object.keys(full.pages)[0]]
 if (!template?.gridSize) throw new Error('could not read gridSize from an existing page')
 
+/**
+ * Card layout: a small icon badged into the top-right corner, the label along the top, and
+ * the reading filling the rest.
+ *
+ * The first version stacked icon / label / value in three full-width bands, which left the
+ * label only 22% of the key — 26px on a 120px key, against 45.6px everywhere else on the
+ * deck. Text lost because the icon was taking a full band it did not need. Cornering the
+ * icon buys that height back: the label now renders at 40.8px and the reading at 67px, which
+ * is larger than anything else on the deck — correct, since the number is the point.
+ *
+ * fontsize is set well above what the band can fit and fontsizeAllowShrink does the rest, so
+ * each line grows to fill its band rather than being pinned to a guessed size.
+ */
 const layers = ({ image, label, valueText, bg }) => [
 	{ id: 'canvas', name: 'Canvas', usage: 'auto', type: 'canvas', decoration: v('default'), showStatusIcons: v('default') },
 	{
@@ -127,21 +140,21 @@ const layers = ({ image, label, valueText, bg }) => [
 	},
 	{
 		id: 'image0', name: 'Icon', usage: 'auto', type: 'image',
-		enabled: v(true), opacity: v(100), x: v(2), y: v(1), width: v(96), height: v(34), rotation: v(0),
+		enabled: v(true), opacity: v(100), x: v(70), y: v(3), width: v(28), height: v(26), rotation: v(0),
 		base64Image: v(`$(image:${image})`),
 	},
 	{
 		id: 'text0', name: 'Label', usage: 'auto', type: 'text',
-		enabled: v(true), opacity: v(100), x: v(0), y: v(35), width: v(100), height: v(22), rotation: v(0),
-		text: v(label), color: v(0x9aa4b2), halign: v('center'), valign: v('center'),
-		fontsize: v(40), fontsizeAllowShrink: v(true), font: v('companion-sans'), outlineColor: v(0xff000000),
+		enabled: v(true), opacity: v(100), x: v(3), y: v(4), width: v(64), height: v(34), rotation: v(0),
+		text: v(label), color: v(0x9aa4b2), halign: v('left'), valign: v('center'),
+		fontsize: v(100), fontsizeAllowShrink: v(true), font: v('companion-sans'), outlineColor: v(0xff000000),
 	},
 	...(valueText
 		? [{
 				id: 'text1', name: 'Value', usage: 'auto', type: 'text',
-				enabled: v(true), opacity: v(100), x: v(0), y: v(57), width: v(100), height: v(40), rotation: v(0),
+				enabled: v(true), opacity: v(100), x: v(2), y: v(40), width: v(96), height: v(56), rotation: v(0),
 				text: v(valueText), color: v(0xffffff), halign: v('center'), valign: v('center'),
-				fontsize: v(70), fontsizeAllowShrink: v(true), font: v('companion-sans'), outlineColor: v(0xff000000),
+				fontsize: v(100), fontsizeAllowShrink: v(true), font: v('companion-sans'), outlineColor: v(0xff000000),
 			}]
 		: []),
 ]
@@ -183,9 +196,30 @@ const metricButton = (m) => {
 	}
 }
 
+/** The Home key matches the one on every other page rather than the metric card layout. */
+const homeLayers = () => [
+	{ id: 'canvas', name: 'Canvas', usage: 'auto', type: 'canvas', decoration: v('default'), showStatusIcons: v('default') },
+	{
+		id: 'box0', name: 'Background', usage: 'auto', type: 'box',
+		enabled: v(true), opacity: v(100), x: v(0), y: v(0), width: v(100), height: v(100), rotation: v(0),
+		color: v(NAV_BG), borderWidth: v(0), borderColor: v(0), borderPosition: v('inside'),
+	},
+	{
+		id: 'image0', name: 'Icon', usage: 'auto', type: 'image',
+		enabled: v(true), opacity: v(100), x: v(0), y: v(2), width: v(100), height: v(56), rotation: v(0),
+		base64Image: v('$(image:home)'),
+	},
+	{
+		id: 'text0', name: 'Label', usage: 'auto', type: 'text',
+		enabled: v(true), opacity: v(100), x: v(0), y: v(60), width: v(100), height: v(38), rotation: v(0),
+		text: v('Home'), color: v(0xffffff), halign: v('center'), valign: v('center'),
+		fontsize: v(70), fontsizeAllowShrink: v(true), font: v('companion-sans'), outlineColor: v(0xff000000),
+	},
+]
+
 const homeButton = () => ({
 	type: 'button-layered',
-	style: { layers: layers({ image: 'home', label: '', valueText: 'Home', bg: NAV_BG }) },
+	style: { layers: homeLayers() },
 	options: { stepProgression: 'auto', stepExpression: '', rotaryActions: false, canModifyStyleInApis: false, notes: '' },
 	feedbacks: [],
 	steps: {
