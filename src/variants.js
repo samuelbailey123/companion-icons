@@ -81,6 +81,33 @@ const routing = [
 	icon('matrix', 'matrix', 'route', 'routing', 'Routing matrix'),
 ]
 
+/**
+ * Home-page folders. Colour is the system's identity, matched to how each page already
+ * reads on the deck, so the folder and the page it opens agree.
+ */
+const folders = [
+	icon('folder-power', 'folder-power', 'on', 'folders', 'Open the Power page'),
+	icon('folder-present', 'folder-present', 'present', 'folders', 'Open the ProPresenter page'),
+	icon('folder-lighting', 'folder-lighting', 'warn', 'folders', 'Open the lighting page'),
+	icon('folder-video', 'folder-video', 'video', 'folders', 'Open the ATEM page'),
+	icon('folder-audio', 'folder-audio', 'audio', 'folders', 'Open the audio page'),
+	icon('folder-routing', 'folder-routing', 'route', 'folders', 'Open the router page'),
+]
+
+/**
+ * Host metrics for the Raspberry Pi that Companion runs on. Colour is neutral here on
+ * purpose: these keys are coloured by feedback from the live value, so a fixed hue would
+ * fight the state it is meant to show.
+ */
+const system = [
+	icon('cpu', 'cpu', 'neutral', 'system', 'Processor load'),
+	icon('temperature', 'thermometer', 'neutral', 'system', 'CPU temperature'),
+	icon('memory', 'memory', 'neutral', 'system', 'Memory in use'),
+	icon('disk', 'disk', 'neutral', 'system', 'Disk in use'),
+	icon('uptime', 'clock', 'neutral', 'system', 'Time since boot'),
+	icon('folder-system', 'folder-system', 'audio', 'folders', 'Open the system page'),
+]
+
 const present = [
 	icon('slide-next', 'slide-next', 'present', 'present', 'Next slide'),
 	icon('slide-prev', 'slide-prev', 'present', 'present', 'Previous slide'),
@@ -99,6 +126,8 @@ const present = [
 	icon('media', 'media', 'present', 'present', 'Play media'),
 	icon('prop', 'prop', 'present', 'present', 'Trigger prop'),
 	icon('playlist', 'playlist', 'present', 'present', 'Playlist'),
+	icon('focus-next', 'focus-next', 'present', 'present', 'Focus the next presentation'),
+	icon('focus-prev', 'focus-prev', 'present', 'present', 'Focus the previous presentation'),
 ]
 
 const audio = [
@@ -163,6 +192,8 @@ export const ICONS = [
 	...video,
 	...routing,
 	...present,
+	...folders,
+	...system,
 	...audio,
 	...wireless,
 	...utility,

@@ -5,8 +5,8 @@ import { SHAPES } from '../src/glyphs/index.js'
 import { isLabelValid, makeLabelSafe } from './helpers/labelsafe.js'
 
 describe('icon inventory', () => {
-	it('contains exactly 126 icons', () => {
-		expect(ICONS).toHaveLength(126)
+	it('contains exactly 140 icons', () => {
+		expect(ICONS).toHaveLength(140)
 	})
 
 	it('has no duplicate names', () => {
@@ -34,14 +34,16 @@ describe('icon inventory', () => {
 		}
 	})
 
-	it('assigns every icon to one of the seven collections', () => {
+	it('assigns every icon to one of the ten collections', () => {
 		const collections = new Set(ICONS.map((i) => i.collection))
 		expect([...collections].sort()).toEqual([
 			'audio',
 			'contrast',
+			'folders',
 			'power',
 			'present',
 			'routing',
+			'system',
 			'utility',
 			'video',
 			'wireless',
@@ -53,10 +55,12 @@ describe('icon inventory', () => {
 		for (const i of ICONS) counts[i.collection] = (counts[i.collection] ?? 0) + 1
 		expect(counts).toEqual({
 			contrast: 14,
+			folders: 7,
+			system: 5,
 			power: 17,
 			video: 34,
 			routing: 7,
-			present: 17,
+			present: 19,
 			audio: 14,
 			wireless: 14,
 			utility: 9,

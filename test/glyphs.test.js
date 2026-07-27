@@ -39,9 +39,11 @@ describe('glyph shapes', () => {
 	it('exposes collections as Companion image-library folders', () => {
 		expect(Object.keys(COLLECTIONS).sort()).toEqual([
 			'audio',
+			'folders',
 			'power',
 			'present',
 			'routing',
+			'system',
 			'utility',
 			'video',
 			'wireless',
@@ -63,9 +65,15 @@ describe('glyph shapes', () => {
 			'slide-next', 'slide-prev', 'slide-first', 'slide-last', 'clear', 'clear-slide',
 			'clear-props', 'clear-audio', 'logo', 'stage-display', 'message', 'timer-start',
 			'timer-stop', 'timer-reset', 'media', 'prop', 'playlist',
+			'focus-next', 'focus-prev',
 			// audio
 			'speaker', 'mute', 'fader', 'mix', 'scene-recall', 'gain', 'aux-send', 'talkback',
 			'pfl', 'phantom', 'meter', 'dca', 'mono', 'mains',
+			// folders
+			'folder-power', 'folder-present', 'folder-lighting', 'folder-video',
+			'folder-audio', 'folder-routing', 'folder-system',
+			// system
+			'cpu', 'thermometer', 'memory', 'disk', 'clock',
 			// wireless
 			'mic', 'mic-muted', 'tx-fault', 'battery', 'rf',
 		]

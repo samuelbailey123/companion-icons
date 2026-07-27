@@ -80,4 +80,30 @@ export default {
 			{ d: 'M74 66 L98 80 L74 94 Z', fill: true },
 		],
 	},
+
+	/*
+	 * Moving the FOCUS through the playlist is not the same as stepping a slide, and the two
+	 * sit next to each other on the deck — so these must not read as the slide arrows.
+	 *
+	 * The list strokes say "playlist" and the vertical triangle says "move through it".
+	 * Vertical is the whole point: `slide-next`/`slide-prev` are bare horizontal triangles
+	 * and `playlist` is a horizontal one, so nothing else in the set points up or down.
+	 */
+	'focus-next': {
+		paths: [
+			{ line: [16, 32, 62, 32] },
+			{ line: [16, 60, 62, 60] },
+			{ line: [16, 88, 62, 88] },
+			{ d: 'M72 50 L104 50 L88 90 Z', fill: true },
+		],
+	},
+
+	'focus-prev': {
+		paths: [
+			{ line: [16, 32, 62, 32] },
+			{ line: [16, 60, 62, 60] },
+			{ line: [16, 88, 62, 88] },
+			{ d: 'M72 70 L104 70 L88 30 Z', fill: true },
+		],
+	},
 }
