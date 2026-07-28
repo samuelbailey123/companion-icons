@@ -42,6 +42,7 @@ const FOLDERS = {
 	SQ7: { image: 'folder-audio', bg: 0x062b3a },
 	VH: { image: 'folder-routing', bg: 0x241a42 },
 	System: { image: 'folder-system', bg: 0x1c2b2b },
+	Mics: { image: 'folder-wireless', bg: 0x143026 },
 }
 
 /** Slate, matching the nav chrome elsewhere on the deck. */

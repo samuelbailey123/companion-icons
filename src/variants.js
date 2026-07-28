@@ -106,6 +106,7 @@ const system = [
 	icon('disk', 'disk', 'neutral', 'system', 'Disk in use'),
 	icon('uptime', 'clock', 'neutral', 'system', 'Time since boot'),
 	icon('folder-system', 'folder-system', 'audio', 'folders', 'Open the system page'),
+	icon('folder-wireless', 'folder-wireless', 'on', 'folders', 'Open the wireless mics page'),
 ]
 
 const present = [

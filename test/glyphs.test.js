@@ -71,7 +71,7 @@ describe('glyph shapes', () => {
 			'pfl', 'phantom', 'meter', 'dca', 'mono', 'mains',
 			// folders
 			'folder-power', 'folder-present', 'folder-lighting', 'folder-video',
-			'folder-audio', 'folder-routing', 'folder-system',
+			'folder-audio', 'folder-routing', 'folder-system', 'folder-wireless',
 			// system
 			'cpu', 'thermometer', 'memory', 'disk', 'clock',
 			// wireless
