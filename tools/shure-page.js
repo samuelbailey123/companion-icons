@@ -47,11 +47,16 @@ let seq = 0
 const id = (p) => `${p}-${(seq++).toString(36)}`
 
 /** The four racks, in the order they sit in the building. */
+/**
+ * Names come from what each rack actually holds, read off the receivers' own channel names
+ * rather than invented. "Rack 3" tells you nothing at 2 minutes to service; "Lav 1-2" tells
+ * you whose pack is flat.
+ */
 const RECEIVERS = [
-	{ label: 'shure1', name: 'Rack 1', host: '10.23.0.18' },
-	{ label: 'shure2', name: 'Rack 2', host: '10.23.0.22' },
-	{ label: 'shure3', name: 'Rack 3', host: '10.23.0.212' },
-	{ label: 'shure4', name: 'Rack 4', host: '10.23.0.253' },
+	{ label: 'shure1', name: 'BGV 1-4', host: '10.23.0.18' },
+	{ label: 'shure2', name: 'Lead 1-4', host: '10.23.0.22' },
+	{ label: 'shure3', name: 'Lav 1-2', host: '10.23.0.212' },
+	{ label: 'shure4', name: 'Host+BGV', host: '10.23.0.253' },
 ]
 
 const CHANNELS = [1, 2, 3, 4]
@@ -88,12 +93,16 @@ const layers = ({ image, label, valueText, bg }) => [
 	},
 	{
 		id: 'image0', name: 'Icon', usage: 'auto', type: 'image',
-		enabled: v(true), opacity: v(100), x: v(70), y: v(3), width: v(28), height: v(26), rotation: v(0),
+		// 42x34 rather than the original 28x26. At the smaller size the badge measured
+		// 33.6 x 31.2px against a 120 x 67.2px deck standard — present but not actually
+		// readable. This is 50.4 x 40.8px, which reads at arm's length, and costs the label
+		// nothing because it only takes width the label was not using.
+		enabled: v(true), opacity: v(100), x: v(56), y: v(2), width: v(42), height: v(34), rotation: v(0),
 		base64Image: v(`$(image:${image})`),
 	},
 	{
 		id: 'text0', name: 'Label', usage: 'auto', type: 'text',
-		enabled: v(true), opacity: v(100), x: v(3), y: v(4), width: v(64), height: v(34), rotation: v(0),
+		enabled: v(true), opacity: v(100), x: v(3), y: v(4), width: v(52), height: v(34), rotation: v(0),
 		text: v(label), color: v(0x9aa4b2), halign: v('left'), valign: v('center'),
 		fontsize: v(100), fontsizeAllowShrink: v(true), font: v('companion-sans'), outlineColor: v(0xff000000),
 	},
@@ -142,9 +151,30 @@ function receiverButton(rx) {
 	}
 }
 
+/** The Home key matches every other page rather than the metric-card layout. */
+const homeLayers = () => [
+	{ id: 'canvas', name: 'Canvas', usage: 'auto', type: 'canvas', decoration: v('default'), showStatusIcons: v('default') },
+	{
+		id: 'box0', name: 'Background', usage: 'auto', type: 'box',
+		enabled: v(true), opacity: v(100), x: v(0), y: v(0), width: v(100), height: v(100), rotation: v(0),
+		color: v(NAV_BG), borderWidth: v(0), borderColor: v(0), borderPosition: v('inside'),
+	},
+	{
+		id: 'image0', name: 'Icon', usage: 'auto', type: 'image',
+		enabled: v(true), opacity: v(100), x: v(0), y: v(2), width: v(100), height: v(56), rotation: v(0),
+		base64Image: v('$(image:home)'),
+	},
+	{
+		id: 'text0', name: 'Label', usage: 'auto', type: 'text',
+		enabled: v(true), opacity: v(100), x: v(0), y: v(60), width: v(100), height: v(38), rotation: v(0),
+		text: v('Home'), color: v(0xffffff), halign: v('center'), valign: v('center'),
+		fontsize: v(70), fontsizeAllowShrink: v(true), font: v('companion-sans'), outlineColor: v(0xff000000),
+	},
+]
+
 const homeButton = () => ({
 	type: 'button-layered',
-	style: { layers: layers({ image: 'home', label: '', valueText: 'Home', bg: NAV_BG }) },
+	style: { layers: homeLayers() },
 	options: { stepProgression: 'auto', stepExpression: '', rotaryActions: false, canModifyStyleInApis: false, notes: '' },
 	feedbacks: [],
 	steps: {
