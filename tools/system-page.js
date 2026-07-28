@@ -163,12 +163,16 @@ const layers = ({ image, label, valueText, bg }) => [
 	},
 	{
 		id: 'image0', name: 'Icon', usage: 'auto', type: 'image',
-		enabled: v(true), opacity: v(100), x: v(70), y: v(3), width: v(28), height: v(26), rotation: v(0),
+		// 42x34 rather than the original 28x26. At the smaller size the badge measured
+		// 33.6 x 31.2px against a 120 x 67.2px deck standard — present but not actually
+		// readable. This is 50.4 x 40.8px, which reads at arm's length, and costs the label
+		// nothing because it only takes width the label was not using.
+		enabled: v(true), opacity: v(100), x: v(56), y: v(2), width: v(42), height: v(34), rotation: v(0),
 		base64Image: v(`$(image:${image})`),
 	},
 	{
 		id: 'text0', name: 'Label', usage: 'auto', type: 'text',
-		enabled: v(true), opacity: v(100), x: v(3), y: v(4), width: v(64), height: v(34), rotation: v(0),
+		enabled: v(true), opacity: v(100), x: v(3), y: v(4), width: v(52), height: v(34), rotation: v(0),
 		text: v(label), color: v(0x9aa4b2), halign: v('left'), valign: v('center'),
 		fontsize: v(100), fontsizeAllowShrink: v(true), font: v('companion-sans'), outlineColor: v(0xff000000),
 	},
