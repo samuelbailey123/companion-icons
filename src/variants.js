@@ -161,6 +161,8 @@ const wireless = [
 		icon(`battery-${n}`, 'battery', color, 'wireless', `Transmitter battery ${n} of 4`)
 	),
 	...RF_COLORS.map((color, n) => icon(`rf-${n}`, 'rf', color, 'wireless', `RF signal ${n} of 3`)),
+	// Bare antenna, no bars: nothing is transmitting, which is not a signal failure.
+	icon('rf-idle', 'rf', 'idle', 'wireless', 'No transmitter on air'),
 	icon('tx-fault', 'tx-fault', 'off', 'wireless', 'Transmitter fault'),
 ]
 
@@ -210,5 +212,12 @@ export const ICONS = [
 export function resolveShape(entry) {
 	const shape = SHAPES[entry.shape]
 	if (typeof shape.levels !== 'function') return shape
-	return shape.levels(Number(entry.name.slice(entry.name.lastIndexOf('-') + 1)))
+	const level = Number(entry.name.slice(entry.name.lastIndexOf('-') + 1))
+	/*
+	 * A non-numeric suffix (`rf-idle`) means the family's BASE drawing, with no level marks
+	 * at all. That is not the same picture as level zero: `rf-0` is a red antenna reading
+	 * "no signal", which is a fault, whereas an idle rig has nothing to report and must not
+	 * look like one. Levels are numbers; absence is a word.
+	 */
+	return Number.isInteger(level) ? shape.levels(level) : shape
 }
