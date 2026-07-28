@@ -72,3 +72,41 @@ describe('renderIcon primitives', () => {
 		expect(() => renderIcon({ paths: [{ blob: [1, 2] }] }, '#FFF')).toThrow(/unrecognised/i)
 	})
 })
+
+describe('renderIcon groups', () => {
+	const nested = {
+		paths: [{ group: [{ circle: [60, 60, 30] }], at: [24, 29], scale: 0.48 }],
+	}
+
+	it('positions and scales nested geometry', () => {
+		expect(renderIcon(nested, '#FFF')).toContain('<g transform="translate(24 29) scale(0.48)">')
+	})
+
+	it('renders nested primitives inside the group', () => {
+		expect(renderIcon(nested, '#FFF')).toContain(
+			'<g transform="translate(24 29) scale(0.48)"><circle cx="60" cy="60" r="30"/></g>'
+		)
+	})
+
+	/*
+	 * The regression this guards. Pinning the nested stroke to the library's absolute weight
+	 * draws the emblem at 1/scale its authored proportion — at 0.48 that is roughly double,
+	 * and the folder emblems collapse into blobs. The transform must be allowed to scale the
+	 * inherited stroke, so the group carries no stroke-width of its own.
+	 */
+	it('does not override the inherited stroke-width on the group', () => {
+		const svg = renderIcon(nested, '#FFF')
+		const group = svg.slice(svg.indexOf('<g '), svg.indexOf('</g>'))
+		expect(group).not.toContain('stroke-width')
+	})
+
+	it('nests groups recursively', () => {
+		const svg = renderIcon(
+			{ paths: [{ group: [{ group: [{ line: [0, 0, 10, 10] }], at: [1, 2], scale: 0.5 }], at: [3, 4], scale: 0.25 }] },
+			'#FFF'
+		)
+		expect(svg).toContain(
+			'<g transform="translate(3 4) scale(0.25)"><g transform="translate(1 2) scale(0.5)"><line x1="0" y1="0" x2="10" y2="10"/></g></g>'
+		)
+	})
+})
