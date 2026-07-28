@@ -45,6 +45,16 @@ const FOLDERS = {
 	Mics: { image: 'folder-wireless', bg: 0x143026 },
 }
 
+/**
+ * Explicit order the folders appear in, left to right then down.
+ *
+ * Page NUMBER order is not the right order for the deck: System was added before Mics so it
+ * landed mid-row, but it belongs in the bottom-right corner as the least-reached key —
+ * you open it when something is wrong, not during a service. Anything not listed here
+ * falls back to page order, so a new page still appears without touching this.
+ */
+const HOME_ORDER = ['Power', 'PP1', 'MA2', 'ATEM', 'SQ7', 'VH', 'Mics', 'System']
+
 /** Slate, matching the nav chrome elsewhere on the deck. */
 const HOME_BG = 0x1f2937
 
@@ -158,6 +168,13 @@ const cells = [...visibleCells()]
 if (targets.length > cells.length) {
 	throw new Error(`${targets.length} pages but only ${cells.length} visible keys on the home page`)
 }
+
+// Sort by the explicit display order; unlisted pages keep page order, after the listed ones.
+const rank = (pageNumber) => {
+	const i = HOME_ORDER.indexOf(full.pages[pageNumber].name)
+	return i === -1 ? HOME_ORDER.length + Number(pageNumber) : i
+}
+targets.sort((a, b) => rank(a) - rank(b))
 
 for (const [i, pageNumber] of targets.entries()) {
 	const name = full.pages[pageNumber].name
