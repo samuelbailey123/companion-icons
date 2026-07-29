@@ -66,6 +66,9 @@ describe('glyph shapes', () => {
 			'clear-props', 'clear-audio', 'logo', 'stage-display', 'message', 'timer-start',
 			'timer-stop', 'timer-reset', 'media', 'prop', 'playlist',
 			'focus-next', 'focus-prev',
+			'green-wall', 'water-calm', 'water-storm', 'thunder',
+			'clear-messages', 'clear-announce', 'clear-media', 'clear-video',
+			'executor',
 			// audio
 			'speaker', 'mute', 'fader', 'mix', 'scene-recall', 'gain', 'aux-send', 'talkback',
 			'pfl', 'phantom', 'meter', 'dca', 'mono', 'mains',
@@ -73,7 +76,7 @@ describe('glyph shapes', () => {
 			'folder-power', 'folder-present', 'folder-lighting', 'folder-video',
 			'folder-audio', 'folder-routing', 'folder-system', 'folder-wireless',
 			// system
-			'cpu', 'thermometer', 'memory', 'disk', 'clock',
+			'cpu', 'thermometer', 'memory', 'disk', 'clock', 'network',
 			// wireless
 			'mic', 'mic-muted', 'tx-fault', 'battery', 'rf',
 		]

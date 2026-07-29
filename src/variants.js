@@ -105,6 +105,11 @@ const system = [
 	icon('memory', 'memory', 'neutral', 'system', 'Memory in use'),
 	icon('disk', 'disk', 'neutral', 'system', 'Disk in use'),
 	icon('uptime', 'clock', 'neutral', 'system', 'Time since boot'),
+	icon('network', 'network', 'neutral', 'system', 'Network address'),
+	// The filesystem going read-only is a silent Pi failure: Companion keeps running and
+	// nothing it writes survives a restart. Open padlock is healthy, closed is the fault.
+	icon('storage-ok', 'unlock', 'on', 'system', 'Filesystem is writable'),
+	icon('storage-locked', 'lock', 'off', 'system', 'Filesystem has gone read-only'),
 	icon('folder-system', 'folder-system', 'audio', 'folders', 'Open the system page'),
 	icon('folder-wireless', 'folder-wireless', 'on', 'folders', 'Open the wireless mics page'),
 ]
@@ -129,6 +134,33 @@ const present = [
 	icon('playlist', 'playlist', 'present', 'present', 'Playlist'),
 	icon('focus-next', 'focus-next', 'present', 'present', 'Focus the next presentation'),
 	icon('focus-prev', 'focus-prev', 'present', 'present', 'Focus the previous presentation'),
+
+	/*
+	 * Stage looks. Colour is the SECOND signal here, behind silhouette — see the glyphs.
+	 *
+	 * The two water looks share a hue on purpose. They are one subject in two states, and
+	 * giving them separate colours would claim a distinction that is not there while making
+	 * the pair harder to group at a glance.
+	 */
+	/*
+	 * The MA2 page. Its transport reuses the slide-triangle geometry under lighting names,
+	 * because a triangle pointing forward is the same idea whether it is a slide or a cue —
+	 * but the NAME has to say cue, or a future reader wires a lighting desk to a slide icon
+	 * and quietly builds a page that lies about what it drives.
+	 */
+	icon('cue-next', 'slide-next', 'warn', 'present', 'Advance the lighting cue'),
+	icon('cue-back', 'slide-prev', 'warn', 'present', 'Step the lighting cue back'),
+	icon('executor', 'executor', 'warn', 'present', 'Lighting executor'),
+
+	icon('clear-messages', 'clear-messages', 'off', 'present', 'Clear the messages layer'),
+	icon('clear-announce', 'clear-announce', 'off', 'present', 'Clear the announcements layer'),
+	icon('clear-media', 'clear-media', 'off', 'present', 'Clear the media layer'),
+	icon('clear-video', 'clear-video', 'off', 'present', 'Clear the video input layer'),
+
+	icon('green-wall', 'green-wall', 'on', 'present', 'Foliage wall look'),
+	icon('water-calm', 'water-calm', 'audio', 'present', 'Calm water look'),
+	icon('water-storm', 'water-storm', 'audio', 'present', 'Storm water look'),
+	icon('thunder', 'thunder', 'warn', 'present', 'Thunder sting'),
 ]
 
 const audio = [
@@ -182,7 +214,26 @@ const utility = [
  * Shapes that land on buttons whose background is feedback-driven, and therefore need
  * high-contrast variants for the per-state swap. See `contrastVariant` in wiring.js.
  */
-const CONTRAST_SHAPES = ['projector', 'pa', 'clear-slide', 'clear-audio', 'camera', 'media', 'macro-run']
+const CONTRAST_SHAPES = [
+	'projector', 'pa', 'clear-slide', 'clear-audio', 'camera', 'media', 'macro-run',
+	// The ATEM bus and its transition column: every one of these sits on a key whose background
+	// is red when live, green when cued, and near-black when neither. No single icon colour
+	// survives all three, so each needs its pair. See src/atem.js.
+	'message', 'cut', 'auto',
+	// PP1 sits on strong flat colours the operator chose — bright orange transport, red clears,
+	// blue looks. A semantic hue on top of those is not reliably legible (the orange transport
+	// keys measured 1.31:1), so these need the paper/ink pair to fall back on. The rest of the
+	// page keeps its colour, because on the dark backgrounds it clears the threshold easily.
+	'clear', 'stage-display', 'slide-prev', 'slide-next',
+	'clear-messages', 'clear-props', 'clear-announce', 'clear-media', 'clear-video',
+	// MA2's keys sit on saturated green and red, where an amber icon measures about 2:1.
+	'ftb', 'executor', 'fader',
+	// VH arms a destination by turning its key light violet, where the violet routing icon
+	// vanishes into its own background.
+	'destination', 'source',
+	// A muted DCA turns its key red, where the audio-blue icon drops to about 2:1.
+	'dca',
+]
 
 const contrast = CONTRAST_SHAPES.flatMap((shape) => [
 	icon(`${shape}-paper`, shape, 'paper', 'contrast', `${shape} (light, for dark backgrounds)`),

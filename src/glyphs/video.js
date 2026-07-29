@@ -42,7 +42,7 @@ export default {
 	},
 
 	ftb: {
-		paths: [{ circle: [60, 60, 30] }, { d: 'M30 60 A30 30 0 0 0 90 60 Z', fill: true }],
+		paths: [{ circle: [60, 60, 38] }, { d: 'M22 60 A38 38 0 0 0 98 60 Z', fill: true }],
 	},
 
 	dsk: {
