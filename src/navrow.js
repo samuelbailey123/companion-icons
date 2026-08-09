@@ -17,7 +17,7 @@
  */
 
 /** Left-to-right order of the folder row. */
-export const NAV_ORDER = ['Home', 'Power', 'PP1', 'MA2', 'ATEM', 'SQ7', 'VH', 'Mics', 'System']
+export const NAV_ORDER = ['Home', 'Power', 'PP1', 'MA2', 'ATEM', 'SQ7', 'VW', 'Mics', 'System']
 
 /**
  * Art, resting background and accent per page.
@@ -33,7 +33,9 @@ export const FOLDERS = {
 	MA2: { image: 'folder-lighting', bg: 0x3a2e06, accent: 0xfbbf24 },
 	ATEM: { image: 'folder-video', bg: 0x0e2742, accent: 0x60a5fa },
 	SQ7: { image: 'folder-audio', bg: 0x062b3a, accent: 0x38bdf8 },
-	VH: { image: 'folder-routing', bg: 0x241a42, accent: 0xa78bfa },
+	// Video World: router destinations, their sources, and the LED wall's brightness. Keeps the
+	// routing art and violet identity — routing is still the bulk of what the page does.
+	VW: { image: 'folder-routing', bg: 0x241a42, accent: 0xa78bfa },
 	Mics: { image: 'folder-wireless', bg: 0x143026, accent: 0x4ade80 },
 	System: { image: 'folder-system', bg: 0x1c2b2b, accent: 0x38bdf8 },
 }

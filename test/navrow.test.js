@@ -3,7 +3,7 @@ import { FOLDERS, NAV_ORDER, assertNavCoverage, navRow } from '../src/navrow.js'
 import { COLUMNS } from '../src/layout.js'
 import { ICONS } from '../src/variants.js'
 
-const NUMBERS = { Home: 1, Power: 2, PP1: 3, MA2: 4, ATEM: 5, SQ7: 6, VH: 7, System: 8, Mics: 9 }
+const NUMBERS = { Home: 1, Power: 2, PP1: 3, MA2: 4, ATEM: 5, SQ7: 6, VW: 7, System: 8, Mics: 9 }
 
 const layerOf = (control, type) => control.style.layers.find((l) => l.type === type)
 const actionOf = (control) => control.steps[0].action_sets.down[0]
@@ -33,7 +33,7 @@ describe('the folder row', () => {
 
 	/* Companion reads page "0" as "wherever you already are", so it can never be a destination. */
 	it('refuses page number zero', () => {
-		expect(() => navRow('Home', { ...NUMBERS, VH: 0 })).toThrow(/reads as "current page"/)
+		expect(() => navRow('Home', { ...NUMBERS, VW: 0 })).toThrow(/reads as "current page"/)
 	})
 
 	it('refuses a page it has no number for', () => {
@@ -42,12 +42,12 @@ describe('the folder row', () => {
 	})
 
 	it('refuses a page it has no art for', () => {
-		const original = FOLDERS.VH
-		delete FOLDERS.VH
+		const original = FOLDERS.VW
+		delete FOLDERS.VW
 		try {
-			expect(() => navRow('Home', NUMBERS)).toThrow(/no folder art for "VH"/)
+			expect(() => navRow('Home', NUMBERS)).toThrow(/no folder art for "VW"/)
 		} finally {
-			FOLDERS.VH = original
+			FOLDERS.VW = original
 		}
 	})
 })
@@ -72,8 +72,8 @@ describe('marking the current page', () => {
 	 * whether or not its page is current, so its verified contrast still holds.
 	 */
 	it('leaves the icon and its background untouched when active', () => {
-		const [inactive, active] = [navRow('Home', NUMBERS), navRow('VH', NUMBERS)].map(
-			(row) => row[NAV_ORDER.indexOf('VH')]
+		const [inactive, active] = [navRow('Home', NUMBERS), navRow('VW', NUMBERS)].map(
+			(row) => row[NAV_ORDER.indexOf('VW')]
 		)
 		expect(layerOf(active, 'image').base64Image.value).toEqual(layerOf(inactive, 'image').base64Image.value)
 		expect(layerOf(active, 'box').color.value).toEqual(layerOf(inactive, 'box').color.value)
@@ -128,8 +128,8 @@ describe('coverage checks', () => {
 	})
 
 	it('catches a folder pointing at a page that is gone', () => {
-		expect(() => assertNavCoverage(Object.keys(NUMBERS).filter((n) => n !== 'VH'), COLUMNS)).toThrow(
-			/do not exist: VH/
+		expect(() => assertNavCoverage(Object.keys(NUMBERS).filter((n) => n !== 'VW'), COLUMNS)).toThrow(
+			/do not exist: VW/
 		)
 	})
 
