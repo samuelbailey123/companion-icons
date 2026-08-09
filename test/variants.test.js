@@ -5,8 +5,20 @@ import { SHAPES } from '../src/glyphs/index.js'
 import { isLabelValid, makeLabelSafe } from './helpers/labelsafe.js'
 
 describe('icon inventory', () => {
-	it('contains exactly 192 icons', () => {
-		expect(ICONS).toHaveLength(192)
+	it('contains exactly 193 icons', () => {
+		expect(ICONS).toHaveLength(193)
+	})
+
+	/**
+	 * The VW page's brightness knob renders `$(image:brightness)`. A rename here would leave
+	 * that key blank on the deck with no error anywhere — the exact silent failure the image
+	 * library's variable indirection makes possible.
+	 */
+	it('keeps the brightness icon the VW knob references', () => {
+		const brightness = ICONS.find((i) => i.name === 'brightness')
+		expect(brightness).toBeDefined()
+		expect(brightness.collection).toBe('video')
+		expect(SHAPES).toHaveProperty(brightness.shape)
 	})
 
 	it('has no duplicate names', () => {
@@ -58,7 +70,7 @@ describe('icon inventory', () => {
 			folders: 8,
 			system: 8,
 			power: 17,
-			video: 34,
+			video: 35,
 			routing: 7,
 			present: 30,
 			audio: 14,

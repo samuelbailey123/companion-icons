@@ -69,6 +69,7 @@ const video = [
 	icon('macro-stop', 'macro-stop', 'off', 'video', 'Stop macro'),
 	icon('transition', 'transition', 'video', 'video', 'Transition'),
 	icon('still', 'still', 'video', 'video', 'Still / background image'),
+	icon('brightness', 'brightness', 'video', 'video', 'LED wall brightness'),
 ]
 
 const routing = [

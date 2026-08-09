@@ -58,7 +58,7 @@ describe('glyph shapes', () => {
 			'page-up', 'page-down', 'home', 'back', 'macro', 'lock', 'blank', 'settings', 'alert',
 			// video
 			'camera', 'program', 'preview', 'cut', 'auto', 'ftb', 'dsk', 'key', 'aux', 'tally',
-			'macro-run', 'macro-stop', 'transition', 'still',
+			'macro-run', 'macro-stop', 'transition', 'still', 'brightness',
 			// routing
 			'route', 'take', 'unlock', 'source', 'destination', 'matrix', 'route-locked',
 			// present
