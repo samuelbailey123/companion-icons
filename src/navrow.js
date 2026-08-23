@@ -17,7 +17,7 @@
  */
 
 /** Left-to-right order of the folder row. */
-export const NAV_ORDER = ['Home', 'Power', 'PP1', 'MA2', 'ATEM', 'SQ7', 'VW', 'Mics', 'System']
+export const NAV_ORDER = ['Home', 'Power', 'PP1', 'MA2', 'ATEM', 'SQ7', 'VW', 'PTZ', 'System']
 
 /**
  * Art, resting background and accent per page.
@@ -36,7 +36,8 @@ export const FOLDERS = {
 	// Video World: router destinations, their sources, and the LED wall's brightness. Keeps the
 	// routing art and violet identity — routing is still the bulk of what the page does.
 	VW: { image: 'folder-routing', bg: 0x241a42, accent: 0xa78bfa },
-	Mics: { image: 'folder-wireless', bg: 0x143026, accent: 0x4ade80 },
+	// The PTZ camera took the Mics page's slot on 2026-08-23: the wireless page was never used.
+	PTZ: { image: 'folder-ptz', bg: 0x3b1230, accent: 0xf472b6 },
 	System: { image: 'folder-system', bg: 0x1c2b2b, accent: 0x38bdf8 },
 }
 

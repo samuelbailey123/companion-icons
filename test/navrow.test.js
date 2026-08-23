@@ -3,7 +3,7 @@ import { FOLDERS, NAV_ORDER, assertNavCoverage, navRow } from '../src/navrow.js'
 import { COLUMNS } from '../src/layout.js'
 import { ICONS } from '../src/variants.js'
 
-const NUMBERS = { Home: 1, Power: 2, PP1: 3, MA2: 4, ATEM: 5, SQ7: 6, VW: 7, System: 8, Mics: 9 }
+const NUMBERS = { Home: 1, Power: 2, PP1: 3, MA2: 4, ATEM: 5, SQ7: 6, VW: 7, System: 8, PTZ: 9 }
 
 const layerOf = (control, type) => control.style.layers.find((l) => l.type === type)
 const actionOf = (control) => control.steps[0].action_sets.down[0]
