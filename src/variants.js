@@ -199,6 +199,45 @@ const wireless = [
 	icon('tx-fault', 'tx-fault', 'off', 'wireless', 'Transmitter fault'),
 ]
 
+/**
+ * The PTZ camera page. Everything carries the camera's own hue so the page reads as one
+ * instrument, with two exceptions: STOP is red because it is the key you hit when something
+ * has gone wrong, and the autofocus ring is green for "the camera has it".
+ */
+const camera = [
+	icon('arrow-up', 'arrow-up', 'camera', 'camera', 'Tilt up'),
+	icon('arrow-down', 'arrow-down', 'camera', 'camera', 'Tilt down'),
+	icon('arrow-left', 'arrow-left', 'camera', 'camera', 'Pan left'),
+	icon('arrow-right', 'arrow-right', 'camera', 'camera', 'Pan right'),
+	icon('arrow-up-left', 'arrow-up-left', 'camera', 'camera', 'Up and left'),
+	icon('arrow-up-right', 'arrow-up-right', 'camera', 'camera', 'Up and right'),
+	icon('arrow-down-left', 'arrow-down-left', 'camera', 'camera', 'Down and left'),
+	icon('arrow-down-right', 'arrow-down-right', 'camera', 'camera', 'Down and right'),
+	icon('ptz', 'ptz', 'camera', 'camera', 'Pan/tilt/zoom camera'),
+	icon('pan', 'pan', 'camera', 'camera', 'Pan axis'),
+	icon('tilt', 'tilt', 'camera', 'camera', 'Tilt axis'),
+	icon('stop', 'stop', 'off', 'camera', 'Stop all movement'),
+	icon('zoom-in', 'zoom-in', 'camera', 'camera', 'Zoom in'),
+	icon('zoom-out', 'zoom-out', 'camera', 'camera', 'Zoom out'),
+	icon('focus', 'focus', 'camera', 'camera', 'Focus / one-push autofocus'),
+	icon('focus-auto', 'focus-auto', 'on', 'camera', 'Autofocus engaged'),
+	icon('focus-manual', 'focus-auto', 'idle', 'camera', 'Manual focus'),
+	icon('speed', 'speed', 'camera', 'camera', 'Drive speed'),
+	icon('preset', 'preset', 'camera', 'camera', 'Camera preset'),
+	icon('preset-save', 'preset-save', 'camera', 'camera', 'Save a preset'),
+	icon('tracking', 'tracking', 'camera', 'camera', 'Auto tracking'),
+	icon('tracking-on', 'tracking', 'on', 'camera', 'Auto tracking engaged'),
+	icon('exposure', 'exposure', 'camera', 'camera', 'Exposure mode'),
+	icon('white-balance', 'thermometer', 'camera', 'camera', 'White balance'),
+	icon('backlight', 'backlight', 'camera', 'camera', 'Backlight compensation'),
+	icon('backlight-on', 'backlight', 'on', 'camera', 'Backlight compensation engaged'),
+	icon('menu', 'menu', 'camera', 'camera', 'Camera on-screen menu'),
+	icon('ptz-home', 'home', 'camera', 'camera', 'Camera home position'),
+	icon('ptz-power', 'power', 'camera', 'camera', 'Camera power'),
+	icon('ptz-standby', 'power', 'off', 'camera', 'Camera in standby'),
+	icon('folder-ptz', 'folder-ptz', 'camera', 'folders', 'Open the PTZ camera page'),
+]
+
 const utility = [
 	icon('page-up', 'page-up', 'neutral', 'utility', 'Previous page'),
 	icon('page-down', 'page-down', 'neutral', 'utility', 'Next page'),
@@ -234,6 +273,9 @@ const CONTRAST_SHAPES = [
 	'destination', 'source',
 	// A muted DCA turns its key red, where the audio-blue icon drops to about 2:1.
 	'dca',
+	// The PTZ stop key carries ATEM tally (red live, green preview), and the save key turns
+	// solid red while it is armed. Both are backgrounds the camera hue cannot survive.
+	'stop', 'preset-save',
 ]
 
 const contrast = CONTRAST_SHAPES.flatMap((shape) => [
@@ -252,6 +294,7 @@ export const ICONS = [
 	...audio,
 	...wireless,
 	...utility,
+	...camera,
 	...contrast,
 ]
 

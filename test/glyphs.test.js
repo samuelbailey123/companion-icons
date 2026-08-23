@@ -39,6 +39,7 @@ describe('glyph shapes', () => {
 	it('exposes collections as Companion image-library folders', () => {
 		expect(Object.keys(COLLECTIONS).sort()).toEqual([
 			'audio',
+			'camera',
 			'folders',
 			'power',
 			'present',
@@ -79,6 +80,11 @@ describe('glyph shapes', () => {
 			'cpu', 'thermometer', 'memory', 'disk', 'clock', 'network',
 			// wireless
 			'mic', 'mic-muted', 'tx-fault', 'battery', 'rf',
+			// camera
+			'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right',
+			'arrow-up-left', 'arrow-up-right', 'arrow-down-left', 'arrow-down-right',
+			'ptz', 'pan', 'tilt', 'stop', 'zoom-in', 'zoom-out', 'focus', 'focus-auto', 'speed',
+			'preset', 'preset-save', 'tracking', 'exposure', 'backlight', 'menu', 'folder-ptz',
 		]
 		expect(Object.keys(SHAPES).sort()).toEqual([...expected].sort())
 	})

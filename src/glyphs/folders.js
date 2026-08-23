@@ -27,6 +27,7 @@ import audio from './audio.js'
 import routing from './routing.js'
 import system from './system.js'
 import wireless from './wireless.js'
+import camera from './camera.js'
 
 /**
  * The folder outline: a tab rising on the left, then a rounded body.
@@ -73,4 +74,6 @@ export default {
 	'folder-routing': withEmblem(routing['route'].paths),
 	'folder-system': withEmblem(system['cpu'].paths),
 	'folder-wireless': withEmblem(wireless['mic'].paths),
+	// The four-way move mark, not the camera body: that already opens the ATEM folder.
+	'folder-ptz': withEmblem(camera['ptz'].paths),
 }
