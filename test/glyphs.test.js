@@ -85,6 +85,7 @@ describe('glyph shapes', () => {
 			'arrow-up-left', 'arrow-up-right', 'arrow-down-left', 'arrow-down-right',
 			'ptz', 'pan', 'tilt', 'stop', 'zoom-in', 'zoom-out', 'focus', 'focus-auto', 'speed',
 			'preset', 'preset-save', 'tracking', 'exposure', 'backlight', 'menu', 'folder-ptz',
+			'frame-close', 'frame-half', 'frame-full',
 		]
 		expect(Object.keys(SHAPES).sort()).toEqual([...expected].sort())
 	})

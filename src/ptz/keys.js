@@ -1,10 +1,15 @@
 /**
- * The 27 keys of the PTZ page: rows 1-3, nine across.
+ * The 27 keys of the PTZ run page: rows 1-3, nine across.
  *
- *   col:   0    1     2   |  3      4         5        6         7          8
- *   row 1: ↖    ↑     ↗   |  P1     P2        P3       P4        P5         P6
- *   row 2: ←   STOP   →   |  Home   Zoom in   AF       Track     WB         Save
- *   row 3: ↙    ↓     ↘   |  Menu   Zoom out  1-push   Exposure  Backlight  Power
+ *   col:   0    1     2   |  3        4         5        6         7          8
+ *   row 1: ↖    ↑     ↗   |  P1       P2        P3       P4        P5         P6
+ *   row 2: ←   STOP   →   |  Home     Zoom in   AF       Track     Close-up   Save
+ *   row 3: ↙    ↓     ↘   |  Setup ▸  Zoom out  1-push   Half      Full       Menu
+ *
+ * RUN HERE, SET UP ON THE NEXT PAGE. This page holds what an operator touches during a
+ * service: driving, presets, focus, tracking on/off and its framing. Exposure, white
+ * balance, backlight, power and the tracking parameters live on the setup sub-page
+ * (`setup.js`), one press away on Setup ▸ and back on the folder row or its own ◂ key.
  *
  * THE D-PAD DRIVES WHILE HELD. Press starts the camera moving, release stops it — the one
  * gesture every PTZ joystick on earth uses, and the only one where "hold" is the natural
@@ -25,15 +30,16 @@
  * hold gestures, and a preset lost to a held finger mid-service is exactly the accident that
  * rule exists to prevent.
  *
- * TOGGLES READ THE CAMERA, NOT A GUESS. Autofocus, backlight, power and menu all branch on
- * the state the poller last read from the camera, so a key pressed after someone changed the
- * setting from the camera's web page still does the right thing. Tracking is the exception:
- * the camera does not answer a tracking inquiry, so the deck remembers what it last sent.
+ * TOGGLES READ THE CAMERA, NOT A GUESS. Autofocus, backlight, power, menu and tracking all
+ * branch on the state last read from the camera, so a key pressed after someone changed the
+ * setting from the camera's web page still does the right thing.
  */
 
 import { cv, field, logicIf, raw, setVar, visca, wait, when, override } from './actions.js'
 import { BG, INK, LABEL, key } from './controls.js'
+import { menuKey } from './image.js'
 import { driveCommand } from './knobs.js'
+import { framingKey, trackKey } from './tracking.js'
 import * as V from './variables.js'
 
 /** The page's accent, for the "last preset" border. */
@@ -169,29 +175,6 @@ const homeKey = (conn) =>
 		actionSets: { down: [visca('home-go', conn, 'home'), setVar('home-last', V.LAST_PRESET, '')], up: [] },
 	})
 
-const menuKey = (conn) =>
-	key({
-		style: { icon: 'menu', label: 'Menu', bg: BG.key },
-		notes: 'Opens or closes the camera on-screen menu. While open, the arrows navigate (right enters, left backs out) and STOP closes it.',
-		feedbacks: [
-			when('menu-open', `${field('menu')} == "On"`, [
-				override('menu-open-bg', 'box0', 'color', BG.notice),
-				override('menu-open-text', 'text0', 'text', 'Menu OPEN'),
-			]),
-		],
-		actionSets: {
-			down: [
-				logicIf(
-					'menu-if',
-					[menuOpen('menu-cond')],
-					[raw('menu-close', conn, '81 01 06 06 03 FF')],
-					[raw('menu-open-cmd', conn, '81 01 06 06 02 FF')]
-				),
-			],
-			up: [],
-		},
-	})
-
 /** Zoom while held, at the derived zoom speed. */
 const zoomKey = (name, conn, icon, bytes, label) =>
 	key({
@@ -233,129 +216,44 @@ const onePushKey = (conn) =>
 		actionSets: { down: [raw('onepush-go', conn, '81 01 04 38 04 FF')], up: [] },
 	})
 
-const trackingKey = (conn) =>
-	key({
-		style: { icon: 'tracking', label: 'Track', bg: BG.key },
-		notes: 'Toggles the camera AI auto tracking. Green while on (as last set from this deck).',
-		feedbacks: [
-			when('track-on', `${cv(V.TRACKING)} == 1`, [
-				override('track-on-bg', 'box0', 'color', BG.engaged),
-				override('track-on-icon', 'image0', 'base64Image', '$(image:tracking-on)'),
-				override('track-on-text', 'text0', 'text', 'Track ON'),
-			]),
-		],
-		actionSets: {
-			down: [
-				logicIf(
-					'track-if',
-					[when('track-cond', `${cv(V.TRACKING)} == 1`)],
-					[raw('track-off', conn, '81 0A 01 32 00 00 03 00 FF'), setVar('track-set-off', V.TRACKING, '0')],
-					[raw('track-on-cmd', conn, '81 0A 01 32 00 00 02 00 FF'), setVar('track-set-on', V.TRACKING, '1')]
-				),
-			],
-			up: [],
-		},
-	})
-
-/** Cycle Auto → Shutter priority → Iris priority → Manual → Auto. */
-const exposureKey = (conn) => {
-	const mode = (id, val) => visca(id, conn, 'expM', { val: { value: val, isExpression: false } })
-	const is = (id, s) => when(id, `${field('ae')} == "${s}"`)
+/**
+ * A page jump. `set_page` with `surfaceId: self`, the same action the folder row uses.
+ *
+ * @param {string} prefix
+ * @param {{icon: string, label: string, notes: string}} look
+ * @param {number|string} pageNumber  destination page NUMBER; never 0, which Companion
+ *   reads as "the page you are on"
+ */
+export const navKey = (prefix, look, pageNumber) => {
+	if (Number(pageNumber) === 0 || pageNumber === undefined) throw new Error(`${prefix}: page number ${pageNumber} is not a destination`)
 	return key({
-		style: { icon: 'exposure', label: `concat('Exp ', ${field('ae')})`, bg: BG.key, labelIsExpression: true },
-		notes: 'Steps the exposure mode: Auto, Shutter priority, Iris priority, Manual, then back to Auto.',
+		style: { icon: look.icon, label: look.label, bg: BG.key },
+		notes: look.notes,
 		actionSets: {
 			down: [
-				logicIf('exp-if-auto', [is('exp-c-auto', 'Auto')], [mode('exp-shutter', '2')], [
-					logicIf('exp-if-shutter', [is('exp-c-shutter', 'Shutter')], [mode('exp-iris', '3')], [
-						logicIf('exp-if-iris', [is('exp-c-iris', 'Iris')], [mode('exp-manual', '1')], [mode('exp-auto', '0')]),
-					]),
-				]),
+				{
+					id: `${prefix}-go`,
+					definitionId: 'set_page',
+					connectionId: 'internal',
+					options: { surfaceId: { value: 'self', isExpression: false }, page: { value: String(pageNumber), isExpression: false } },
+					upgradeIndex: null,
+					type: 'action',
+				},
 			],
 			up: [],
 		},
 	})
 }
-
-/** Cycle Auto → Indoor (3000K) → Outdoor (4000K) → One push → Auto. */
-const whiteBalanceKey = (conn) => {
-	const mode = (id, val) => visca(id, conn, 'wb', { val: { value: val, isExpression: false } })
-	const is = (id, s) => when(id, `${field('wb')} == "${s}"`)
-	return key({
-		style: { icon: 'white-balance', label: `concat('WB ', ${field('wb')})`, bg: BG.key, labelIsExpression: true },
-		notes: 'Steps white balance: Auto, Indoor 3000K, Outdoor 4000K, One-push (measures now), then Auto.',
-		actionSets: {
-			down: [
-				logicIf('wb-if-auto', [is('wb-c-auto', 'Auto')], [mode('wb-indoor', 'indoor')], [
-					logicIf('wb-if-indoor', [is('wb-c-indoor', '3000K')], [mode('wb-outdoor', 'outdoor')], [
-						logicIf(
-							'wb-if-outdoor',
-							[is('wb-c-outdoor', '4000K')],
-							[mode('wb-onepush', 'onepush'), wait('wb-onepush-wait', 300), visca('wb-trigger', conn, 'wbOPT')],
-							[mode('wb-auto', 'automatic')]
-						),
-					]),
-				]),
-			],
-			up: [],
-		},
-	})
-}
-
-const backlightKey = (conn) =>
-	key({
-		style: { icon: 'backlight', label: `concat('BLC ', ${field('backlight')})`, bg: BG.key, labelIsExpression: true },
-		notes: 'Toggles backlight compensation. Green while on.',
-		feedbacks: [
-			when('blc-on', `${field('backlight')} == "On"`, [
-				override('blc-on-bg', 'box0', 'color', BG.engaged),
-				override('blc-on-icon', 'image0', 'base64Image', '$(image:backlight-on)'),
-			]),
-		],
-		actionSets: {
-			down: [
-				logicIf(
-					'blc-if',
-					[when('blc-cond', `${field('backlight')} == "On"`)],
-					[raw('blc-off', conn, '81 01 04 33 03 FF')],
-					[raw('blc-on-cmd', conn, '81 01 04 33 02 FF')]
-				),
-			],
-			up: [],
-		},
-	})
-
-const powerKey = (conn) =>
-	key({
-		style: { icon: 'ptz-power', label: `concat('Power ', ${field('power')})`, bg: BG.key, labelIsExpression: true },
-		notes: 'Toggles the camera between on and standby. Amber with a red glyph while in standby.',
-		feedbacks: [
-			when('power-standby', `${field('power')} == "Standby"`, [
-				override('power-standby-bg', 'box0', 'color', BG.notice),
-				override('power-standby-icon', 'image0', 'base64Image', '$(image:ptz-standby)'),
-				override('power-standby-text', 'text0', 'text', 'STANDBY'),
-			]),
-		],
-		actionSets: {
-			down: [
-				logicIf(
-					'power-if',
-					[when('power-cond', `${field('power')} == "On"`)],
-					[visca('power-off', conn, 'power', { bool: { value: 'off', isExpression: false } })],
-					[visca('power-on', conn, 'power', { bool: { value: 'on', isExpression: false } })]
-				),
-			],
-			up: [],
-		},
-	})
 
 /**
- * Build rows 1-3.
+ * Build rows 1-3 of the run page.
  *
- * @param {string} conn  the ptzoptics-visca connection id
+ * @param {string} conn   the ptzoptics-visca connection id
+ * @param {string} host   the camera address, for the web-API keys
+ * @param {{setup: number|string}} pages  page numbers the jumps land on
  * @returns {Record<number, Record<number, object>>} row → column → control
  */
-export function buildKeys(conn) {
+export function buildKeys(conn, host, pages) {
 	const presets = Object.fromEntries(PRESET_KEYS.map((n, i) => [3 + i, presetKey(n, conn)]))
 	return {
 		1: {
@@ -371,20 +269,20 @@ export function buildKeys(conn) {
 			3: homeKey(conn),
 			4: zoomKey('zi', conn, 'zoom-in', '81 01 04 07 20 FF', 'Zoom in'),
 			5: autofocusKey(conn),
-			6: trackingKey(conn),
-			7: whiteBalanceKey(conn),
+			6: trackKey(host),
+			7: framingKey(host, 'close'),
 			8: saveKey(),
 		},
 		3: {
 			0: driveKey('dl', conn, 'arrow-down-left', 'downLeft', null),
 			1: driveKey('d', conn, 'arrow-down', 'down', 'down'),
 			2: driveKey('dr', conn, 'arrow-down-right', 'downRight', null),
-			3: menuKey(conn),
+			3: navKey('setup', { icon: 'ptz-setup', label: 'Setup', notes: 'Opens the PTZ setup page: exposure, white balance, backlight, power and the tracking settings.' }, pages.setup),
 			4: zoomKey('zo', conn, 'zoom-out', '81 01 04 07 30 FF', 'Zoom out'),
 			5: onePushKey(conn),
-			6: exposureKey(conn),
-			7: backlightKey(conn),
-			8: powerKey(conn),
+			6: framingKey(host, 'half'),
+			7: framingKey(host, 'full'),
+			8: menuKey(conn),
 		},
 	}
 }

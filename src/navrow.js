@@ -151,10 +151,22 @@ export function navRow(currentPage, pageNumbers) {
 }
 
 /**
+ * Sub-pages: pages reached from inside one of the nine, never from the folder row.
+ *
+ * Their row 0 is the folder row with the PARENT marked current, so the deck still says where
+ * you are. Maps sub-page name → parent page name.
+ */
+export const SUB_PAGES = { 'PTZ Setup': 'PTZ' }
+
+/** The folder-row page a page belongs to: itself, or its parent for a sub-page. */
+export const folderFor = (pageName) => SUB_PAGES[pageName] ?? pageName
+
+/**
  * Check the deck's pages and the folder row agree, before anything is written.
  *
  * A page missing from NAV_ORDER is unreachable from the row — the exact bug this row exists to
- * prevent — so it is an error rather than a warning.
+ * prevent — so it is an error rather than a warning. Sub-pages are the one exception: they are
+ * reached from their parent, and their parent must be on the row.
  *
  * @throws listing whichever side is out of step
  */
@@ -163,7 +175,10 @@ export function assertNavCoverage(pageNames, columns) {
 		throw new Error(`folder row has ${NAV_ORDER.length} entries but the deck is ${columns} columns wide`)
 	}
 
-	const missing = pageNames.filter((n) => !NAV_ORDER.includes(n))
+	const orphans = pageNames.filter((n) => n in SUB_PAGES && !pageNames.includes(SUB_PAGES[n]))
+	if (orphans.length) throw new Error(`sub-pages whose parent page is missing: ${orphans.join(', ')}`)
+
+	const missing = pageNames.filter((n) => !NAV_ORDER.includes(n) && !(n in SUB_PAGES))
 	if (missing.length) throw new Error(`pages unreachable from the folder row: ${missing.join(', ')}`)
 
 	const phantom = NAV_ORDER.filter((n) => !pageNames.includes(n))

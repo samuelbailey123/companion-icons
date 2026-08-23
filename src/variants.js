@@ -235,6 +235,11 @@ const camera = [
 	icon('ptz-home', 'home', 'camera', 'camera', 'Camera home position'),
 	icon('ptz-power', 'power', 'camera', 'camera', 'Camera power'),
 	icon('ptz-standby', 'power', 'off', 'camera', 'Camera in standby'),
+	icon('frame-close', 'frame-close', 'camera', 'camera', 'Tracking framing: close-up'),
+	icon('frame-half', 'frame-half', 'camera', 'camera', 'Tracking framing: half body'),
+	icon('frame-full', 'frame-full', 'camera', 'camera', 'Tracking framing: full body'),
+	icon('ptz-setup', 'settings', 'camera', 'camera', 'Camera setup page'),
+	icon('ptz-back', 'back', 'camera', 'camera', 'Back to the camera page'),
 	icon('folder-ptz', 'folder-ptz', 'camera', 'folders', 'Open the PTZ camera page'),
 ]
 

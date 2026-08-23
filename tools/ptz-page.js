@@ -21,6 +21,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { buildConfig } from '../src/ptz/page.js'
 import { SCRIPT, SCRIPT_PATH } from '../src/ptz/poller.js'
+import { CREDENTIALS_FILE, SCRIPT as WEB_SCRIPT, SCRIPT_PATH as WEB_SCRIPT_PATH } from '../src/ptz/web.js'
 
 const [, , src, outDir] = process.argv
 if (!src || !outDir) {
@@ -29,10 +30,11 @@ if (!src || !outDir) {
 }
 
 const full = JSON.parse(await fs.readFile(src, 'utf8'))
-const { pages, custom_variables, triggers, pageNumber, connection } = buildConfig(full)
+const { pages, custom_variables, triggers, pageNumber, setupNumber, connection } = buildConfig(full)
 
 console.log(`  connection "${connection.label}"  ptzoptics-visca  ${connection.id}  host ${connection.host}`)
 console.log(`  page ${pageNumber}  "${full.pages[pageNumber].name}" -> "${pages[pageNumber].name}"`)
+console.log(`  page ${setupNumber}  "${full.pages[setupNumber]?.name ?? '(new)'}" -> "${pages[setupNumber].name}"`)
 for (const [n, page] of Object.entries(pages)) console.log(`  page ${n}  (${page.name.padEnd(6)}) folder row rebuilt`)
 
 await fs.mkdir(outDir, { recursive: true })
@@ -60,7 +62,10 @@ await fs.writeFile(
 
 const scriptFile = path.join(outDir, path.basename(SCRIPT_PATH))
 await fs.writeFile(scriptFile, SCRIPT)
+const webFile = path.join(outDir, path.basename(WEB_SCRIPT_PATH))
+await fs.writeFile(webFile, WEB_SCRIPT)
 
 console.log(`\nwrote ${path.basename(libraryFile)}, ${path.basename(pagesFile)} (${Object.keys(pages).length} pages, ` +
-	`${Object.keys(custom_variables).length} custom variables, ${Object.keys(triggers).length} triggers) ` +
-	`and ${path.basename(scriptFile)} -> copy to ${SCRIPT_PATH} on the Pi`)
+	`${Object.keys(custom_variables).length} custom variables, ${Object.keys(triggers).length} triggers), ` +
+	`${path.basename(scriptFile)} -> ${SCRIPT_PATH} and ${path.basename(webFile)} -> ${WEB_SCRIPT_PATH} on the Pi ` +
+	`(the latter reads user:pass from ${CREDENTIALS_FILE} beside it)`)

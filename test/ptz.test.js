@@ -3,14 +3,17 @@ import { cv, exec, expr, field, logicIf, override, raw, setVar, v, visca, wait, 
 import { BG, control, key, knob, layers, strip } from '../src/ptz/controls.js'
 import { DEFAULT_SPEED, SPEED, STATE, definitions, mergeDefinitions } from '../src/ptz/variables.js'
 import { DIRECTION, DRIVE_MS, KNOBS, ROWS, buildKnobs, driveCommand } from '../src/ptz/knobs.js'
-import { PRESET_KEYS, buildKeys } from '../src/ptz/keys.js'
+import { PRESET_KEYS, buildKeys, navKey } from '../src/ptz/keys.js'
 import { INTERVAL_SECONDS, SCRIPT, SCRIPT_PATH, TRIGGER_ID, pollTrigger } from '../src/ptz/poller.js'
-import { PAGE_NAME, REPLACES, buildConfig, buildPage, findConnection } from '../src/ptz/page.js'
+import { PAGE_NAME, REPLACES, SETUP_NAME, buildConfig, buildPage, buildSetupPage, findConnection } from '../src/ptz/page.js'
+import { TRIGGER_ID as TRACK_TRIGGER_ID } from '../src/ptz/web.js'
 import { KNOB_COLS, KNOB_ROW, STRIP_ROW } from '../src/layout.js'
 import { NAV_ORDER } from '../src/navrow.js'
 import { ICONS } from '../src/variants.js'
 
 const CONN = 'conn-test'
+const HOST = '10.0.0.9'
+const PAGES = { setup: 10, run: 9 }
 
 /** Every action reachable from a control, descending into logic_if children. */
 const allActions = (control) => {
@@ -210,7 +213,7 @@ describe('the knobs', () => {
 })
 
 describe('the keys', () => {
-	const rows = buildKeys(CONN)
+	const rows = buildKeys(CONN, HOST, PAGES)
 	const all = Object.values(rows).flatMap((r) => Object.values(r))
 
 	it('fill rows 1-3, nine across, with nothing rotary', () => {
@@ -267,26 +270,38 @@ describe('the keys', () => {
 		expect(af.steps[0].action_sets.down[0].children.else_actions[0].options.bol.value).toBe('0')
 
 		const track = rows[2][6]
-		expect(track.steps[0].action_sets.down[0].children.actions[0].options.custom.value).toBe('81 0A 01 32 00 00 03 00 FF')
-		expect(track.steps[0].action_sets.down[0].children.else_actions[0].options.custom.value).toBe('81 0A 01 32 00 00 02 00 FF')
+		expect(track.steps[0].action_sets.down[0].children.actions[0].options.path.value).toBe(`python3 /home/samuelbailey/Desktop/AV_Power_scripts/ptz_web.py ${HOST} track off`)
+		expect(track.steps[0].action_sets.down[0].children.else_actions[0].options.path.value).toContain('track on')
+		expect(track.steps[0].action_sets.down[0].children.actions[0].options.targetVariable.value).toBe('ptz_track')
 
-		const exposure = rows[3][6]
+		const setupRows = buildSetupPage(CONN, HOST, PAGES).controls
+		const exposure = setupRows[1][0]
 		const modes = allActions(exposure).filter((a) => a.definitionId === 'expM').map((a) => a.options.val.value)
 		expect(modes).toEqual(['2', '3', '1', '0'])
 
-		const wb = rows[2][7]
+		const wb = setupRows[1][1]
 		const wbModes = allActions(wb).filter((a) => a.definitionId === 'wb').map((a) => a.options.val.value)
 		expect(wbModes).toEqual(['indoor', 'outdoor', 'onepush', 'automatic'])
 		expect(allActions(wb).some((a) => a.definitionId === 'wbOPT')).toBe(true)
 
-		const backlight = rows[3][7]
+		const backlight = setupRows[1][2]
 		expect(allActions(backlight).map((a) => a.options.custom?.value).filter(Boolean)).toEqual(['81 01 04 33 03 FF', '81 01 04 33 02 FF'])
 
-		const power = rows[3][8]
+		const power = setupRows[1][3]
 		expect(allActions(power).filter((a) => a.definitionId === 'power').map((a) => a.options.bool.value)).toEqual(['off', 'on'])
 
-		const menu = rows[3][3]
+		const menu = rows[3][8]
 		expect(allActions(menu).map((a) => a.options.custom?.value).filter(Boolean)).toEqual(['81 01 06 06 03 FF', '81 01 06 06 02 FF'])
+
+		for (const [cell, which] of [[rows[2][7], 'close'], [rows[3][6], 'half'], [rows[3][7], 'full']]) {
+			expect(cell.steps[0].action_sets.down[0].options.path.value).toContain(`body ${which}`)
+			expect(cell.feedbacks[0].options.expression.value).toContain("jsonpath($(internal:custom_ptz_track), '$.body')")
+		}
+		const setup = rows[3][3]
+		expect(setup.steps[0].action_sets.down[0].definitionId).toBe('set_page')
+		expect(setup.steps[0].action_sets.down[0].options.page.value).toBe('10')
+		expect(() => navKey('x', { icon: 'ptz-setup', label: '', notes: '' }, 0)).toThrow(/not a destination/)
+		expect(() => navKey('x', { icon: 'ptz-setup', label: '', notes: '' }, undefined)).toThrow(/not a destination/)
 	})
 
 	it('zooms while held and homes on demand', () => {
@@ -352,26 +367,39 @@ describe('the page', () => {
 		expect(() => findConnection({})).toThrow(/no ptzoptics-visca connection/)
 	})
 
-	it('lays the page out on the full grid', () => {
-		const page = buildPage(CONN)
+	it('lays the pages out on the full grid', () => {
+		const page = buildPage(CONN, HOST, PAGES)
 		expect(page.name).toBe(PAGE_NAME)
 		expect(Object.keys(page.controls).map(Number).sort()).toEqual([1, 2, 3, STRIP_ROW, KNOB_ROW].sort())
 		expect(page.gridSize).toEqual({ minColumn: 0, maxColumn: 8, minRow: 0, maxRow: 5 })
+		const setup = buildSetupPage(CONN, HOST, PAGES)
+		expect(setup.name).toBe(SETUP_NAME)
+		expect(Object.keys(setup.controls)).toEqual(['1', '2'])
+		expect(Object.keys(setup.controls[1])).toHaveLength(9)
+		expect(Object.keys(setup.controls[2])).toHaveLength(6)
+		expect(setup.controls[1][8].steps[0].action_sets.down[0].options.page.value).toBe('9')
 	})
 
 	it('replaces Mics, rebuilds row 0 everywhere, merges variables and swaps the trigger', () => {
 		const out = buildConfig(rig())
 		expect(out.pageNumber).toBe('9')
+		expect(out.setupNumber).toBe('10')
 		expect(out.pages['9'].name).toBe('PTZ')
+		expect(out.pages['10'].name).toBe('PTZ Setup')
 		expect(out.pages['9'].controls[0][NAV_ORDER.indexOf('PTZ')].style.layers[3].text.value).toBe('PTZ')
+		// the sub-page's folder row marks its parent as current
+		expect(out.pages['10'].controls[0][NAV_ORDER.indexOf('PTZ')].style.layers[1].borderWidth.value).toBe(6)
+		expect(out.pages['10'].controls[0][NAV_ORDER.indexOf('Home')].style.layers[1].borderWidth.value).toBe(0)
+		expect(out.pages['9'].controls[3][3].steps[0].action_sets.down[0].options.page.value).toBe('10')
 		for (const n of ['1', '2', '3', '4', '5', '6', '7', '8']) {
 			expect(out.pages[n].controls[1][0].marker).toBe(rig().pages[n].name)
 			expect(Object.keys(out.pages[n].controls[0])).toHaveLength(9)
 		}
 		expect(out.custom_variables.vh_dest).toEqual(rig().custom_variables.vh_dest)
 		expect(out.custom_variables[SPEED]).toBeDefined()
-		expect(Object.keys(out.triggers).sort()).toEqual(['keep', TRIGGER_ID].sort())
+		expect(Object.keys(out.triggers).sort()).toEqual(['keep', TRIGGER_ID, TRACK_TRIGGER_ID].sort())
 		expect(out.triggers[TRIGGER_ID].actions[0].options.path.value).toContain('10.23.0.181')
+		expect(out.triggers[TRACK_TRIGGER_ID].actions[0].options.path.value).toContain('ptz_web.py 10.23.0.181 get')
 		expect(out.connection.id).toBe('abc')
 		expect(REPLACES).toBe('Mics')
 	})
@@ -381,6 +409,8 @@ describe('the page', () => {
 		delete once.pages['3'].controls
 		const twice = buildConfig({ ...rig(), pages: once.pages, triggers: once.triggers, custom_variables: once.custom_variables })
 		expect(twice.pages['9'].name).toBe('PTZ')
+		expect(twice.setupNumber).toBe('10')
+		expect(Object.keys(twice.pages)).toHaveLength(10)
 		expect(Object.keys(twice.pages['3'].controls)).toEqual(['0'])
 		expect(Object.keys(twice.triggers).filter((t) => t === TRIGGER_ID)).toHaveLength(1)
 	})
@@ -392,6 +422,6 @@ describe('the page', () => {
 		const bare = rig()
 		delete bare.triggers
 		delete bare.custom_variables
-		expect(Object.keys(buildConfig(bare).triggers)).toEqual([TRIGGER_ID])
+		expect(Object.keys(buildConfig(bare).triggers).sort()).toEqual([TRIGGER_ID, TRACK_TRIGGER_ID].sort())
 	})
 })

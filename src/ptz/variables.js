@@ -27,8 +27,8 @@ export const PRESET = 'ptz_preset'
 export const LAST_PRESET = 'ptz_last'
 /** 1 while the next preset press will SAVE rather than recall. */
 export const ARMED = 'ptz_armed'
-/** 1 while auto tracking has been switched on from the deck. The camera cannot be asked. */
-export const TRACKING = 'ptz_tracking'
+/** The camera's AI-tracking settings as one JSON document, from `ptz_web.py` (see web.js). */
+export const TRACK = 'ptz_track'
 /** The ATEM input the camera is plugged into, so the stop key can show its tally. */
 export const ATEM_INPUT = 'ptz_atem_input'
 
@@ -62,7 +62,7 @@ export function definitions() {
 		[PRESET]: persistent('PTZ preset number on the Preset dial, 1-254', '1'),
 		[LAST_PRESET]: persistent('PTZ preset most recently recalled or saved from the deck', ''),
 		[ARMED]: persistent('1 while the next PTZ preset press saves instead of recalling', '0'),
-		[TRACKING]: persistent('1 while PTZ auto tracking was last switched on from the deck', '0'),
+		[TRACK]: live('PTZ AI-tracking settings as JSON from the camera web API: tracking, body, mode, speed, sensitivity, placement, headroom, lost'),
 		[ATEM_INPUT]: persistent('ATEM input number the PTZ camera is on, for tally on the Stop key', '8'),
 		[STATE]: live('PTZ camera state as JSON, polled every second: online, pan, tilt, zoom, focus, ae, wb, backlight, power, menu'),
 	}

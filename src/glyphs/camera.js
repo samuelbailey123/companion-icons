@@ -138,4 +138,20 @@ export default {
 	menu: {
 		paths: ['M24 34 H96', 'M24 60 H96', 'M24 86 H96'],
 	},
+
+	/**
+	 * Tracking framings: how much of the person the camera keeps in shot. The figure grows
+	 * as the framing tightens, so the three read as one scale rather than three pictures.
+	 */
+	'frame-close': {
+		paths: [...CORNERS, { circle: [60, 60, 22] }],
+	},
+
+	'frame-half': {
+		paths: [...CORNERS, { circle: [60, 46, 13] }, 'M36 94 A24 24 0 0 1 84 94'],
+	},
+
+	'frame-full': {
+		paths: [...CORNERS, { circle: [60, 34, 9] }, 'M44 54 H76 M60 43 V66 L48 92 M60 66 L72 92'],
+	},
 }

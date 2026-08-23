@@ -13,27 +13,37 @@
  */
 
 import { COLUMNS, GRID_SIZE } from '../layout.js'
-import { assertNavCoverage, navRow } from '../navrow.js'
+import { assertNavCoverage, folderFor, navRow } from '../navrow.js'
 import { buildKeys } from './keys.js'
 import { buildKnobs, ROWS } from './knobs.js'
 import { TRIGGER_ID, pollTrigger } from './poller.js'
+import { PAGE_NAME as SETUP_NAME, buildSetupKeys } from './setup.js'
 import { mergeDefinitions } from './variables.js'
+import { TRIGGER_ID as TRACK_TRIGGER_ID, trackingTrigger } from './web.js'
 
 export const PAGE_NAME = 'PTZ'
 export const REPLACES = 'Mics'
+export { SETUP_NAME }
 
 /**
- * The PTZ page content, rows 1-5. Row 0 is added by `buildConfig`, which knows the page numbers.
+ * The PTZ run page, rows 1-5. Row 0 is added by `buildConfig`, which knows the page numbers.
  *
- * @param {string} conn  the ptzoptics-visca connection id
+ * @param {string} conn   the ptzoptics-visca connection id
+ * @param {string} host   camera address
+ * @param {{setup: number|string}} pages
  */
-export function buildPage(conn) {
+export function buildPage(conn, host, pages) {
 	const { strips, knobs } = buildKnobs(conn)
 	return {
 		name: PAGE_NAME,
-		controls: { ...buildKeys(conn), [ROWS.strip]: strips, [ROWS.knob]: knobs },
+		controls: { ...buildKeys(conn, host, pages), [ROWS.strip]: strips, [ROWS.knob]: knobs },
 		gridSize: { ...GRID_SIZE },
 	}
+}
+
+/** The setup sub-page, rows 1-2. */
+export function buildSetupPage(conn, host, pages) {
+	return { name: SETUP_NAME, controls: buildSetupKeys(conn, host, pages), gridSize: { ...GRID_SIZE } }
 }
 
 /**
@@ -63,28 +73,40 @@ export function buildConfig(full) {
 	const [pageNumber] = target
 
 	const pages = structuredClone(full.pages)
-	pages[pageNumber] = buildPage(connection.id)
+	/*
+	 * The setup sub-page takes the slot it already has, or the first number past the last
+	 * page. Companion's full import inserts pages up to the highest number in the bundle, so a
+	 * new tenth page needs nothing more than being present as "10".
+	 */
+	const existingSetup = Object.entries(pages).find(([, p]) => p.name === SETUP_NAME)?.[0]
+	const setupNumber = existingSetup ?? String(Math.max(...Object.keys(pages).map(Number)) + 1)
+	const numbers = { setup: setupNumber, run: pageNumber }
+
+	pages[pageNumber] = buildPage(connection.id, connection.host, numbers)
+	pages[setupNumber] = buildSetupPage(connection.id, connection.host, numbers)
 
 	const pageNumbers = Object.fromEntries(Object.entries(pages).map(([n, p]) => [p.name, Number(n)]))
 	assertNavCoverage(Object.values(pages).map((p) => p.name), COLUMNS)
 
 	for (const page of Object.values(pages)) {
 		page.controls ??= {}
-		page.controls[0] = navRow(page.name, pageNumbers)
+		page.controls[0] = navRow(folderFor(page.name), pageNumbers)
 	}
 
 	const triggers = structuredClone(full.triggers ?? {})
-	const trigger = pollTrigger(connection.host)
-	for (const [id, t] of Object.entries(triggers)) {
-		if (t?.options?.name === trigger.options.name) delete triggers[id]
+	for (const [id, trigger] of [[TRIGGER_ID, pollTrigger(connection.host)], [TRACK_TRIGGER_ID, trackingTrigger(connection.host)]]) {
+		for (const [existing, t] of Object.entries(triggers)) {
+			if (t?.options?.name === trigger.options.name) delete triggers[existing]
+		}
+		triggers[id] = trigger
 	}
-	triggers[TRIGGER_ID] = trigger
 
 	return {
 		pages,
 		custom_variables: mergeDefinitions(full.custom_variables),
 		triggers,
 		pageNumber,
+		setupNumber,
 		connection,
 	}
 }
