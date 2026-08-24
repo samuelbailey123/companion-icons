@@ -29,14 +29,18 @@ All measured off the 2026-08-23 recording. Evidence in
 
 1. **The chain delivers 29.97p motion inside a 59.94p file.** Every second frame is a
    duplicate, on every camera. Costs nothing to fix and is the biggest single
-   image-quality win available. **Not yet traced to a box** — start at the switcher.
+   image-quality win available. Since the HD8 records its own program feed, it is in one
+   of only **two** places: a camera's output format, or the switcher's video standard.
 2. **White clips with no highlight rolloff.** 79% of the speaker's white shirt sits flat
    at the 235 ceiling with nothing recoverable. Needs the camera's knee enabled and
    zebras used. **Do not fix this by stopping down** — see the correction in findings.
 3. **Cameras are not matched to each other.** Skin level varies noticeably between the
-   wide and close shots of the same subject in the same service.
+   wide and close shots of the same subject in the same service. Both static cameras are
+   unmanned, so their framing and exposure are whatever they were last left at —
+   which also means fixing them is a one-off job, not a weekly discipline.
 4. **Audio is clipped at the desk** — −8 to −11.8 LUFS and up to +3.5 dBTP, so distortion
-   is baked in before post sees it.
+   is baked in before post sees it. The stream shares that path, so it went out live
+   distorted too.
 5. **The PTZ makes long moves live on air** — a continuous four-minute zoom during
    worship with no cut away from it.
 6. **A 7.6 s recording gap** between segments 02 and 03 — a manual stop/start mid-service.

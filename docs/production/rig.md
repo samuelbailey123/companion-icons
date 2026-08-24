@@ -11,7 +11,7 @@ the page it emits, so the page layouts here are authoritative. Anything marked
 | | |
 |---|---|
 | Companion | v5 on a Raspberry Pi (`internal:hostname` reads `CompanionPi`) |
-| Address | **http://10.23.0.242:8000** — church network only, not reachable off-site |
+| Address | **http://10.23.0.242:8000** on the AV LAN — see Network below. Not reachable off-site |
 | Surfaces | Stream Deck + and Stream Deck XL. The XL grid is 9 columns; row 0 is the folder row on every page, row 4 the touchstrip, row 5 the encoders |
 | Config in/out | `node tools/rig.js export <out.json>` reads the live config; `import` pushes selected sections. See the header of that file for why it exists and why it never touches `connections` or `userconfig` |
 | Backup | `tools/rig.js export` **is** the backup. Run it before any change |
@@ -47,15 +47,38 @@ Nine, each with the folder row across the top.
 | grandMA2 | Lighting | TODO(sam) |
 | Shure ULXD4Q × 4 | Wireless, 16 channels | TODO(sam) |
 | ProPresenter | Presentation | TODO(sam) |
-| Cameras | 2 manned + 1 PTZ | TODO(sam) — makes and models |
+| Cameras | 2 fixed static (unmanned) + 1 PTZ, second PTZ going in | TODO(sam) — makes and models |
 | Raspberry Pi | Companion host | 10.23.0.242 |
+
+## Network
+
+**10.23.0.x is a dedicated AV LAN** — church production gear only, nothing else on it. It
+covers roughly half the building, with a direct line to backstage.
+
+That is the right design, and it is also why none of this is readable from off-site: being
+on church wifi is not enough, you have to be on that LAN. Anything that needs the live
+Companion (`tools/rig.js export`, reading connection addresses, checking the ATEM's video
+standard) has to happen on site.
+
+## Video outputs
+
+| Output | Feeds |
+|---|---|
+| AUX 1 | The LED wall **and** the two projectors either side of it |
+| AUX 2 | The back-wall projector |
+
+Both AUXes are therefore in use. **They are not immovable:** the back-wall projector could
+be fed from the VideoHub instead — take the switcher's output into the router and route it
+to that projector — which frees AUX 2. Worth doing only if there is a use case that earns
+it; see the ISO section below.
 
 Credentials do not go in this file. Record **where** they live — a password manager entry
 name — not what they are.
 
 ## The ISO problem
 
-The HD8 is the **plain** variant, so it records the **program feed only**. That has a
+The HD8 is the **plain** variant, and it records its own **program feed only** — there is
+no separate recorder in the chain at all. That has a
 direct consequence for post, and it is the single biggest constraint on making clips:
 
 > Every clip inherits whatever the operator cut to at that moment. There is no second
@@ -66,14 +89,16 @@ This bit us on 2026-08-23: the best line in the sermon landed while the switcher
 the house-wide, so the vertical crop for that clip had to follow the speaker across
 1074 px of stage instead of sitting on a clean close-up.
 
-Three ways out, cheapest first:
+The cameras cannot help here: all three go SDI straight into the switcher and none of
+them records locally. So the only routes to a clean tight angle are:
 
-1. **Record a camera's own output separately.** Many PTZs record to SD or publish an
-   RTSP/NDI stream that can be recorded on the Pi or any spare machine. Costs nothing if
-   the camera already does it — check the PTZ's spec first.
-2. **Feed an AUX output to a second recorder.** The HD8 has AUX; park a locked tight shot
-   on it and record that alongside the program feed.
-3. **Cut better.** Free, but it makes every future clip dependent on live decisions.
+1. **Free AUX 2 via the VideoHub** (reroute the back-wall projector, as above), park a
+   locked tight shot on it — and record it. **That last part needs a device that does not
+   currently exist in the rig.** The Pi could potentially do it with a capture input, or a
+   cheap standalone SDI recorder would.
+2. **Cut better.** Free, but every future clip stays dependent on live decisions.
 
-A locked, tight, never-cut shot of the speaker is what makes clips and vertical reframing
-trivial. Option 1 or 2 gets it without buying a camera.
+Be honest about the cost: option 1 is a reroute plus a recorder plus a camera dedicated to
+not being on program. That is real money and a real constraint for a benefit that is
+mostly about social clips. It is worth doing if clips matter; it is not worth doing to fix
+one bad week.

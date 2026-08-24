@@ -18,6 +18,16 @@ decoded audio reaches ±1.367 on file 03. Post cannot undo that.
 Being 6 LU hot buys nothing. Every platform normalises it back down and you keep the
 distortion.
 
+## The stream is affected too
+
+**The livestream and the recording come off the same audio path.** So the +3.5 dBTP
+clipping measured on the 23rd did not just land in the recording — it went out live as
+well, and everyone watching heard it.
+
+That raises the priority of the limiter: it is not a post-production convenience, it is
+the only thing standing between a hot desk and distortion reaching the congregation
+online. It also means one fix covers both outputs.
+
 ## At the desk
 
 - Pull the feed to the recorder down about **6 dB**.
@@ -36,5 +46,3 @@ this — see `Services/_tools/02-grade-join.sh` on the media drive.
 
 - [ ] Which SQ7 output feeds the recorder, and at what level
 - [ ] Is there a limiter on that path already?
-- [ ] Is the stream feed the same path as the recording feed? (the Stream and MAIN
-      readouts on the SQ7 page suggest not)
