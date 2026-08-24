@@ -39,7 +39,8 @@ All measured off the 2026-08-23 recording. Evidence in
    is baked in before post sees it.
 5. **The PTZ makes long moves live on air** — a continuous four-minute zoom during
    worship with no cut away from it.
-6. **A 7.6 s recording gap** between segments 02 and 03, cause unknown.
+6. **A 7.6 s recording gap** between segments 02 and 03 — a manual stop/start mid-service.
+   Nothing on the deck shows record state, so it went unnoticed until post.
 7. **No ISO recording** (plain HD8), so every clip inherits the live cut. See rig.md.
 
 Post can hide 6, partly compensate for 3, and do nothing at all about 1 or 2 — those are

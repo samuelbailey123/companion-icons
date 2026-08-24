@@ -27,17 +27,24 @@ A **7.6 second gap** appeared between segments 02 and 03 on 2026-08-23 — file 
 position across the join. The 01→02 split was a clean 0.5 s file roll, so the recorder
 *can* split seamlessly.
 
-Find out whether that was a manual stop or the recorder rolling over. If it rolls over,
-check media health and confirm seamless splitting is enabled.
+**Cause: known.** It was a manual stop/start by the operator mid-service, not the
+recorder rolling over and not a media fault. So seamless splitting is not implicated and
+the media is not suspect.
 
-Companion could catch this next time: a key that goes red when recording stops would have
-surfaced it live. The ATEM page already has a guarded Record key and the ATEM publishes
-`$(atem:record_duration_hm)`.
+The useful fix is not "be more careful" — it is making the mistake visible and hard to
+make. Two things, both cheap:
+
+1. **A record-state indicator on the deck.** The ATEM publishes
+   `$(atem:record_duration_hm)`, so a key that goes red the moment recording stops would
+   have surfaced this within seconds instead of after the service. Nothing on the deck
+   currently shows record state at a glance.
+2. **The Record key is already two-step guarded** (first press arms, second fires) — the
+   same guard the Stream key has. Worth confirming that guard is what shipped, since an
+   accidental single-press stop is exactly the failure this was.
 
 ## TODO(sam)
 
 - [ ] Exact recorder model
 - [ ] Current input and record format settings
 - [ ] Can it do High profile? Higher audio bitrate?
-- [ ] What caused the stop/start between segments 02 and 03 on 2026-08-23?
 - [ ] Media type, and how full it was
