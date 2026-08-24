@@ -24,8 +24,11 @@ Check in this order and find the one box that is not 59.94:
 
 1. Each camera's own output format — in the camera menu, not the ATEM's display
 2. **ATEM video standard**
-3. Recorder input format **and** record format
-4. Any converter, scaler or extender in the path
+3. Any converter, scaler or extender in the path
+
+There is **no separate recorder** — the HD8 records its own program feed — so the fault is
+in one of only two places: a camera's output format, or the switcher's video standard.
+That is a much shorter hunt than it first looked.
 
 If the chain genuinely cannot do 59.94 end to end, then **record 29.97 deliberately** —
 same motion, half the file size. What you must not do is record doubled 59.94.
@@ -34,5 +37,20 @@ same motion, half the file size. What you must not do is record doubled 59.94.
 
 - [ ] Current video standard setting — the actual value, before changing anything
 - [ ] Input mapping: which camera on which input
-- [ ] Is tally wired up? (the ATEM page already carries program and preview feedbacks)
-- [ ] Is an AUX output free for a locked tight shot to a second recorder?
+- [ ] Can it be set to H.264 High profile, and a higher audio bitrate?
+
+## Tally
+
+**Not wired.** No camera shows whether it is live. Since two cameras are static and
+unmanned that matters less than it sounds — but it is exactly the gap behind the PTZ
+being zoomed for four minutes on air.
+
+The deck covers it in practice: the ATEM page already carries program and preview
+feedbacks, so whoever is driving the PTZ can see what is live before touching it. Worth
+knowing that is the only indication there is.
+
+## Outputs
+
+AUX 1 feeds the LED wall and the two flanking projectors; AUX 2 feeds the back-wall
+projector. Both in use, but AUX 2 can be freed by rerouting the back-wall projector
+through the VideoHub — see rig.md.
