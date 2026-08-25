@@ -38,6 +38,10 @@ npm run coverage  # coverage report, 99% threshold enforced
 npm run build     # → dist/svg/ and dist/library.companionconfig
 ```
 
+Page tools in `tools/` read a live export and emit `.companionconfig` bundles; `tools/rig.js`
+exports from and imports to the rig over Companion's own admin API, one section at a time
+(`node tools/rig.js import <bundle> buttons,triggers`), leaving everything unselected untouched.
+
 ## Importing into Companion
 
 1. **Take a full backup first** — Settings → Export → Full backup.

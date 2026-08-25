@@ -39,6 +39,7 @@ describe('glyph shapes', () => {
 	it('exposes collections as Companion image-library folders', () => {
 		expect(Object.keys(COLLECTIONS).sort()).toEqual([
 			'audio',
+			'camera',
 			'folders',
 			'power',
 			'present',
@@ -58,7 +59,7 @@ describe('glyph shapes', () => {
 			'page-up', 'page-down', 'home', 'back', 'macro', 'lock', 'blank', 'settings', 'alert',
 			// video
 			'camera', 'program', 'preview', 'cut', 'auto', 'ftb', 'dsk', 'key', 'aux', 'tally',
-			'macro-run', 'macro-stop', 'transition', 'still',
+			'macro-run', 'macro-stop', 'transition', 'still', 'brightness',
 			// routing
 			'route', 'take', 'unlock', 'source', 'destination', 'matrix', 'route-locked',
 			// present
@@ -66,16 +67,25 @@ describe('glyph shapes', () => {
 			'clear-props', 'clear-audio', 'logo', 'stage-display', 'message', 'timer-start',
 			'timer-stop', 'timer-reset', 'media', 'prop', 'playlist',
 			'focus-next', 'focus-prev',
+			'green-wall', 'water-calm', 'water-storm', 'thunder',
+			'clear-messages', 'clear-announce', 'clear-media', 'clear-video',
+			'executor',
 			// audio
 			'speaker', 'mute', 'fader', 'mix', 'scene-recall', 'gain', 'aux-send', 'talkback',
 			'pfl', 'phantom', 'meter', 'dca', 'mono', 'mains',
 			// folders
 			'folder-power', 'folder-present', 'folder-lighting', 'folder-video',
-			'folder-audio', 'folder-routing', 'folder-system',
+			'folder-audio', 'folder-routing', 'folder-system', 'folder-wireless',
 			// system
-			'cpu', 'thermometer', 'memory', 'disk', 'clock',
+			'cpu', 'thermometer', 'memory', 'disk', 'clock', 'network',
 			// wireless
 			'mic', 'mic-muted', 'tx-fault', 'battery', 'rf',
+			// camera
+			'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right',
+			'arrow-up-left', 'arrow-up-right', 'arrow-down-left', 'arrow-down-right',
+			'ptz', 'pan', 'tilt', 'stop', 'zoom-in', 'zoom-out', 'focus', 'focus-auto', 'speed',
+			'preset', 'preset-save', 'tracking', 'exposure', 'backlight', 'menu', 'folder-ptz',
+			'frame-close', 'frame-half', 'frame-full',
 		]
 		expect(Object.keys(SHAPES).sort()).toEqual([...expected].sort())
 	})

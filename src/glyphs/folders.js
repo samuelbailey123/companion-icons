@@ -13,7 +13,12 @@
  * so tall or dense glyphs do not work in it: `mix` (full-height faders) broke out through the
  * folder's top edge at every usable scale, and `matrix` collapsed into a solid blob once its
  * grid fell below a few pixels. Both were rejected in favour of compact, wide emblems that
- * sit inside the body cleanly. Check any replacement at 120px before adopting it.
+ * sit inside the body cleanly.
+ *
+ * CHECK ANY REPLACEMENT AT THE REAL KEY SIZE, not at 120px. The image layer on the home page
+ * is 100x56 percent of a 120px key, so a square emblem SVG fits to roughly 67x67 — a third
+ * of the size these are authored at. Detail that survives a 120px preview can still close up
+ * on the deck.
  */
 import power from './power.js'
 import video from './video.js'
@@ -21,6 +26,8 @@ import present from './present.js'
 import audio from './audio.js'
 import routing from './routing.js'
 import system from './system.js'
+import wireless from './wireless.js'
+import camera from './camera.js'
 
 /**
  * The folder outline: a tab rising on the left, then a rounded body.
@@ -66,4 +73,7 @@ export default {
 	'folder-audio': withEmblem(audio['speaker'].paths),
 	'folder-routing': withEmblem(routing['route'].paths),
 	'folder-system': withEmblem(system['cpu'].paths),
+	'folder-wireless': withEmblem(wireless['mic'].paths),
+	// The four-way move mark, not the camera body: that already opens the ATEM folder.
+	'folder-ptz': withEmblem(camera['ptz'].paths),
 }

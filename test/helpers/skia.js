@@ -77,27 +77,11 @@ export function touchesMargin({ data, width, height }, fraction) {
 	return false
 }
 
-/**
- * WCAG relative luminance of a hex colour.
- * @param {string} hex
- * @returns {number}
+/*
+ * Contrast lives in `src/wiring.js` and is re-exported here.
+ *
+ * It used to be a second copy in this file. Two implementations of the WCAG formula in a
+ * project whose entire premise is contrast is exactly the pair that drifts — and the day they
+ * disagree, the tests pass while the deck ships an illegible key.
  */
-function luminance(hex) {
-	const n = parseInt(hex.replace('#', ''), 16)
-	const channels = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
-		const s = v / 255
-		return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
-	})
-	return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
-}
-
-/**
- * WCAG contrast ratio between two hex colours, 1..21.
- * @param {string} a
- * @param {string} b
- * @returns {number}
- */
-export function contrastRatio(a, b) {
-	const [lighter, darker] = [luminance(a), luminance(b)].sort((p, q) => q - p)
-	return (lighter + 0.05) / (darker + 0.05)
-}
+export { contrastRatio } from '../../src/wiring.js'

@@ -5,8 +5,20 @@ import { SHAPES } from '../src/glyphs/index.js'
 import { isLabelValid, makeLabelSafe } from './helpers/labelsafe.js'
 
 describe('icon inventory', () => {
-	it('contains exactly 140 icons', () => {
-		expect(ICONS).toHaveLength(140)
+	it('contains exactly 233 icons', () => {
+		expect(ICONS).toHaveLength(233)
+	})
+
+	/**
+	 * The VW page's brightness knob renders `$(image:brightness)`. A rename here would leave
+	 * that key blank on the deck with no error anywhere — the exact silent failure the image
+	 * library's variable indirection makes possible.
+	 */
+	it('keeps the brightness icon the VW knob references', () => {
+		const brightness = ICONS.find((i) => i.name === 'brightness')
+		expect(brightness).toBeDefined()
+		expect(brightness.collection).toBe('video')
+		expect(SHAPES).toHaveProperty(brightness.shape)
 	})
 
 	it('has no duplicate names', () => {
@@ -34,10 +46,11 @@ describe('icon inventory', () => {
 		}
 	})
 
-	it('assigns every icon to one of the ten collections', () => {
+	it('assigns every icon to one of the eleven collections', () => {
 		const collections = new Set(ICONS.map((i) => i.collection))
 		expect([...collections].sort()).toEqual([
 			'audio',
+			'camera',
 			'contrast',
 			'folders',
 			'power',
@@ -54,15 +67,16 @@ describe('icon inventory', () => {
 		const counts = {}
 		for (const i of ICONS) counts[i.collection] = (counts[i.collection] ?? 0) + 1
 		expect(counts).toEqual({
-			contrast: 14,
-			folders: 7,
-			system: 5,
+			contrast: 54,
+			folders: 9,
+			camera: 35,
+			system: 8,
 			power: 17,
-			video: 34,
+			video: 35,
 			routing: 7,
-			present: 19,
+			present: 30,
 			audio: 14,
-			wireless: 14,
+			wireless: 15,
 			utility: 9,
 		})
 	})
