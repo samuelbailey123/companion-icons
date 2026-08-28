@@ -48,6 +48,9 @@ carrying no new picture, and it is what is wrong today.
 - [ ] Seamless file splitting confirmed on
 - [ ] Enough space on the media, and the media is healthy
 - [ ] `node tools/rig.js export` run, so there is a current Companion backup
+- [ ] **Every connection on the deck is green** — addresses drift, and on 2026-08-28 three
+      of the four Shure receivers were silently pointing at dead hosts. Companion's status
+      dots lie about this, so check a readout on each page rather than the connections list
 - [ ] Deck is on the page you want to start from (it resumes wherever it was left)
 
 ### Operators

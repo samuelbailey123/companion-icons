@@ -34,13 +34,18 @@ media, not disk space — all three are cleared.
 The useful fix is not "be more careful". It is making the mistake visible and hard to
 make, and there are two cheap moves:
 
-1. **A record-state indicator on the deck.** The ATEM publishes
-   `$(atem:record_duration_hm)`, so a key that goes red the moment recording stops would
-   have surfaced this in seconds rather than in post. Nothing currently shows record state
-   at a glance.
-2. **Confirm the Record key's two-step guard shipped** — first press arms, second fires,
-   the same guard the Stream key has. An accidental single press is exactly this failure.
+1. **A record-state indicator on the deck. — Shipped.** Both Home `2,3` and ATEM `3,1`
+   carry a Record key showing `$(atem:record_duration_hm)` with the module's own
+   `recordStatus` feedback colouring it, so a stopped recording is now visible at a glance
+   on two pages.
+2. **The Record key's two-step guard did not ship.** Checked against the live config on
+   2026-08-28: the Stream key has two steps — arm, then fire — and the Record key beside
+   it has one, going straight into `recordStartStop` on a single press. An accidental
+   single press is exactly this failure, and it is still one press away. **This is the
+   open half of the fix.**
 
 ## TODO(sam)
+
+Needs ATEM Software Control — Companion publishes nothing about the encoder.
 
 - [ ] Can the HD8 be set to High profile? A higher audio bitrate?

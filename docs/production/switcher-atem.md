@@ -3,6 +3,11 @@
 The **plain** HD8, not the ISO variant. It records the program feed only; see the ISO
 section in [rig.md](rig.md) for what that costs and how to work around it.
 
+At **10.23.0.31**, control on UDP 9910. It also answers the Blackmagic routing protocol on
+TCP 9990, which reports its unique ID as `1947523eab1a4015aa81b6a4ae2dfe43` — the same
+uuid stamped into the recording files, so there is no doubt this is the box that records
+the service.
+
 Driven from the ATEM page: program bus over preview bus, CUT and AUTO at column 8, and
 two-step guarded Stream and Record keys (first press arms, second fires). The model spec
 in the `bmd-atem` module declares `streaming: true` and `recording: true`, which is what
@@ -33,10 +38,33 @@ That is a much shorter hunt than it first looked.
 If the chain genuinely cannot do 59.94 end to end, then **record 29.97 deliberately** —
 same motion, half the file size. What you must not do is record doubled 59.94.
 
+## Input mapping
+
+Read off the switcher on 2026-08-28.
+
+| Input | Label | On the deck |
+|---|---|---|
+| 1 | Camera 1 | program + preview |
+| 2 | Camera 2 | program + preview |
+| 3 | Camera 3 | program + preview |
+| 4 | Camera 4 | program + preview |
+| 5 | Words Overlay | program + preview |
+| 6 | PP1B | program + preview |
+| 7 | PP1 | program + preview |
+| 8 | Camera 8 — **the PTZ** | **nothing** |
+| 3010 | Media Player 1 | program + preview, in the eighth slot |
+
+Inputs 1–8 all report BNC connected. **The PTZ is the one source you cannot cut to from
+the deck**: the eighth key on each bus is Media Player 1, not input 8. Worth fixing before
+the second PTZ goes in.
+
 ## TODO(sam)
 
+Neither of these is readable over the network — Companion exposes no variable for the
+video standard or the encoder settings, so both need ATEM Software Control or the front
+panel.
+
 - [ ] Current video standard setting — the actual value, before changing anything
-- [ ] Input mapping: which camera on which input
 - [ ] Can it be set to H.264 High profile, and a higher audio bitrate?
 
 ## Tally

@@ -24,10 +24,24 @@ Better than a 4600K preset: white-balance all of them off the same white card he
 preaching position, then lock. That matches them *to each other*, which is the actual
 problem — see fault 3 in the README.
 
-**TODO(sam): are they currently manual or auto?** White balance measured stable across the
-23rd, so AWB at least appears locked. Iris could not be tested independently of the shots
-being differently framed. PTZs in particular ship with everything on auto, and that is
-most of why PTZ footage tends to look worse than the cameras beside it.
+**The PTZ is on auto for everything.** Read straight off the camera on 2026-08-28 through
+the poller the deck already runs (`ptz_state.py`, surfaced as `$(internal:custom_ptz_state)`):
+
+```json
+{"online":"OK","pan":"-10.4°","tilt":"-1.9°","zoom":"57%",
+ "focus":"Auto","ae":"Auto","wb":"Auto","backlight":"Off","power":"On"}
+```
+
+Auto focus, auto exposure, auto white balance. That is the prediction in this file
+confirmed on the actual camera, and it is the most likely single reason PTZ shots do not
+cut with the statics. **The PTZ Setup page already has keys for all three** — Exp, WB and
+the tracking controls — so switching them to manual is a job on the deck, not in a camera
+menu.
+
+**The two static cameras are still unknown.** They are not on the network — both go SDI
+straight into the switcher — so nothing about them can be read remotely. White balance
+measured stable across the 23rd, so AWB at least appears locked. Iris could not be tested
+independently of the shots being differently framed.
 
 ## Exposure targets
 
@@ -76,9 +90,19 @@ Going in soon. Two notes:
   matched to each other will cut together far better than either matched to the static
   cameras.
 
+## Answered on 2026-08-28
+
+- **The PTZ is a PTZOptics**, driven over VISCA-on-IP at `10.23.0.181:5678`, with a web
+  interface on port 80 that the tracking poller uses.
+- **Iris, exposure, white balance and focus are all on auto** on that PTZ — see above.
+- **Which camera is on which ATEM input**, from the switcher's own labels:
+  1 Camera 1, 2 Camera 2, 3 Camera 3, 4 Camera 4, 5 Words Overlay, 6 PP1B, 7 PP1,
+  8 Camera 8 — input 8 being the PTZ, per the deck's `ptz_atem_input`.
+
 ## TODO(sam)
 
-- [ ] Makes and models: the two static cameras and both PTZs
-- [ ] Are iris, gain and white balance currently manual or auto on each?
+Everything left needs hands on a camera; none of it is on the network.
+
+- [ ] Makes and models of the two static cameras (and of the second PTZ when it lands)
+- [ ] Are iris, gain and white balance manual or auto on each **static** camera?
 - [ ] Current shutter speed on each
-- [ ] Which camera is on which ATEM input

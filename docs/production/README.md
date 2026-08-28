@@ -11,7 +11,7 @@ writes the live Companion. See [rig.md](rig.md) for the topology.
 
 | File | What's in it |
 |---|---|
-| [rig.md](rig.md) | Every device, its page, and how Companion is addressed and backed up |
+| [rig.md](rig.md) | Every device and address, every page, how Companion is backed up — and the open configuration faults |
 | [cameras.md](cameras.md) | Per-camera settings, exposure targets, framing discipline |
 | [switcher-atem.md](switcher-atem.md) | The 59.94 check — the current worst fault lives here |
 | [audio.md](audio.md) | Levels, limiter, and the AAC true-peak trap |
@@ -44,8 +44,18 @@ All measured off the 2026-08-23 recording. Evidence in
 5. **The PTZ makes long moves live on air** — a continuous four-minute zoom during
    worship with no cut away from it.
 6. **A 7.6 s recording gap** between segments 02 and 03 — a manual stop/start mid-service.
-   Nothing on the deck shows record state, so it went unnoticed until post.
+   Record state is now shown on the deck, on both Home and the ATEM page, so a repeat
+   would be visible within seconds. **But the Record key still has no two-step guard**, so
+   the mistake is still one stray press away — see recorder.md.
 7. **No ISO recording** (plain HD8), so every clip inherits the live cut. See rig.md.
+8. **The PTZ is on auto exposure, auto white balance and auto focus** — read off the
+   camera on 2026-08-28. It is the reason PTZ shots do not cut with the statics, and the
+   PTZ Setup page can fix all three without touching a camera menu. See cameras.md.
+
+Separately, the live Companion config carries faults of its own — a Record key with no
+guard, four VW feedbacks that cannot parse, a PTZ that has no key on the ATEM bus, and two
+pages depending on scripts that are not backed up. Those are listed in
+[rig.md](rig.md#open-configuration-faults).
 
 Post can hide 6, partly compensate for 3, and do nothing at all about 1 or 2 — those are
 destroyed at capture.
