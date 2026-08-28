@@ -27,10 +27,16 @@ carrying no new picture, and it is what is wrong today.
 
 ### Cameras
 
+Do each line across **all** cameras before moving to the next. Matching is the point, and
+taking one camera all the way through then starting the next is how they end up unmatched.
+
 - [ ] Shutter `1/120`, auto-shutter off, on all cameras
-- [ ] White balance manual `4600K`, AWB off — better, white-card them all off the same
-      card at the preaching position
-- [ ] Iris and gain manual on all cameras
+- [ ] Gain `0 dB` and iris manual on all cameras — `f/5.6` on the PTZs, statics matched by
+      result (face 65–70 IRE on a waveform), not by copying the f-number
+- [ ] LED wall blanked, then **One Push** every camera off one white card at the preaching
+      position without moving the card. AWB off afterwards. Should land near `4640K`
+- [ ] Wall brightness back up and set so it sits *under* the face — the VW encoder, never
+      the iris
 - [ ] Zebras at 100% — the white shirt must not trip them
 - [ ] Knee / highlight compression enabled
 - [ ] Pan/tilt locks engaged on static shots

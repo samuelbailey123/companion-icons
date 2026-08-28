@@ -14,15 +14,55 @@ static shots are whatever they were left pointing at, for the whole service, eve
 | Output format | **1080p59.94** exactly | Not 29.97, not 1080i59.94, not 60.00. This is one of only two boxes that can be causing the frame doubling — see switcher-atem.md |
 | Shutter | **1/120** at 59.94 (1/60 if you ever run 29.97) | 180° equivalent. Never drag it slower to gain exposure — if it needs to, that is a lighting problem |
 | Auto shutter | **OFF** | |
-| White balance | **Manual 4600K**, locked | Stage light is 4600K. Measured neutral on 2026-08-23 (U 127.7–130.1, V 128.0–131.1 on a white shirt; neutral is 128/128) — the value is right, the job is to *lock* it |
+| Gain | **0 dB**, manual | The stage has the light for it — see Metered exposure below. Gain is the noise, and there is no reason to be running any |
+| Iris | **f/5.6** on the PTZs; match the statics by result, not by f-number | Metered. Also the sharp end of the lens: at f/8 on a 1/2.8" sensor the Airy disk is ~3.7 px wide and the picture is visibly diffraction-softened |
+| White balance | **~4640K**, or better a One Push, locked | Metered at the preaching position on 2026-08-28 with a colour meter: **4640K**. That agrees to within 40K — about a tenth of a mired, invisible — with the figure derived independently from the 2026-08-23 recording (U 127.7–130.1, V 128.0–131.1 on a white shirt; neutral is 128/128). Two unrelated methods agreeing is why this number can be trusted |
 | Auto white balance | **OFF** | The LED wall changes colour constantly and AWB drifts with it |
-| Iris / gain | **Manual**, locked | |
 | Zebras | **On, 100%** | The white shirt must not trip them |
 | Knee / highlight compression | **On** | Anything above ~90 IRE should roll off rather than clip flat |
 
-Better than a 4600K preset: white-balance all of them off the same white card held at the
-preaching position, then lock. That matches them *to each other*, which is the actual
-problem — see fault 3 in the README.
+Better than dialling 4640K in as a number: **One Push** all of them off the same white card
+held at the preaching position, then lock. A number matches a camera to the *light*; one
+card matches the cameras to *each other*, which is the actual problem — see fault 3 in the
+README. The metered 4640K is then the sanity check that the One Push landed right, not the
+setting itself.
+
+**Blank the LED wall while you do it.** The wall is behind the subject, so it contributes
+rim and floor bounce rather than key — the 4640K above was metered with the wall live and
+is demonstrably unaffected — but blanking costs nothing and removes the one variable that
+could quietly ruin a One Push on the card.
+
+## Metered exposure
+
+Measured at the preaching position on 2026-08-28 with a colour meter, incident, dome
+toward the camera:
+
+| | |
+|---|---|
+| Colour temperature | **4640 K** |
+| Correct exposure | **f/8 at ISO 200, 1/60 s** (358° at 60p) |
+| **Therefore, at the mandated 1/120** | **f/5.6 at ISO 200** — half the exposure time is one stop, so open one stop |
+
+**The headline is that no gain is needed.** f/5.6 at base ISO with a 180° shutter means the
+stage is comfortably lit, which is the same conclusion the findings file reached by a
+different route when it threw out the "very dark stage" claim. Running gain on this rig is
+a choice, not a necessity, and it is the easiest noise to remove.
+
+Two ways to get this wrong:
+
+- **Stopping down to tame the LED wall.** The wall is a light you *control* — the VW page
+  has a brightness encoder on the NovaStar (`$(novastar:brite)%`). Turn the wall down so it
+  sits under the face; do not close the iris and take the face down with it. This is fault 2
+  in the README, restated.
+- **Leaving the meter's own shutter angle in place.** 358° is roughly 360°, i.e. 1/60 at
+  60p — double the motion blur the rig is specified for. It is a metering convenience, not a
+  camera setting. Worth noting that 1/60 is also exactly what someone would set believing it
+  to be 180°, if they thought the chain ran at 30p; weak evidence, but it points the same
+  way as the frame-doubling fault.
+
+The f-number transfers between two PTZs of the same model and **does not transfer** to the
+static cameras, which are different glass. Set those by result — face at 65–70 IRE on a
+waveform — not by copying f/5.6 across.
 
 **The PTZ is on auto for everything.** Read straight off the camera on 2026-08-28 through
 the poller the deck already runs (`ptz_state.py`, surfaced as `$(internal:custom_ptz_state)`):
@@ -85,10 +125,14 @@ For the PTZ:
 Going in soon. Two notes:
 
 - **Set it to manual iris, shutter, white balance, and low noise reduction before it goes
-  live.** Out of the box it will be on auto everything.
+  live.** Out of the box it will be on auto everything — the existing PTZ still is.
+  Numbers to start from: 1/120, 0 dB, f/5.6.
 - **Match it to the existing PTZ off the same white card.** Two cameras of the same model
   matched to each other will cut together far better than either matched to the static
-  cameras.
+  cameras, and the f-number does transfer between two of the same model.
+- **Leave WDR / DRC off.** With a wall that swings whole-frame luma 42→99, wide-dynamic-range
+  modes pump visibly and lift noise while they do it. A flatter gamma is the right lever on a
+  PTZ; a true knee is a static-camera control.
 
 ## Answered on 2026-08-28
 
