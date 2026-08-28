@@ -156,7 +156,15 @@ export function navRow(currentPage, pageNumbers) {
  * Their row 0 is the folder row with the PARENT marked current, so the deck still says where
  * you are. Maps sub-page name → parent page name.
  */
-export const SUB_PAGES = { 'PTZ Setup': 'PTZ' }
+export const SUB_PAGES = {
+	'PTZ Setup': 'PTZ',
+	// The second camera, added 2026-08-28. Both PTZ pages hang off the one PTZ folder rather
+	// than taking a column each: the row is exactly nine wide and already full, and two
+	// cameras are one job, not two destinations. The swap key on each run page moves between
+	// them, so the row keeps saying PTZ wherever you are among the four.
+	'PTZ 2': 'PTZ',
+	'PTZ 2 Setup': 'PTZ',
+}
 
 /** The folder-row page a page belongs to: itself, or its parent for a sub-page. */
 export const folderFor = (pageName) => SUB_PAGES[pageName] ?? pageName
