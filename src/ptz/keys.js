@@ -35,7 +35,7 @@
  * setting from the camera's web page still does the right thing.
  */
 
-import { cv, field, logicIf, raw, setVar, visca, wait, when, override } from './actions.js'
+import { cv, field, logicIf, override, overrideExpr, raw, setVar, visca, wait, when } from './actions.js'
 import { BG, INK, LABEL, key } from './controls.js'
 import { menuKey } from './image.js'
 import { driveCommand } from './knobs.js'
@@ -96,12 +96,33 @@ const driveKey = (name, conn, icon, direction, menuDirection) => {
 }
 
 /** The centre of the pad: stop everything, or close the menu, and show tally. */
+/**
+ * The centre key's caption: which camera this page drives, from the ATEM input number.
+ *
+ * Taken from `ptz_atem_input` rather than baked in, so the same builder produces "CAM 3" for one
+ * camera and "CAM 1" for the other with no parameter — the variable rename that makes the second
+ * camera's page carries it across for free.
+ */
+const CAMERA = `concat('CAM ', ${cv(V.ATEM_INPUT)})`
+
+/**
+ * Stop, and the page's camera indicator.
+ *
+ * IT NAMES THE CAMERA BECAUSE IT IS WHERE THE EYE ALREADY IS. This key sits dead centre of the
+ * nudge cluster, under the thumb, and it already carried the ATEM tally — so it is the one place
+ * on the page that is being looked at while a camera is being moved. A corner badge was tried
+ * first and did not work; this does the same job at no cost in keys, and folds "which camera" and
+ * "is it on air" into one glance.
+ *
+ * The stop function is unchanged; the icon still says stop and the caption is the state.
+ */
 const stopKey = (conn) =>
 	key({
-		style: { icon: 'stop', label: 'STOP', bg: BG.key },
+		style: { icon: 'stop', label: CAMERA, bg: BG.key, labelIsExpression: true },
 		notes:
-			'Stops pan, tilt and zoom. Closes the camera menu while it is open. ' +
-			'Red when this camera is on ATEM program, green on preview (input number in ptz_atem_input).',
+			'Stops pan, tilt and zoom, and names the camera this page drives. Closes the camera menu ' +
+			'while it is open. Red and LIVE when this camera is on ATEM program, green and PVW on ' +
+			'preview (input number in ptz_atem_input).',
 		feedbacks: [
 			when('stop-menu', `${field('menu')} == "On"`, [
 				override('stop-menu-text', 'text0', 'text', 'EXIT'),
@@ -109,13 +130,13 @@ const stopKey = (conn) =>
 			]),
 			when('stop-pvw', `$(atem:pvw1_input_id) == ${cv(V.ATEM_INPUT)}`, [
 				override('stop-pvw-bg', 'box0', 'color', BG.preview),
-				override('stop-pvw-text', 'text0', 'text', 'PREVIEW'),
+				overrideExpr('stop-pvw-text', 'text0', 'text', `concat(${CAMERA}, ' PVW')`),
 				override('stop-pvw-label', 'text0', 'color', INK),
 				override('stop-pvw-icon', 'image0', 'base64Image', '$(image:stop-ink)'),
 			]),
 			when('stop-pgm', `$(atem:pgm1_input_id) == ${cv(V.ATEM_INPUT)}`, [
 				override('stop-pgm-bg', 'box0', 'color', BG.program),
-				override('stop-pgm-text', 'text0', 'text', 'LIVE'),
+				overrideExpr('stop-pgm-text', 'text0', 'text', `concat(${CAMERA}, ' LIVE')`),
 				override('stop-pgm-label', 'text0', 'color', LABEL),
 				override('stop-pgm-icon', 'image0', 'base64Image', '$(image:stop-paper)'),
 			]),

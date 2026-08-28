@@ -118,3 +118,17 @@ export const override = (overrideId, elementId, elementProperty, value) => ({
 	elementProperty,
 	override: v(value),
 })
+
+/**
+ * A style override whose value is an expression rather than a literal.
+ *
+ * Needed wherever a feedback has to restate something the button already computes — a caption
+ * carrying a variable, say — because a plain override would replace the expression with its own
+ * text and lose it.
+ */
+export const overrideExpr = (overrideId, elementId, elementProperty, expression) => ({
+	overrideId,
+	elementId,
+	elementProperty,
+	override: expr(expression),
+})

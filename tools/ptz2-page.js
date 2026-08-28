@@ -70,9 +70,17 @@ for (const cam of Object.values(CAMERAS)) {
  */
 const hubNumber = Object.entries(full.pages).find(([, p]) => p.name === HUB_NAME)?.[0]
 if (!hubNumber) throw new Error(`no page named "${HUB_NAME}" on this rig`)
-const SUPERSEDED = ['PTZ Setup', 'PTZ 2', 'PTZ 2 Setup']
+/*
+ * Every page this tool owns is dropped and rebuilt, including the ones it produced last run.
+ * Listing only the legacy names was a bug: a second run kept the previous CAM pages and added a
+ * duplicate set after them, so the deck grew four pages every time.
+ */
+const OWNED = [
+	'PTZ Setup', 'PTZ 2', 'PTZ 2 Setup',
+	...[CAMERAS.first, CAMERAS.second].flatMap((c) => [runName(c.atem), setupName(c.atem)]),
+]
 const surviving = Object.fromEntries(
-	Object.entries(full.pages).filter(([, p]) => !SUPERSEDED.includes(p.name))
+	Object.entries(full.pages).filter(([, p]) => p.name === HUB_NAME || !OWNED.includes(p.name))
 )
 const highest = Math.max(...Object.keys(surviving).map(Number))
 let next = Math.max(highest, Number(hubNumber)) + 1

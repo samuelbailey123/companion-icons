@@ -243,6 +243,30 @@ describe('the keys', () => {
 		expect(diagonal.steps[0].action_sets.down[0].options.custom.value).toBe('81 01 06 01 00 00 01 01 FF')
 	})
 
+	it('names the camera on the centre key, and folds the tally into the same glance', () => {
+		const stop = rows[2][1]
+		const caption = stop.style.layers.find((l) => l.type === 'text')
+		// Read from ptz_atem_input rather than baked in, so the second camera's page gets its own
+		// number for free through the variable rename.
+		expect(caption.text.isExpression).toBe(true)
+		expect(caption.text.value).toContain('custom_ptz_atem_input')
+		expect(caption.text.value).toContain('CAM ')
+
+		const textOf = (id) =>
+			stop.feedbacks.find((f) => f.id === id).styleOverrides.find((o) => o.elementProperty === 'text').override
+		// The tally captions have to stay expressions, or they would replace the camera number
+		// with their own literal text and lose it.
+		expect(textOf('stop-pgm').isExpression).toBe(true)
+		expect(textOf('stop-pgm').value).toContain('LIVE')
+		expect(textOf('stop-pgm').value).toContain('custom_ptz_atem_input')
+		expect(textOf('stop-pvw').isExpression).toBe(true)
+		expect(textOf('stop-pvw').value).toContain('PVW')
+		// The menu caption is the one that legitimately replaces it: while the OSD is open the key
+		// exits the menu and does not stop anything.
+		expect(textOf('stop-menu').isExpression).toBe(false)
+		expect(textOf('stop-menu').value).toBe('EXIT')
+	})
+
 	it('makes STOP halt everything, close the menu, and carry ATEM tally', () => {
 		const stop = rows[2][1]
 		const branch = stop.steps[0].action_sets.down[0]
