@@ -26,8 +26,9 @@ the wrong Companion by a typo.
 
 ## Pages
 
-**Ten**, in this order, each with the folder row across the top. Read off the live rig on
-2026-08-28 — the Mics page is gone, replaced by PTZ, and PTZ Setup was added behind it.
+**Twelve**, in this order, each with the folder row across the top. Read off the live rig on
+2026-08-28 — the Mics page is gone, replaced by PTZ, with PTZ Setup behind it and a second
+camera's pair behind that.
 
 | # | Page | Drives | Notes |
 |---|---|---|---|
@@ -39,8 +40,21 @@ the wrong Companion by a typo.
 | 6 | SQ7 | Allen & Heath SQ7 | DCA 1–8 with level and mute state, Mute DCAs key. Stream / Foyer / MAIN readouts on the touchstrip |
 | 7 | VW | Blackmagic Videohub + LED wall | Five destinations over four sources: tap a destination to arm, tap a source to route. Two direct routes, four Videohub readouts, and a brightness encoder for the wall |
 | 8 | System | the Pi itself | CPU temp, load, memory, disk, power, internet, address, uptime, Companion, storage. Fed by an `internal: exec` trigger because Companion publishes no OS-level variables |
-| 9 | PTZ | the PTZOptics PTZ | 48 controls: six presets, a nudge cluster, zoom/focus, tracking, and pan/tilt/zoom/focus/speed/preset encoders. Fed by `ptz_state.py` on a **1-second** trigger and `ptz_web.py` on a 5-second one |
+| 9 | PTZ | **CAM 3**, the PTZ on 10.23.0.181 | 48 controls: five presets, a camera-swap key, a nudge cluster, zoom/focus, tracking, and pan/tilt/zoom/focus/speed/preset encoders. Fed by `ptz_state.py` on a **1-second** trigger and `ptz_web.py` on a 5-second one |
 | 10 | PTZ Setup | the same camera | Exposure, white balance, backlight, power, tracking mode and body framing |
+| 11 | PTZ 2 | **CAM 1**, the PTZ on 10.23.0.196 | The same page, built by the same code, bound to the second camera and its own `ptz2_*` variables |
+| 12 | PTZ 2 Setup | the same camera | As page 10, for the second camera |
+
+**Both cameras run one page layout.** Pages 11 and 12 are emitted by the same
+`buildPage`/`buildSetupPage` calls as 9 and 10, and the build asserts they are identical
+once the connection, host, page numbers and variable prefix are normalised away — so they
+cannot drift apart. See `tools/ptz2-page.js`.
+
+**The four PTZ pages share one folder-row slot.** The row is exactly nine columns for nine
+pages and was already full, so pages 10, 11 and 12 are sub-pages reached from page 9. The
+swap key at row 1 column 8 of each run page moves between the two cameras, and is captioned
+with that camera's **ATEM input number** so the deck and the switcher agree. It took the
+slot that held preset 6, which was unnamed and saved at preset 5's identical position.
 
 There is **no Mics page any more.** The four Shure connections still run, but nothing on
 the deck reads them.
@@ -51,15 +65,16 @@ Read off the live Companion on 2026-08-28 and confirmed against each device on t
 
 | Device | Role | Address |
 |---|---|---|
-| ATEM Television Studio HD8 | Vision mixer, program record | **10.23.0.31**, control on UDP 9910. Also answers the Blackmagic routing protocol on TCP 9990, which is how its identity was confirmed: unique ID `1947523eab1a4015aa81b6a4ae2dfe43`, the same uuid stamped into the recordings |
+| ATEM Television Studio HD8 | Vision mixer, program record | **10.23.0.31**, control on UDP 9910. Also answers the Blackmagic routing protocol on TCP 9990, which is how its identity was confirmed: unique ID `1947523eab1a4015aa81b6a4ae2dfe43`, the same uuid stamped into the recordings. That same port reports its video standard — `1080p59.94` — and its aux routing, and accepts routing changes |
 | Blackmagic Micro Videohub, 16×16 | Routing to projectors and outputs | **10.23.0.21**:9990. Input labels: 1 Program Out, 2 Aux 1, 3 Aux 2, 4 SDI Multiview |
 | Allen & Heath SQ7 | Audio console | **10.23.0.188** |
 | grandMA2 | Lighting | **10.23.0.101** for the console login; OSC out to :8000 and feedback in on :9000 |
 | Shure ULXD4Q × 3 + ULXD4D × 1 | Wireless, **14** channels — not 16 | `10.23.0.20` "BGV 1-4" (Q), `10.23.0.23` "Lead 1-4" (Q), `10.23.0.253` "BGV+Host" (Q), `10.23.0.214` "Preach" — **a ULXD4D, two channels only**, Lav 1 and Lav 2. All on :2202 |
 | ProPresenter | Presentation | **10.23.0.111**:1100. A follower is configured at 10.23.0.11 but `control_follower` is off, and nothing is listening there |
 | NovaStar VX6S | LED wall processor | **10.23.0.19**:5200 |
-| PTZOptics PTZ | Camera, VISCA over IP | **10.23.0.181**:5678, with a web interface on :80 that `ptz_web.py` drives |
-| Static cameras × 2 | Fixed, unmanned | TODO(sam) — makes and models. Neither is on the network; they go SDI into the switcher |
+| FoMaKo UV602 PTZ — **CAM 3** | Camera, VISCA over IP, ATEM input 3 | **10.23.0.181**:5678, with an unauthenticated HTTP API on :80 that `ptz_web.py` drives |
+| FoMaKo UV602 PTZ — **CAM 1** | Camera, added 2026-08-28, ATEM input 1 | **10.23.0.196**:5678, same API |
+| Static camera — **CAM 2** | Fixed, unmanned, ATEM input 2 | TODO(sam) — make and model. Not on the network; goes SDI into the switcher |
 | Raspberry Pi | Companion host | 10.23.0.242 |
 
 **Addresses drift.** Every one of these except the Pi had moved at least once by

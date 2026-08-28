@@ -13,6 +13,14 @@ wrong, and no amount of post fixes it.
 - [ ] Recorder **record** format reads `1080p59.94`
 - [ ] Any converter / scaler / extender in the path is 59.94
 
+Both PTZs answer from a laptop on the LAN, so the camera half is one command:
+
+```bash
+for ip in 10.23.0.181 10.23.0.196; do
+  curl -s -X POST "http://$ip/ajaxcom?szCmd={\"GetEnv\":{\"VideoOut\":{\"nChannel\":-1}}}"
+done   # emVoutFormat must be 20 = 1080P59.94. 47 is 4KP30, which is how CAM 1 arrived
+```
+
 **Then prove it.** Record 10 seconds and run:
 
 ```bash
@@ -30,13 +38,18 @@ carrying no new picture, and it is what is wrong today.
 Do each line across **all** cameras before moving to the next. Matching is the point, and
 taking one camera all the way through then starting the next is how they end up unmatched.
 
-- [ ] Shutter `1/120`, auto-shutter off, on all cameras
-- [ ] Gain `0 dB` and iris manual on all cameras — `f/5.6` on the PTZs, statics matched by
+- [ ] Shutter `1/125`, auto-shutter off, on all cameras. **Not 1/60** — that is 180° only
+      at 29.97, and this chain is 59.94
+- [ ] Gain `0 dB` and iris manual on all cameras — `F5.6` on the PTZs, the static matched by
       result (face 65–70 IRE on a waveform), not by copying the f-number
-- [ ] LED wall blanked, then **One Push** every camera off one white card at the preaching
-      position without moving the card. AWB off afterwards. Should land near `4640K`
-- [ ] Wall brightness back up and set so it sits *under* the face — the VW encoder, never
-      the iris
+- [ ] White balance fixed at `4600K`, AWB off. Better still, blank the wall and **One Push**
+      every camera off one white card at the preaching position without moving the card
+- [ ] **Recall each PTZ preset and check it still reads Manual.** A preset stores the
+      exposure it was saved with, so any exposure change has to be re-saved into every
+      preset or the first press in the service undoes it
+- [ ] **No preset sits inside its camera's moiré band** — 52–60% zoom on CAM 3, 56–60% on
+      CAM 1. Look at the wall on each preset; rainbow banding means reframe and re-save
+- [ ] Wall brightness set so it sits *under* the face — the VW encoder, never the iris
 - [ ] Zebras at 100% — the white shirt must not trip them
 - [ ] Knee / highlight compression enabled
 - [ ] Pan/tilt locks engaged on static shots

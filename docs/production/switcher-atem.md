@@ -13,12 +13,24 @@ two-step guarded Stream and Record keys (first press arms, second fires). The mo
 in the `bmd-atem` module declares `streaming: true` and `recording: true`, which is what
 those keys rely on.
 
-## The one that matters
+## The one that matters — answered
 
-**Settings → Video → Video Standard must read `1080p59.94`.**
+**Settings → Video → Video Standard must read `1080p59.94`. On 2026-08-28 it does.**
 
-If it is set to a 29.97 standard, that alone explains the frame doubling across every
-camera.
+And it turns out this **is** readable over the network after all, which this file previously
+said it was not. The HD8 answers the Blackmagic routing protocol on TCP 9990 and its status
+block ends with a `CONFIGURATION` section:
+
+```bash
+nc 10.23.0.31 9990 </dev/null | grep -A1 CONFIGURATION
+#   CONFIGURATION:
+#   Video Mode: 1080p59.94
+```
+
+**So the switcher is not the frame-doubling fault.** That leaves the cameras, and one of
+them was: the PTZ that went onto input 1 on 2026-08-28 was outputting **4K at 30 fps** into
+this 59.94 chain. It is now `1080P59.94` like the other. The remaining static camera on
+input 2 has never been checked and is the last unverified box in the chain.
 
 Evidence it is a single point in the chain rather than one bad camera: at a hard cut in
 the 2026-08-23 recording the duplicate-pair phase ran straight through unbroken, and the
@@ -27,8 +39,10 @@ reaching the recorder was already 29.97.
 
 Check in this order and find the one box that is not 59.94:
 
-1. Each camera's own output format — in the camera menu, not the ATEM's display
-2. **ATEM video standard**
+1. Each camera's own output format — in the camera menu, not the ATEM's display. **Both
+   PTZs are readable over the network**: `GetEnv VideoOut` returns `emVoutFormat`, where
+   20 is `1080P59.94` and 47 is `4KP30`. See cameras.md
+2. ~~ATEM video standard~~ — **confirmed 1080p59.94 on 2026-08-28**, see above
 3. Any converter, scaler or extender in the path
 
 There is **no separate recorder** — the HD8 records its own program feed — so the fault is
@@ -51,21 +65,26 @@ Read off the switcher on 2026-08-28.
 | 5 | Words Overlay | program + preview |
 | 6 | PP1B | program + preview |
 | 7 | PP1 | program + preview |
-| 8 | Camera 8 — **the PTZ** | **nothing** |
+| 8 | Camera 8 | **nothing** |
 | 3010 | Media Player 1 | program + preview, in the eighth slot |
 
-Inputs 1–8 all report BNC connected. **The PTZ is the one source you cannot cut to from
-the deck**: the eighth key on each bus is Media Player 1, not input 8. Worth fixing before
-the second PTZ goes in.
+**The labels are stale.** As of 2026-08-28 the cameras are: input 1 = a PTZ
+(10.23.0.196), input 2 = the fixed static, input 3 = the other PTZ (10.23.0.181). The
+switcher still calls input 8 "Camera 8" and inputs 3 and 4 "Camera 3" and "Camera 4";
+relabelling them on the ATEM updates the deck automatically, because those keys read
+`$(atem:long_N)`.
+
+Inputs 1–8 all report BNC connected. The deck's tally variables were set to match the patch
+on the 28th — `ptz_atem_input` = 3 and `ptz2_atem_input` = 1 — but that came from the patch
+as described rather than from tracing cable, so **it is worth eyeballing that the Stop key
+lights on the right camera.**
 
 ## TODO(sam)
 
-Neither of these is readable over the network — Companion exposes no variable for the
-video standard or the encoder settings, so both need ATEM Software Control or the front
-panel.
-
-- [ ] Current video standard setting — the actual value, before changing anything
-- [ ] Can it be set to H.264 High profile, and a higher audio bitrate?
+- [x] ~~Current video standard setting~~ — **`1080p59.94`, read over port 9990 on 2026-08-28**
+- [ ] Can it be set to H.264 High profile, and a higher audio bitrate? Companion exposes no
+      variable for the encoder settings and the 9990 status block does not carry them, so
+      this one really does need ATEM Software Control
 
 ## Tally
 
