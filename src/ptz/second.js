@@ -19,14 +19,13 @@
  * option field. `assertMirrored` then proves the two pages are the same page: it renames camera
  * two's structure BACK and requires it to equal camera one's, modulo the connection id, the host
  * and the page numbers. A layout difference cannot survive that check.
+ *
+ * The camera badge that used to live here is gone: the deck now chooses a camera from a page of
+ * its own rather than swapping between two run pages, so there is nothing to label. See
+ * `src/ptz/hub.js`.
  */
 
-import { navKey } from './keys.js'
 import { definitions } from './variables.js'
-
-/** Page names. Camera one keeps the plain name so it stays the folder-row entry. */
-export const RUN_NAME = 'PTZ 2'
-export const SETUP_NAME = 'PTZ 2 Setup'
 
 /** Camera two's variables are camera one's with this prefix. */
 const PREFIX = 'ptz'
@@ -89,31 +88,6 @@ export function definitions2() {
 		out[second(name)] = { ...def, description: def.description.replace(/\bPTZ\b/, 'PTZ 2') }
 	}
 	return out
-}
-
-/**
- * The camera-swap key.
- *
- * Takes row 1 column 8, which held preset 6 — unnamed on the rig, and saved at the identical
- * position to preset 5, so it was a duplicate rather than a shot anyone would miss. Five direct
- * preset keys remain, and the Preset dial still reaches all 254.
- *
- * The label is the camera's ATEM number, not "1 of 2": the operator reads the same number on the
- * deck as on the switcher, which is the number that matters when deciding what to cut to.
- *
- * @param {number|string} pageNumber  the other camera's run page
- * @param {number} atemNumber         the other camera's ATEM input, for the caption and art
- */
-export function swapKey(pageNumber, atemNumber) {
-	return navKey(
-		`cam${atemNumber}`,
-		{
-			icon: `cam${atemNumber}-idle`,
-			label: `CAM ${atemNumber}`,
-			notes: `Switch the deck to the other PTZ camera, on ATEM input ${atemNumber}. The page you land on drives that camera and nothing else, so there is no mode to get wrong.`,
-		},
-		pageNumber
-	)
 }
 
 /**

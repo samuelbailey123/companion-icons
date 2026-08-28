@@ -160,7 +160,7 @@ describe('the knobs', () => {
 		expect(driveCommand('d', CONN, 'upLeft').options.custom.value).toBe('81 01 06 01 00 00 01 01 FF')
 	})
 
-	it('zooms at the derived speed and stops; focuses by hand without a stop', () => {
+	it('zooms and focuses at the derived speed, and stops both', () => {
 		const zoom = knobs[KNOBS.zoom].steps[0].action_sets
 		expect(zoom.rotate_right[0].options.custom.value).toBe('81 01 04 07 20 FF')
 		expect(zoom.rotate_left[0].options.custom.value).toBe('81 01 04 07 30 FF')
@@ -168,9 +168,14 @@ describe('the knobs', () => {
 		expect(zoom.down.map((a) => a.definitionId)).toEqual(['zoomS'])
 
 		const focus = knobs[KNOBS.focus].steps[0].action_sets
-		expect(focus.rotate_right.map((a) => a.definitionId)).toEqual(['focusM', 'custom'])
+		// Drive, wait, stop — the same shape as pan, tilt and zoom. The stop answers with a
+		// syntax error and halts the drive anyway; without it one detent runs the focus to the
+		// endstop, which is what a knob that runs away feels like.
+		expect(focus.rotate_right.map((a) => a.definitionId)).toEqual(['focusM', 'custom', 'wait', 'custom'])
 		expect(focus.rotate_right[0].options.bol.value).toBe('1')
 		expect(focus.rotate_left[1].options.custom.value).toBe('81 01 04 08 30 FF')
+		expect(focus.rotate_left[3].options.custom.value).toBe('81 01 04 08 00 FF')
+		expect(focus.rotate_right[3].options.custom.value).toBe('81 01 04 08 00 FF')
 		expect(focus.down[0].options.custom.value).toBe('81 01 04 38 04 FF')
 		expect(JSON.stringify(focus)).not.toContain('focusS')
 	})

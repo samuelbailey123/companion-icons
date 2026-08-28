@@ -88,13 +88,25 @@ const zoomDrive = (prefix, conn, bytes) => [
 ]
 
 /**
- * One focus step. `81 01 04 08 2p FF` is far, `3p` near, `p` the speed nibble.
+ * One focus step: drive, wait, stop — the same shape as pan, tilt and zoom.
  *
- * No stop is sent: this camera answers the standard focus-stop with a syntax error, and
- * its focus drives end on their own (measured — the focus position settles within the
- * detent and never runs on). Sending the stop anyway would only fill the log.
+ * `81 01 04 08 2p FF` is far, `3p` near, `p` the speed nibble.
+ *
+ * THE STOP LOOKS LIKE IT FAILS AND DOES NOT. `81 01 04 08 00 FF` answers `90 60 02` — a
+ * syntax error — and then halts the drive anyway; measured on 2026-08-28, focus position
+ * frozen within 40ms of sending it and stable thereafter. An earlier version of this file
+ * read that error reply as a rejection, concluded the drives "end on their own", and sent no
+ * stop at all. They do not end on their own: one detent ran the focus from 2780 to 0, the far
+ * endstop, and left it there. That is what a knob that runs away feels like.
+ *
+ * So the error reply is noise and is ignored. If the log fills with it, filter the log rather
+ * than removing the stop.
  */
-const focusStep = (prefix, conn, bytes) => raw(`${prefix}-go`, conn, bytes, '9', [cv(V.FOCUS_SPEED)])
+const focusStep = (prefix, conn, bytes) => [
+	raw(`${prefix}-go`, conn, bytes, '9', [cv(V.FOCUS_SPEED)]),
+	wait(`${prefix}-wait`, DRIVE_MS),
+	raw(`${prefix}-stop`, conn, '81 01 04 08 00 FF'),
+]
 
 /** Focus drives only work in manual mode; the camera refuses them during autofocus. */
 const manualFocusFirst = (prefix, conn) => visca(`${prefix}-manual`, conn, 'focusM', { bol: { value: '1', isExpression: false } })
@@ -180,8 +192,8 @@ export function buildKnobs(conn) {
 		actionSets: {
 			down: [raw('focus-press-onepush', conn, '81 01 04 38 04 FF')],
 			up: [],
-			rotate_left: [manualFocusFirst('focus-l', conn), focusStep('focus-l', conn, '81 01 04 08 30 FF')],
-			rotate_right: [manualFocusFirst('focus-r', conn), focusStep('focus-r', conn, '81 01 04 08 20 FF')],
+			rotate_left: [manualFocusFirst('focus-l', conn), ...focusStep('focus-l', conn, '81 01 04 08 30 FF')],
+			rotate_right: [manualFocusFirst('focus-r', conn), ...focusStep('focus-r', conn, '81 01 04 08 20 FF')],
 		},
 	})
 

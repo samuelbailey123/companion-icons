@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-	RUN_NAME,
-	SETUP_NAME,
-	assertMirrored,
-	definitions2,
-	renameVariables,
-	renameVariablesBack,
-	swapKey,
-} from '../src/ptz/second.js'
+import { assertMirrored, definitions2, renameVariables, renameVariablesBack } from '../src/ptz/second.js'
+import { LOOK, buildHubPage, runName, setupName } from '../src/ptz/hub.js'
 import { buildPage, buildSetupPage } from '../src/ptz/page.js'
 import { definitions } from '../src/ptz/variables.js'
 import { SUB_PAGES, folderFor } from '../src/navrow.js'
@@ -87,38 +80,6 @@ describe('camera two variable definitions', () => {
 	})
 })
 
-describe('the camera-swap key', () => {
-	const imageNames = new Set(ICONS.map((i) => i.name))
-
-	it('is captioned and drawn with the other camera ATEM number', () => {
-		const key = swapKey(11, 1)
-		const text = key.style.layers.find((l) => l.type === 'text')
-		const image = key.style.layers.find((l) => l.type === 'image')
-		expect(text.text.value).toBe('CAM 1')
-		expect(image.base64Image.value).toBe('$(image:cam1-idle)')
-	})
-
-	it('only ever uses art the library actually ships', () => {
-		for (const atem of [1, 2, 3, 4, 5, 6]) {
-			const image = swapKey(9, atem).style.layers.find((l) => l.type === 'image')
-			expect(imageNames.has(image.base64Image.value.slice('$(image:'.length, -1))).toBe(true)
-		}
-	})
-
-	it('navigates to the other camera run page', () => {
-		const key = swapKey(11, 1)
-		const action = key.steps[0].action_sets.down[0]
-		expect(action.definitionId).toBe('set_page')
-		expect(action.connectionId).toBe('internal')
-		expect(action.options.page.value).toBe('11')
-	})
-
-	it('refuses page 0, which Companion reads as "the page you are on"', () => {
-		expect(() => swapKey(0, 1)).toThrow()
-		expect(() => swapKey(undefined, 1)).toThrow()
-	})
-})
-
 describe('the mirror check', () => {
 	const opts = {
 		connOne: ONE.conn, connTwo: TWO.conn,
@@ -161,11 +122,76 @@ describe('the mirror check', () => {
 	})
 })
 
-describe('where the second camera sits in the deck', () => {
-	it('hangs both of its pages off the PTZ folder rather than taking a column', () => {
-		expect(SUB_PAGES[RUN_NAME]).toBe('PTZ')
-		expect(SUB_PAGES[SETUP_NAME]).toBe('PTZ')
-		expect(folderFor(RUN_NAME)).toBe('PTZ')
-		expect(folderFor(SETUP_NAME)).toBe('PTZ')
+describe('where the cameras sit in the deck', () => {
+	it('hangs all four camera pages off the one PTZ folder column', () => {
+		for (const atem of [1, 3]) {
+			expect(SUB_PAGES[runName(atem)]).toBe('PTZ')
+			expect(SUB_PAGES[setupName(atem)]).toBe('PTZ')
+			expect(folderFor(runName(atem))).toBe('PTZ')
+			expect(folderFor(setupName(atem))).toBe('PTZ')
+		}
+	})
+})
+
+describe('the chooser', () => {
+	const cameras = [
+		{ atem: 1, runPage: 10, setupPage: 11, stateVar: 'ptz2_state', presetVar: 'ptz2_last' },
+		{ atem: 3, runPage: 12, setupPage: 13, stateVar: 'ptz_state', presetVar: 'ptz_last' },
+	]
+	const hub = buildHubPage(cameras)
+	const label = (c) => c.style.layers.find((l) => l.type === 'text').text.value
+
+	it('gives each camera an entry key that goes to its own run page', () => {
+		const entries = Object.values(hub[1])
+		expect(entries).toHaveLength(2)
+		expect(entries.map(label)).toEqual(['CAM 1', 'CAM 3'])
+		expect(entries.map((e) => e.steps[0].action_sets.down[0].options.page.value)).toEqual(['10', '12'])
+	})
+
+	it('puts the two cameras far enough apart that neither is hit by accident', () => {
+		const columns = Object.keys(hub[1]).map(Number)
+		expect(Math.abs(columns[0] - columns[1])).toBeGreaterThanOrEqual(3)
+	})
+
+	it('carries the ATEM tally, so you can see what moving a camera would cost', () => {
+		const entry = Object.values(hub[1])[0]
+		const expressions = entry.feedbacks.map((f) => f.options.expression.value)
+		expect(expressions.some((e) => e.includes('pgm1_input_id'))).toBe(true)
+		expect(expressions.some((e) => e.includes('pvw1_input_id'))).toBe(true)
+	})
+
+	it('warns when a camera stops answering its poller', () => {
+		const entry = Object.values(hub[1])[0]
+		expect(entry.feedbacks.some((f) => f.options.expression.value.includes("'$.online'"))).toBe(true)
+	})
+
+	it('reads each camera state from that camera own variables', () => {
+		expect(label(Object.values(hub[2])[0])).toContain('ptz2_state')
+		expect(label(Object.values(hub[2])[1])).toContain('ptz_state')
+	})
+
+	it('offers each camera setup page directly, so setup is two presses not three', () => {
+		const setups = Object.values(hub[3])
+		expect(setups.map(label)).toEqual(['CAM 1 Setup', 'CAM 3 Setup'])
+		expect(setups.map((s) => s.steps[0].action_sets.down[0].options.page.value)).toEqual(['11', '13'])
+	})
+
+	it('falls back to a neutral look for a camera with no colour of its own', () => {
+		const odd = buildHubPage([
+			{ atem: 5, runPage: 10, setupPage: 11, stateVar: 'ptz2_state', presetVar: 'ptz2_last' },
+			{ atem: 3, runPage: 12, setupPage: 13, stateVar: 'ptz_state', presetVar: 'ptz_last' },
+		])
+		const box = Object.values(odd[1])[0].style.layers.find((l) => l.id === 'box0')
+		expect(box.color.value).toBe(LOOK.default.bg)
+	})
+
+	it('gives the two cameras different colours', () => {
+		expect(LOOK[1].bg).not.toBe(LOOK[3].bg)
+		expect(LOOK[1].accent).not.toBe(LOOK[3].accent)
+	})
+
+	it('is laid out for exactly two cameras and says so rather than drawing nonsense', () => {
+		expect(() => buildHubPage(cameras.slice(0, 1))).toThrow(/two cameras/)
+		expect(() => buildHubPage([...cameras, { atem: 4 }])).toThrow(/two cameras/)
 	})
 })
