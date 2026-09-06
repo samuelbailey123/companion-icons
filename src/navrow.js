@@ -156,7 +156,21 @@ export function navRow(currentPage, pageNumbers) {
  * Their row 0 is the folder row with the PARENT marked current, so the deck still says where
  * you are. Maps sub-page name → parent page name.
  */
-export const SUB_PAGES = { 'PTZ Setup': 'PTZ' }
+export const SUB_PAGES = {
+	/*
+	 * Two PTZ cameras, four pages, one folder column. The row is exactly nine wide and was
+	 * already full, so the PTZ key lands on a chooser (see src/ptz/hub.js) and the cameras hang
+	 * off that. Because the row is on every page and always points at the chooser, the camera
+	 * pages need no back key of their own.
+	 */
+	'CAM 3': 'PTZ',
+	'CAM 3 Setup': 'PTZ',
+	'CAM 1': 'PTZ',
+	'CAM 1 Setup': 'PTZ',
+	// The single-camera layout (tools/ptz-page.js) still names its sub-page this. Both layouts
+	// have to stay reachable while both tools exist.
+	'PTZ Setup': 'PTZ',
+}
 
 /** The folder-row page a page belongs to: itself, or its parent for a sub-page. */
 export const folderFor = (pageName) => SUB_PAGES[pageName] ?? pageName
