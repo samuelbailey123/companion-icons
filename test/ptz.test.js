@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { cv, exec, expr, field, logicIf, override, raw, setVar, v, visca, wait, when } from '../src/ptz/actions.js'
 import { BG, control, key, knob, layers, strip } from '../src/ptz/controls.js'
 import { DEFAULT_SPEED, SPEED, STATE, definitions, mergeDefinitions } from '../src/ptz/variables.js'
-import { DIRECTION, DRIVE_MS, KNOBS, ROWS, buildKnobs, driveCommand } from '../src/ptz/knobs.js'
-import { PRESET_KEYS, buildKeys, navKey } from '../src/ptz/keys.js'
+import { DIRECTION, DRIVE_MS, KNOBS, ROWS, buildKnobs, deriveSpeeds, driveCommand } from '../src/ptz/knobs.js'
+import { PRESET_KEYS, SPEED_STOPS, buildKeys, navKey, nextStop } from '../src/ptz/keys.js'
 import { INTERVAL_SECONDS, SCRIPT, SCRIPT_PATH, TRIGGER_ID, pollTrigger } from '../src/ptz/poller.js'
 import { PAGE_NAME, REPLACES, SETUP_NAME, buildConfig, buildPage, buildSetupPage, findConnection } from '../src/ptz/page.js'
 import { TRIGGER_ID as TRACK_TRIGGER_ID } from '../src/ptz/web.js'
@@ -221,26 +221,31 @@ describe('the keys', () => {
 	const rows = buildKeys(CONN, HOST, PAGES)
 	const all = Object.values(rows).flatMap((r) => Object.values(r))
 
-	it('fill rows 1-3, nine across, with nothing rotary', () => {
+	it('fill rows 1-3 right of the old pad, plus Speed and STOP, with nothing rotary', () => {
 		expect(Object.keys(rows)).toEqual(['1', '2', '3'])
-		for (const row of Object.values(rows)) expect(Object.keys(row).map(Number)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8])
+		expect(Object.keys(rows[1]).map(Number)).toEqual([3, 4, 5, 6, 7, 8])
+		expect(Object.keys(rows[2]).map(Number)).toEqual([0, 1, 3, 4, 5, 6, 7, 8])
+		expect(Object.keys(rows[3]).map(Number)).toEqual([3, 4, 5, 6, 7, 8])
 		for (const c of all) expect(c.options.rotaryActions).toBe(false)
-		expect(all).toHaveLength(27)
+		expect(all).toHaveLength(20)
+		// No arrow art is left anywhere on the page.
+		for (const c of all) for (const name of imagesUsed(c)) expect(name).not.toMatch(/^arrow-/)
 	})
 
-	it('drive while held, stop on release, and navigate the menu instead while it is open', () => {
-		const up = rows[1][1]
-		const branch = up.steps[0].action_sets.down[0]
-		expect(branch.definitionId).toBe('logic_if')
-		expect(branch.children.condition[0].options.expression.value).toBe(`${field('menu')} == "On"`)
-		expect(branch.children.actions[0].definitionId).toBe('onScreenDisplayNavigate')
-		expect(branch.children.actions[0].options.direction.value).toBe('up')
-		expect(branch.children.else_actions[0].options.custom.value).toBe('81 01 06 01 00 00 03 01 FF')
-		expect(up.steps[0].action_sets.up.map((a) => a.definitionId)).toEqual(['stop'])
+	it('step the drive speed through its three stops and keep the derived speeds in step', () => {
+		expect(SPEED_STOPS).toEqual([1, 10, 24])
+		expect(nextStop('ptz_speed', SPEED_STOPS)).toBe(`${cv('ptz_speed')} < 10 ? 10 : (${cv('ptz_speed')} < 24 ? 24 : 1)`)
+		expect(nextStop('x', [2, 5])).toBe(`${cv('x')} < 5 ? 5 : 2`)
 
-		const diagonal = rows[1][0]
-		expect(diagonal.steps[0].action_sets.down[0].definitionId).toBe('custom')
-		expect(diagonal.steps[0].action_sets.down[0].options.custom.value).toBe('81 01 06 01 00 00 01 01 FF')
+		const speed = rows[2][0]
+		const down = speed.steps[0].action_sets.down
+		expect(down[0]).toEqual(setVar('speed-cycle', SPEED, nextStop(SPEED, SPEED_STOPS), true))
+		// The same three derivations the Speed knob performs, in the same order.
+		expect(down.slice(1).map((a) => a.options.name.value)).toEqual(['ptz_tspeed', 'ptz_zspeed', 'ptz_fspeed'])
+		expect(down.slice(1)).toEqual(deriveSpeeds('speed-cycle'))
+		expect(speed.steps[0].action_sets.up).toEqual([])
+		expect(speed.style.layers[3].text).toEqual(expr(`concat('Speed ', ${cv(SPEED)})`))
+		expect(imagesUsed(speed)).toEqual(['speed'])
 	})
 
 	it('names the camera on the centre key, and folds the tally into the same glance', () => {
