@@ -1,24 +1,24 @@
 /**
- * The 27 keys of the PTZ run page: rows 1-3, nine across.
+ * The 20 keys of the PTZ run page: rows 1-3, nine across, the left block mostly empty.
  *
- *   col:   0    1     2   |  3        4         5        6         7          8
- *   row 1: ↖    ↑     ↗   |  P1       P2        P3       P4        P5         P6
- *   row 2: ←   STOP   →   |  Home     Zoom in   AF       Track     Close-up   Save
- *   row 3: ↙    ↓     ↘   |  Setup ▸  Zoom out  1-push   Half      Full       Menu
+ *   col:   0       1     2   |  3        4         5        6         7          8
+ *   row 1: ·       ·     ·   |  P1       P2        P3       P4        P5         P6
+ *   row 2: Speed  STOP   ·   |  Home     Zoom in   AF       Track     Close-up   Save
+ *   row 3: ·       ·     ·   |  Setup ▸  Zoom out  1-push   Half      Full       Menu
  *
  * RUN HERE, SET UP ON THE NEXT PAGE. This page holds what an operator touches during a
  * service: driving, presets, focus, tracking on/off and its framing. Exposure, white
  * balance, backlight, power and the tracking parameters live on the setup sub-page
  * (`setup.js`), one press away on Setup ▸ and back on the folder row or its own ◂ key.
  *
- * THE D-PAD DRIVES WHILE HELD. Press starts the camera moving, release stops it — the one
- * gesture every PTZ joystick on earth uses, and the only one where "hold" is the natural
- * reading rather than a hidden second function. While the camera's on-screen menu is open
- * the same four arrows navigate it and STOP closes it. The camera rejects the VISCA "menu
- * enter" and "menu back" bytes outright (checked), and its own command list has no menu
- * section, so the arrows are the whole interface: on this family of OSD, right enters a
- * submenu or changes a value and left backs out. That part could not be watched — the
- * camera had no monitor while this was built — and wants one look at a screen.
+ * THE ARROWS ARE GONE; THE KNOBS DRIVE. The left block used to be an eight-way pad that
+ * drove while held. The operator never used it — pan and tilt live on the encoders — and on
+ * 2026-09-06 asked for its space instead. It now holds one key, Speed, which steps the drive
+ * speed through three stops, 1 → 10 → 24 → 1: creep, normal, fast. The Speed knob still
+ * fine-tunes between them, and both write the same variable so the caption is always right.
+ * The pad also navigated the camera's on-screen menu while it was open; that went with it,
+ * and Menu now only opens and closes the OSD. The camera's web page covers everything the
+ * menu did.
  *
  * STOP CARRIES TALLY. The centre key goes red when the ATEM has this camera on program and
  * green on preview: it is the key you are looking at when you move the camera, so it is the
@@ -35,10 +35,10 @@
  * setting from the camera's web page still does the right thing.
  */
 
-import { cv, field, logicIf, override, overrideExpr, raw, setVar, visca, wait, when } from './actions.js'
+import { cv, field, logicIf, override, overrideExpr, raw, setVar, visca, when } from './actions.js'
 import { BG, INK, LABEL, key } from './controls.js'
 import { menuKey } from './image.js'
-import { driveCommand } from './knobs.js'
+import { deriveSpeeds } from './knobs.js'
 import { framingKey, trackKey } from './tracking.js'
 import * as V from './variables.js'
 
@@ -47,6 +47,21 @@ const ACCENT = 0xf472b6
 
 /** Direct-recall preset keys, in row-1 order. */
 export const PRESET_KEYS = [1, 2, 3, 4, 5, 6]
+
+/** The drive speeds the Speed key steps through, in order; the last wraps to the first. */
+export const SPEED_STOPS = [1, 10, 24]
+
+/**
+ * An expression that moves a value to the next stop: below the second stop go to it, below
+ * the third go there, otherwise wrap. Written from the stops so the list is the only truth.
+ */
+export const nextStop = (variable, stops) => {
+	const [first, ...rest] = stops
+	return rest.reduceRight(
+		(tail, stop, i) => `${cv(variable)} < ${stop} ? ${stop} : ${i === rest.length - 1 ? tail : `(${tail})`}`,
+		String(first)
+	)
+}
 
 const menuOpen = (id) => when(id, `${field('menu')} == "On"`)
 const armed = (id) => when(id, `${cv(V.ARMED)} == 1`)
@@ -68,34 +83,22 @@ const armedLook = (prefix, caption, icon) => [
 ]
 
 /**
- * A drive key: move while held, navigate the menu instead while it is open.
+ * Speed: one press per stop, 1 → 10 → 24 → 1, shown in the caption.
  *
- * @param {string} name       id prefix and caption
- * @param {string} conn
- * @param {string} icon
- * @param {string} direction  module drive action id
- * @param {string|null} menuDirection  module OSD navigate direction, or null for diagonals
+ * Writes the same variable the Speed knob turns, then re-derives the tilt, zoom and focus
+ * speeds exactly as the knob does, so a press and a turn are interchangeable.
  */
-const driveKey = (name, conn, icon, direction, menuDirection) => {
-	const move = [driveCommand(`${name}-go`, conn, direction)]
-	const down = menuDirection
-		? [
-				logicIf(
-					`${name}-dn-if`,
-					[menuOpen(`${name}-dn-menu`)],
-					[visca(`${name}-nav`, conn, 'onScreenDisplayNavigate', { direction: { value: menuDirection, isExpression: false } })],
-					move
-				),
-			]
-		: move
-	return key({
-		style: { icon, label: '', bg: BG.pad },
-		notes: `Hold to drive ${direction}; release to stop.${menuDirection ? ' Navigates the camera menu while it is open (right enters, left backs out).' : ''}`,
-		actionSets: { down, up: [visca(`${name}-up-stop`, conn, 'stop')] },
+const speedKey = () =>
+	key({
+		style: { icon: 'speed', label: `concat('Speed ', ${cv(V.SPEED)})`, bg: BG.key, labelIsExpression: true },
+		notes: `Steps the drive speed ${SPEED_STOPS.join(' → ')} → ${SPEED_STOPS[0]} for pan, tilt, zoom and focus. The Speed knob still fine-tunes it.`,
+		actionSets: {
+			down: [setVar('speed-cycle', V.SPEED, nextStop(V.SPEED, SPEED_STOPS), true), ...deriveSpeeds('speed-cycle')],
+			up: [],
+		},
 	})
-}
 
-/** The centre of the pad: stop everything, or close the menu, and show tally. */
+/** The centre of the old pad: stop everything, or close the menu, and show tally. */
 /**
  * The centre key's caption: which camera this page drives, from the ATEM input number.
  *
@@ -277,16 +280,10 @@ export const navKey = (prefix, look, pageNumber) => {
 export function buildKeys(conn, host, pages) {
 	const presets = Object.fromEntries(PRESET_KEYS.map((n, i) => [3 + i, presetKey(n, conn)]))
 	return {
-		1: {
-			0: driveKey('ul', conn, 'arrow-up-left', 'upLeft', null),
-			1: driveKey('u', conn, 'arrow-up', 'up', 'up'),
-			2: driveKey('ur', conn, 'arrow-up-right', 'upRight', null),
-			...presets,
-		},
+		1: { ...presets },
 		2: {
-			0: driveKey('l', conn, 'arrow-left', 'left', 'left'),
+			0: speedKey(),
 			1: stopKey(conn),
-			2: driveKey('r', conn, 'arrow-right', 'right', 'right'),
 			3: homeKey(conn),
 			4: zoomKey('zi', conn, 'zoom-in', '81 01 04 07 20 FF', 'Zoom in'),
 			5: autofocusKey(conn),
@@ -295,9 +292,6 @@ export function buildKeys(conn, host, pages) {
 			8: saveKey(),
 		},
 		3: {
-			0: driveKey('dl', conn, 'arrow-down-left', 'downLeft', null),
-			1: driveKey('d', conn, 'arrow-down', 'down', 'down'),
-			2: driveKey('dr', conn, 'arrow-down-right', 'downRight', null),
 			3: navKey('setup', { icon: 'ptz-setup', label: 'Setup', notes: 'Opens the PTZ setup page: exposure, white balance, backlight, power and the tracking settings.' }, pages.setup),
 			4: zoomKey('zo', conn, 'zoom-out', '81 01 04 07 30 FF', 'Zoom out'),
 			5: onePushKey(conn),
