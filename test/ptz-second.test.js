@@ -115,6 +115,19 @@ describe('the mirror check', () => {
 		expect(() => assertMirrored(one, two, opts)).toThrow(/not a mirror/)
 	})
 
+	it('treats each camera\'s preset names as identity, not layout', () => {
+		const namesOne = { 1: 'Wide', 2: 'Drums', 3: 'Keys' }
+		const namesTwo = { 1: 'Wide', 2: 'Stage', 3: 'Baptism' }
+		const one = buildPage(ONE.conn, ONE.host, PAGES_ONE, namesOne)
+		const two = renameVariables(buildPage(TWO.conn, TWO.host, PAGES_TWO, namesTwo))
+		expect(() => assertMirrored(one, two, opts)).toThrow(/not a mirror/)
+		expect(() => assertMirrored(one, two, { ...opts, namesOne, namesTwo })).not.toThrow()
+		// A name the table does not know is still a drift.
+		const text = two.controls[1][6].style.layers.find((l) => l.type === 'text')
+		text.text.value = '4 (Lectern)'
+		expect(() => assertMirrored(one, two, { ...opts, namesOne, namesTwo })).toThrow(/not a mirror/)
+	})
+
 	it('does not need page numbers to be given', () => {
 		const one = buildPage(ONE.conn, ONE.host, PAGES_ONE)
 		const two = renameVariables(buildPage(TWO.conn, TWO.host, PAGES_ONE))

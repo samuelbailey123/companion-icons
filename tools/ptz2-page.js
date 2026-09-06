@@ -39,8 +39,32 @@ import { assertMirrored, definitions2, renameVariables } from '../src/ptz/second
  * is already live on the rig and persists across restarts, and renaming it would reset it.
  */
 const CAMERAS = {
-	second: { host: '10.23.0.196', atem: 1, vars: { state: 'ptz2_state', preset: 'ptz2_last' } },
-	first: { host: '10.23.0.181', atem: 3, vars: { state: 'ptz_state', preset: 'ptz_last' } },
+	second: {
+		host: '10.23.0.196', atem: 1, vars: { state: 'ptz2_state', preset: 'ptz2_last' },
+		presets: { 1: 'Wide', 2: 'Stage', 3: 'Baptism', 4: 'Keyboard', 5: 'Drums' },
+	},
+	first: {
+		host: '10.23.0.181', atem: 3, vars: { state: 'ptz_state', preset: 'ptz_last' },
+		presets: { 1: 'Wide', 2: 'Drums', 3: 'Keys', 4: 'Stage', 5: 'Bass' },
+	},
+}
+
+/**
+ * The preset names as the operator typed them on the deck, read back from the live page.
+ *
+ * THE DECK IS WHERE NAMES GET CHANGED, AND A REBUILD OVERWRITES THEM. On 2026-09-06 the names
+ * above were lost exactly that way, so before rebuilding, every preset caption on the live
+ * page is compared with what the table produces, and a difference is printed loudly. Copy it
+ * into the table, or accept the overwrite knowingly — but never silently.
+ */
+function liveNames(page) {
+	const out = {}
+	for (const control of Object.values(page?.controls?.[1] ?? {})) {
+		const text = control?.style?.layers?.find((l) => l.type === 'text')?.text?.value
+		const m = /^(\d+) \((.+)\)$/.exec(text ?? '')
+		if (m) out[m[1]] = m[2]
+	}
+	return out
 }
 
 const [, , src, outDir] = process.argv
@@ -93,7 +117,13 @@ for (const cam of [CAMERAS.second, CAMERAS.first]) {
 /* Each camera's pages, from the same builders. The second camera's variables are then renamed. */
 const built = {}
 for (const [which, cam] of Object.entries(CAMERAS)) {
-	const run = buildPage(cam.conn, cam.host, cam.numbers)
+	const live = liveNames(Object.values(full.pages).find((p) => p.name === runName(cam.atem)))
+	for (const n of Object.keys({ ...live, ...cam.presets })) {
+		if ((live[n] ?? '') !== (cam.presets[n] ?? '')) {
+			console.warn(`  WARNING CAM ${cam.atem} preset ${n}: the deck says "${live[n] ?? ''}", this build says "${cam.presets[n] ?? ''}" — the build wins`)
+		}
+	}
+	const run = buildPage(cam.conn, cam.host, cam.numbers, cam.presets)
 	const setup = buildSetupPage(cam.conn, cam.host, cam.numbers)
 	built[which] = which === 'first' ? { run, setup } : { run: renameVariables(run), setup: renameVariables(setup) }
 }
@@ -102,6 +132,7 @@ const mirror = {
 	connOne: CAMERAS.first.conn, connTwo: CAMERAS.second.conn,
 	hostOne: CAMERAS.first.host, hostTwo: CAMERAS.second.host,
 	pagesOne: CAMERAS.first.numbers, pagesTwo: CAMERAS.second.numbers,
+	namesOne: CAMERAS.first.presets, namesTwo: CAMERAS.second.presets,
 }
 assertMirrored(built.first.run, built.second.run, { ...mirror, name: 'run page' })
 assertMirrored(built.first.setup, built.second.setup, { ...mirror, name: 'setup page' })

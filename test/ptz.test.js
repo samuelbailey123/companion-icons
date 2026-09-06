@@ -3,7 +3,7 @@ import { cv, exec, expr, field, logicIf, override, raw, setVar, v, visca, wait, 
 import { BG, control, key, knob, layers, strip } from '../src/ptz/controls.js'
 import { DEFAULT_SPEED, SPEED, STATE, definitions, mergeDefinitions } from '../src/ptz/variables.js'
 import { DIRECTION, DRIVE_MS, KNOBS, ROWS, buildKnobs, deriveSpeeds, driveCommand } from '../src/ptz/knobs.js'
-import { PRESET_KEYS, SPEED_STOPS, buildKeys, navKey, nextStop } from '../src/ptz/keys.js'
+import { PRESET_KEYS, SPEED_STOPS, buildKeys, navKey, nextStop, presetCaption } from '../src/ptz/keys.js'
 import { INTERVAL_SECONDS, SCRIPT, SCRIPT_PATH, TRIGGER_ID, pollTrigger } from '../src/ptz/poller.js'
 import { PAGE_NAME, REPLACES, SETUP_NAME, buildConfig, buildPage, buildSetupPage, findConnection } from '../src/ptz/page.js'
 import { TRIGGER_ID as TRACK_TRIGGER_ID } from '../src/ptz/web.js'
@@ -230,6 +230,21 @@ describe('the keys', () => {
 		expect(all).toHaveLength(20)
 		// No arrow art is left anywhere on the page.
 		for (const c of all) for (const name of imagesUsed(c)) expect(name).not.toMatch(/^arrow-/)
+	})
+
+	it('caption presets with the shot name the build was given, and plain numbers otherwise', () => {
+		expect(presetCaption(2, 'Stage')).toBe('2 (Stage)')
+		expect(presetCaption(6)).toBe('6')
+		const named = buildKeys(CONN, HOST, PAGES, { 1: 'Wide', 5: 'Bass' })
+		const caption = (row) => row.style.layers.find((l) => l.type === 'text').text.value
+		expect(caption(named[1][3])).toBe('1 (Wide)')
+		expect(caption(named[1][4])).toBe('2')
+		expect(caption(named[1][7])).toBe('5 (Bass)')
+		expect(named[1][3].options.notes).toContain('preset 1 (Wide)')
+		expect(caption(rows[1][3])).toBe('1')
+		// The name is caption only: the recall and save actions are the same with or without it.
+		expect(named[1][3].steps).toEqual(rows[1][3].steps)
+		expect(named[1][3].feedbacks).toEqual(rows[1][3].feedbacks)
 	})
 
 	it('step the drive speed through its three stops and keep the derived speeds in step', () => {

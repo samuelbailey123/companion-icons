@@ -157,10 +157,21 @@ const stopKey = (conn) =>
 		},
 	})
 
-const presetKey = (n, conn) =>
+/**
+ * The caption of a preset key: the number, and the shot's name in brackets when it has one.
+ *
+ * NAMES COME FROM THE BUILD, NOT FROM THE DECK. The operator named the presets by editing the
+ * captions on the rig, and the next rebuild from code silently put the bare numbers back
+ * (2026-09-06). Anything typed into Companion is one rebuild from gone, so the names live in
+ * the per-camera configuration the tool passes in, and the caption format is the one the
+ * operator chose.
+ */
+export const presetCaption = (n, name) => (name ? `${n} (${name})` : String(n))
+
+const presetKey = (n, conn, name) =>
 	key({
-		style: { icon: 'preset', label: String(n), bg: BG.key },
-		notes: `Recall preset ${n}. With Save armed, saves the current shot as preset ${n} instead.`,
+		style: { icon: 'preset', label: presetCaption(n, name), bg: BG.key },
+		notes: `Recall preset ${n}${name ? ` (${name})` : ''}. With Save armed, saves the current shot as preset ${n} instead.`,
 		feedbacks: [
 			when(`p${n}-last`, `${cv(V.LAST_PRESET)} == ${n}`, [
 				override(`p${n}-last-bw`, 'box0', 'borderWidth', 6),
@@ -275,10 +286,11 @@ export const navKey = (prefix, look, pageNumber) => {
  * @param {string} conn   the ptzoptics-visca connection id
  * @param {string} host   the camera address, for the web-API keys
  * @param {{setup: number|string}} pages  page numbers the jumps land on
+ * @param {Record<number, string>} [names]  preset number → shot name, for the captions
  * @returns {Record<number, Record<number, object>>} row → column → control
  */
-export function buildKeys(conn, host, pages) {
-	const presets = Object.fromEntries(PRESET_KEYS.map((n, i) => [3 + i, presetKey(n, conn)]))
+export function buildKeys(conn, host, pages, names = {}) {
+	const presets = Object.fromEntries(PRESET_KEYS.map((n, i) => [3 + i, presetKey(n, conn, names[n])]))
 	return {
 		1: { ...presets },
 		2: {

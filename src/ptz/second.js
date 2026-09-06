@@ -97,24 +97,30 @@ export function definitions2() {
  * host for camera one's, and requires the result to be identical. Anything that differs is a
  * layout divergence and throws with the JSON path to it.
  *
+ * Preset names are identity, not layout: each camera's shots have their own names, so the
+ * captions they produce are normalised away exactly, name by name, before comparing.
+ *
  * @throws if the two pages are not the same page
  */
-export function assertMirrored(pageOne, pageTwo, { connOne, connTwo, hostOne, hostTwo, pagesOne, pagesTwo, name }) {
+export function assertMirrored(pageOne, pageTwo, { connOne, connTwo, hostOne, hostTwo, pagesOne, pagesTwo, namesOne, namesTwo, name }) {
 	/*
 	 * Page numbers are normalised through the `"page":{"value":"N"` form rather than by replacing
 	 * the bare number, which would also hit coordinates, sizes and colours and turn a real
 	 * difference into a false pass.
 	 */
-	const normalise = (page, conn, host, numbers) => {
+	const normalise = (page, conn, host, numbers, names) => {
 		let s = JSON.stringify(page).split(conn).join('<CONN>').split(host).join('<HOST>')
 		for (const [role, n] of Object.entries(numbers ?? {})) {
 			s = s.split(`"page":{"value":"${n}"`).join(`"page":{"value":"<${role.toUpperCase()}>"`)
 		}
+		for (const [n, shot] of Object.entries(names ?? {})) {
+			s = s.split(` (${shot})`).join(` (<PRESET ${n}>)`)
+		}
 		return s
 	}
 
-	const one = normalise(pageOne, connOne, hostOne, pagesOne)
-	const two = normalise(JSON.parse(JSON.stringify(renameVariablesBack(pageTwo))), connTwo, hostTwo, pagesTwo)
+	const one = normalise(pageOne, connOne, hostOne, pagesOne, namesOne)
+	const two = normalise(JSON.parse(JSON.stringify(renameVariablesBack(pageTwo))), connTwo, hostTwo, pagesTwo, namesTwo)
 
 	if (one !== two) {
 		let i = 0
