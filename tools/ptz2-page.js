@@ -59,7 +59,7 @@ const CAMERAS = {
  */
 function liveNames(page) {
 	const out = {}
-	for (const control of Object.values(page?.controls?.[1] ?? {})) {
+	for (const control of Object.values(page?.controls ?? {}).flatMap((row) => Object.values(row ?? {}))) {
 		const text = control?.style?.layers?.find((l) => l.type === 'text')?.text?.value
 		const m = /^(\d+) \((.+)\)$/.exec(text ?? '')
 		if (m) out[m[1]] = m[2]

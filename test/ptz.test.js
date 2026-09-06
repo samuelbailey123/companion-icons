@@ -221,11 +221,15 @@ describe('the keys', () => {
 	const rows = buildKeys(CONN, HOST, PAGES)
 	const all = Object.values(rows).flatMap((r) => Object.values(r))
 
-	it('fill rows 1-3 right of the old pad, plus Speed and STOP, with nothing rotary', () => {
+	it('fill rows 1 and 2, presets in the left block, Setup and Zoom out alone on row 3', () => {
 		expect(Object.keys(rows)).toEqual(['1', '2', '3'])
-		expect(Object.keys(rows[1]).map(Number)).toEqual([3, 4, 5, 6, 7, 8])
-		expect(Object.keys(rows[2]).map(Number)).toEqual([0, 1, 3, 4, 5, 6, 7, 8])
-		expect(Object.keys(rows[3]).map(Number)).toEqual([3, 4, 5, 6, 7, 8])
+		expect(Object.keys(rows[1]).map(Number)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8])
+		expect(Object.keys(rows[2]).map(Number)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8])
+		expect(Object.keys(rows[3]).map(Number)).toEqual([3, 4])
+		// Presets 1-3 then 4-6, left to right, top to bottom.
+		const caption = (c) => c.style.layers.find((l) => l.type === 'text').text.value
+		expect([0, 1, 2].map((c) => caption(rows[1][c]))).toEqual(['1', '2', '3'])
+		expect([0, 1, 2].map((c) => caption(rows[2][c]))).toEqual(['4', '5', '6'])
 		for (const c of all) expect(c.options.rotaryActions).toBe(false)
 		expect(all).toHaveLength(20)
 		// No arrow art is left anywhere on the page.
@@ -237,14 +241,14 @@ describe('the keys', () => {
 		expect(presetCaption(6)).toBe('6')
 		const named = buildKeys(CONN, HOST, PAGES, { 1: 'Wide', 5: 'Bass' })
 		const caption = (row) => row.style.layers.find((l) => l.type === 'text').text.value
-		expect(caption(named[1][3])).toBe('1 (Wide)')
-		expect(caption(named[1][4])).toBe('2')
-		expect(caption(named[1][7])).toBe('5 (Bass)')
-		expect(named[1][3].options.notes).toContain('preset 1 (Wide)')
-		expect(caption(rows[1][3])).toBe('1')
+		expect(caption(named[1][0])).toBe('1 (Wide)')
+		expect(caption(named[1][1])).toBe('2')
+		expect(caption(named[2][1])).toBe('5 (Bass)')
+		expect(named[1][0].options.notes).toContain('preset 1 (Wide)')
+		expect(caption(rows[1][0])).toBe('1')
 		// The name is caption only: the recall and save actions are the same with or without it.
-		expect(named[1][3].steps).toEqual(rows[1][3].steps)
-		expect(named[1][3].feedbacks).toEqual(rows[1][3].feedbacks)
+		expect(named[1][0].steps).toEqual(rows[1][0].steps)
+		expect(named[1][0].feedbacks).toEqual(rows[1][0].feedbacks)
 	})
 
 	it('step the drive speed through its three stops and keep the derived speeds in step', () => {
@@ -252,7 +256,7 @@ describe('the keys', () => {
 		expect(nextStop('ptz_speed', SPEED_STOPS)).toBe(`${cv('ptz_speed')} < 10 ? 10 : (${cv('ptz_speed')} < 24 ? 24 : 1)`)
 		expect(nextStop('x', [2, 5])).toBe(`${cv('x')} < 5 ? 5 : 2`)
 
-		const speed = rows[2][0]
+		const speed = rows[2][3]
 		const down = speed.steps[0].action_sets.down
 		expect(down[0]).toEqual(setVar('speed-cycle', SPEED, nextStop(SPEED, SPEED_STOPS), true))
 		// The same three derivations the Speed knob performs, in the same order.
@@ -264,7 +268,7 @@ describe('the keys', () => {
 	})
 
 	it('names the camera on the centre key, and folds the tally into the same glance', () => {
-		const stop = rows[2][1]
+		const stop = rows[2][4]
 		const caption = stop.style.layers.find((l) => l.type === 'text')
 		// Read from ptz_atem_input rather than baked in, so the second camera's page gets its own
 		// number for free through the variable rename.
@@ -288,7 +292,7 @@ describe('the keys', () => {
 	})
 
 	it('makes STOP halt everything, close the menu, and carry ATEM tally', () => {
-		const stop = rows[2][1]
+		const stop = rows[2][4]
 		const branch = stop.steps[0].action_sets.down[0]
 		expect(branch.children.actions[0].options.custom.value).toBe('81 01 06 06 03 FF')
 		expect(branch.children.else_actions.map((a) => a.definitionId)).toEqual(['stop', 'zoomS'])
@@ -300,7 +304,7 @@ describe('the keys', () => {
 
 	it('recall presets, and save them only while armed', () => {
 		for (const [i, n] of PRESET_KEYS.entries()) {
-			const k = rows[1][3 + i]
+			const k = rows[1 + Math.floor(i / 3)][i % 3]
 			const branch = k.steps[0].action_sets.down[0]
 			expect(branch.children.actions[0].definitionId).toBe('setPreset')
 			expect(branch.children.actions[0].options.presetAsNumber.value).toBe(n)
@@ -308,17 +312,17 @@ describe('the keys', () => {
 			expect(branch.children.else_actions[0].options.presetAsNumber.value).toBe(n)
 			expect(k.feedbacks.map((f) => f.options.expression.value)).toEqual([`${cv('ptz_last')} == ${n}`, `${cv('ptz_armed')} == 1`])
 		}
-		const save = rows[2][8]
+		const save = rows[1][8]
 		expect(save.steps[0].action_sets.down[0].options.value.value).toBe(`${cv('ptz_armed')} == 1 ? 0 : 1`)
 	})
 
 	it('toggles and cycles off the camera state the poller read', () => {
-		const af = rows[2][5]
+		const af = rows[1][5]
 		expect(af.steps[0].action_sets.down[0].children.condition[0].options.expression.value).toBe(`${field('focus')} == "Auto"`)
 		expect(af.steps[0].action_sets.down[0].children.actions[0].options.bol.value).toBe('1')
 		expect(af.steps[0].action_sets.down[0].children.else_actions[0].options.bol.value).toBe('0')
 
-		const track = rows[2][6]
+		const track = rows[1][6]
 		expect(track.steps[0].action_sets.down[0].children.actions[0].options.path.value).toBe(`python3 /home/samuelbailey/Desktop/AV_Power_scripts/ptz_web.py ${HOST} track off`)
 		expect(track.steps[0].action_sets.down[0].children.else_actions[0].options.path.value).toContain('track on')
 		expect(track.steps[0].action_sets.down[0].children.actions[0].options.targetVariable.value).toBe('ptz_track')
@@ -339,10 +343,10 @@ describe('the keys', () => {
 		const power = setupRows[1][3]
 		expect(allActions(power).filter((a) => a.definitionId === 'power').map((a) => a.options.bool.value)).toEqual(['off', 'on'])
 
-		const menu = rows[3][8]
+		const menu = rows[2][8]
 		expect(allActions(menu).map((a) => a.options.custom?.value).filter(Boolean)).toEqual(['81 01 06 06 03 FF', '81 01 06 06 02 FF'])
 
-		for (const [cell, which] of [[rows[2][7], 'close'], [rows[3][6], 'half'], [rows[3][7], 'full']]) {
+		for (const [cell, which] of [[rows[1][7], 'close'], [rows[2][6], 'half'], [rows[2][7], 'full']]) {
 			expect(cell.steps[0].action_sets.down[0].options.path.value).toContain(`body ${which}`)
 			expect(cell.feedbacks[0].options.expression.value).toContain("jsonpath($(internal:custom_ptz_track), '$.body')")
 		}
@@ -354,11 +358,11 @@ describe('the keys', () => {
 	})
 
 	it('zooms while held and homes on demand', () => {
-		expect(rows[2][4].steps[0].action_sets.down[0].options.custom.value).toBe('81 01 04 07 20 FF')
+		expect(rows[1][4].steps[0].action_sets.down[0].options.custom.value).toBe('81 01 04 07 20 FF')
 		expect(rows[3][4].steps[0].action_sets.down[0].options.custom.value).toBe('81 01 04 07 30 FF')
-		expect(rows[2][4].steps[0].action_sets.up[0].definitionId).toBe('zoomS')
-		expect(rows[2][3].steps[0].action_sets.down[0].definitionId).toBe('home')
-		expect(rows[3][5].steps[0].action_sets.down[0].options.custom.value).toBe('81 01 04 38 04 FF')
+		expect(rows[1][4].steps[0].action_sets.up[0].definitionId).toBe('zoomS')
+		expect(rows[1][3].steps[0].action_sets.down[0].definitionId).toBe('home')
+		expect(rows[2][5].steps[0].action_sets.down[0].options.custom.value).toBe('81 01 04 38 04 FF')
 	})
 
 	it('uses unique ids, only the given connection, and only shipped images', () => {

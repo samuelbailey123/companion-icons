@@ -1,24 +1,25 @@
 /**
- * The 20 keys of the PTZ run page: rows 1-3, nine across, the left block mostly empty.
+ * The 20 keys of the PTZ run page: rows 1-3, nine across.
  *
- *   col:   0       1     2   |  3        4         5        6         7          8
- *   row 1: ·       ·     ·   |  P1       P2        P3       P4        P5         P6
- *   row 2: Speed  STOP   ·   |  Home     Zoom in   AF       Track     Close-up   Save
- *   row 3: ·       ·     ·   |  Setup ▸  Zoom out  1-push   Half      Full       Menu
+ *   col:   0      1      2   |  3        4         5        6         7          8
+ *   row 1: P1     P2     P3  |  Home     Zoom in   AF       Track     Close-up   Save
+ *   row 2: P4     P5     P6  |  Speed    STOP      1-push   Half      Full       Menu
+ *   row 3: ·      ·      ·   |  Setup ▸  Zoom out  ·        ·         ·          ·
  *
  * RUN HERE, SET UP ON THE NEXT PAGE. This page holds what an operator touches during a
- * service: driving, presets, focus, tracking on/off and its framing. Exposure, white
+ * service: presets, speed, focus, tracking on/off and its framing. Exposure, white
  * balance, backlight, power and the tracking parameters live on the setup sub-page
  * (`setup.js`), one press away on Setup ▸ and back on the folder row or its own ◂ key.
  *
- * THE ARROWS ARE GONE; THE KNOBS DRIVE. The left block used to be an eight-way pad that
- * drove while held. The operator never used it — pan and tilt live on the encoders — and on
- * 2026-09-06 asked for its space instead. It now holds one key, Speed, which steps the drive
- * speed through three stops, 1 → 10 → 24 → 1: creep, normal, fast. The Speed knob still
- * fine-tunes between them, and both write the same variable so the caption is always right.
- * The pad also navigated the camera's on-screen menu while it was open; that went with it,
- * and Menu now only opens and closes the OSD. The camera's web page covers everything the
- * menu did.
+ * PRESETS SIT UNDER THE THUMB. The left block used to be an eight-way arrow pad that drove
+ * while held. The operator never used it — pan and tilt live on the encoders — and on
+ * 2026-09-06 asked for its space instead. The six presets, the keys pressed most in a
+ * service, now fill it as a 2×3 block with their shot names on them; everything else moved
+ * one column right. Speed steps the drive speed through three stops, 1 → 10 → 24 → 1:
+ * creep, normal, fast. The Speed knob still fine-tunes between them, and both write the
+ * same variable so the caption is always right. The pad also navigated the camera's
+ * on-screen menu while it was open; that went with it, and Menu now only opens and closes
+ * the OSD. The camera's web page covers everything the menu did.
  *
  * STOP CARRIES TALLY. The centre key goes red when the ATEM has this camera on program and
  * green on preview: it is the key you are looking at when you move the camera, so it is the
@@ -111,11 +112,11 @@ const CAMERA = `concat('CAM ', ${cv(V.ATEM_INPUT)})`
 /**
  * Stop, and the page's camera indicator.
  *
- * IT NAMES THE CAMERA BECAUSE IT IS WHERE THE EYE ALREADY IS. This key sits dead centre of the
- * nudge cluster, under the thumb, and it already carried the ATEM tally — so it is the one place
- * on the page that is being looked at while a camera is being moved. A corner badge was tried
- * first and did not work; this does the same job at no cost in keys, and folds "which camera" and
- * "is it on air" into one glance.
+ * IT NAMES THE CAMERA BECAUSE IT IS WHERE THE EYE ALREADY IS. This key sits between Zoom in and
+ * Zoom out, beside Speed, and it already carried the ATEM tally — so it is the one place on the
+ * page that is being looked at while a camera is being moved. A corner badge was tried first and
+ * did not work; this does the same job at no cost in keys, and folds "which camera" and "is it on
+ * air" into one glance.
  *
  * The stop function is unchanged; the icon still says stop and the caption is the state.
  */
@@ -290,12 +291,14 @@ export const navKey = (prefix, look, pageNumber) => {
  * @returns {Record<number, Record<number, object>>} row → column → control
  */
 export function buildKeys(conn, host, pages, names = {}) {
-	const presets = Object.fromEntries(PRESET_KEYS.map((n, i) => [3 + i, presetKey(n, conn, names[n])]))
+	// Presets 1-3 across row 1, 4-6 across row 2, columns 0-2: three per row, in order.
+	const presets = { 1: {}, 2: {} }
+	PRESET_KEYS.forEach((n, i) => {
+		presets[1 + Math.floor(i / 3)][i % 3] = presetKey(n, conn, names[n])
+	})
 	return {
-		1: { ...presets },
-		2: {
-			0: speedKey(),
-			1: stopKey(conn),
+		1: {
+			...presets[1],
 			3: homeKey(conn),
 			4: zoomKey('zi', conn, 'zoom-in', '81 01 04 07 20 FF', 'Zoom in'),
 			5: autofocusKey(conn),
@@ -303,13 +306,18 @@ export function buildKeys(conn, host, pages, names = {}) {
 			7: framingKey(host, 'close'),
 			8: saveKey(),
 		},
-		3: {
-			3: navKey('setup', { icon: 'ptz-setup', label: 'Setup', notes: 'Opens the PTZ setup page: exposure, white balance, backlight, power and the tracking settings.' }, pages.setup),
-			4: zoomKey('zo', conn, 'zoom-out', '81 01 04 07 30 FF', 'Zoom out'),
+		2: {
+			...presets[2],
+			3: speedKey(),
+			4: stopKey(conn),
 			5: onePushKey(conn),
 			6: framingKey(host, 'half'),
 			7: framingKey(host, 'full'),
 			8: menuKey(conn),
+		},
+		3: {
+			3: navKey('setup', { icon: 'ptz-setup', label: 'Setup', notes: 'Opens the PTZ setup page: exposure, white balance, backlight, power and the tracking settings.' }, pages.setup),
+			4: zoomKey('zo', conn, 'zoom-out', '81 01 04 07 30 FF', 'Zoom out'),
 		},
 	}
 }

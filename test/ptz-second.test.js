@@ -123,7 +123,7 @@ describe('the mirror check', () => {
 		expect(() => assertMirrored(one, two, opts)).toThrow(/not a mirror/)
 		expect(() => assertMirrored(one, two, { ...opts, namesOne, namesTwo })).not.toThrow()
 		// A name the table does not know is still a drift.
-		const text = two.controls[1][6].style.layers.find((l) => l.type === 'text')
+		const text = two.controls[2][0].style.layers.find((l) => l.type === 'text')
 		text.text.value = '4 (Lectern)'
 		expect(() => assertMirrored(one, two, { ...opts, namesOne, namesTwo })).toThrow(/not a mirror/)
 	})
