@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { cv, field } from '../src/ptz/actions.js'
 import { BG } from '../src/ptz/controls.js'
 import {
-	SETUP_KNOBS, SYNC_TRIGGER_ID, buildSetupKnobs, levelKey, matchKey, nrKey, onePushKey, pq, syncTrigger, wbCodeExpression, wdrKey,
+	SETUP_KNOBS, SYNC_TRIGGER_ID, buildSetupKnobs, levelKey, lookKey, matchKey, nrKey, onePushKey, pq, saveLookKey, syncTrigger, wbCodeExpression, wdrKey,
 } from '../src/ptz/picture.js'
 import { EXPCOMP_ZERO, IRIS, RANGE, SHUTTER, STANDARD, WB_CODE, WB_KELVIN, WB_MAX, WB_MIN, expcompLabel, kelvinLabel, levelLabel } from '../src/ptz/tables.js'
 import { FIELDS, GAIN, MATCH, STATE, WB_CODE as WB_CODE_VAR, WB_K, definitions } from '../src/ptz/variables.js'
 import { SCRIPT } from '../src/ptz/poller.js'
-import { MATCH as WEB_MATCH, SCRIPT as WEB_SCRIPT, SCRIPT_PATH, matchExec } from '../src/ptz/web.js'
+import { MATCH as WEB_MATCH, SCRIPT as WEB_SCRIPT, SCRIPT_PATH, lookExec, matchExec } from '../src/ptz/web.js'
 import { KNOB_COLS } from '../src/layout.js'
 import { ICONS } from '../src/variants.js'
 
@@ -241,6 +241,30 @@ describe('one-push white balance and Match', () => {
 		expect(WEB_SCRIPT).toContain('"copied"')
 		expect(WEB_SCRIPT).toContain('"left"')
 		expect(WEB_SCRIPT).not.toContain('`')
+	})
+})
+
+describe('the look', () => {
+	it('ships save, apply and get in the web script, with the headline values in the poller’s labels', () => {
+		for (const verb of ['look save', 'look apply', 'look get']) expect(WEB_SCRIPT).toContain(verb)
+		expect(WEB_SCRIPT).toContain('def look(')
+		expect(WEB_SCRIPT).toContain('def apply_params(')
+		expect(WEB_SCRIPT).toContain('ptz_look_{host}.json')
+		expect(WEB_SCRIPT).toContain('.prev.json')
+		for (const f of ['"wb"', '"ae"', '"shutter"', '"iris"', '"gain"', '"sharp"', '"saved"', '"applied"', '"left"']) expect(WEB_SCRIPT).toContain(f)
+		// The labels come from the same tables the poller prints from.
+		expect(WEB_SCRIPT).toContain('31: "4700K"')
+		expect(WEB_SCRIPT).toContain('3: "Manual"')
+		expect(WEB_SCRIPT).toContain('18: "1/60"')
+		expect(WEB_SCRIPT).not.toContain('`')
+	})
+
+	it('keeps the look as persistent state and reads it back on the key', () => {
+		expect(definitions().ptz_look.persistCurrentValue).toBe(true)
+		expect(lookExec('x', HOST, 'apply').options.targetVariable.value).toBe('ptz_look')
+		expect(lookExec('x', HOST, 'apply').options.timeout.value).toBeGreaterThanOrEqual(20000)
+		expect(saveLookKey(HOST).feedbacks.map((f) => f.id)).toEqual(['savelook-down'])
+		expect(lookKey(HOST, 'p').feedbacks.map((f) => f.id)).toEqual(['p-set', 'p-left', 'p-down'])
 	})
 })
 

@@ -92,3 +92,15 @@ export const levelLabel = (n, auto = false) => (n === 0 ? 'Off' : auto && n === 
 
 /** Exposure compensation as a signed offset from centre, or Off. */
 export const expcompLabel = (on, level) => (on ? (level > EXPCOMP_ZERO ? `+${level - EXPCOMP_ZERO}` : String(level - EXPCOMP_ZERO)) : 'Off')
+
+/** Exposure modes as the camera codes them, VISCA and web API alike. */
+export const AE_MODES = { 0x00: 'Auto', 0x03: 'Manual', 0x0a: 'Shutter', 0x0b: 'Iris', 0x0d: 'Bright' }
+
+/** The white balance label for a code: a temperature, or one of the modes. */
+export const WB_LABELS = { ...WB_MODES, ...Object.fromEntries(Object.entries(WB_KELVIN).map(([code, k]) => [code, kelvinLabel(k)])) }
+
+/**
+ * A JS table as a Python dict literal, so a script's labels come from the same source as the
+ * deck's captions. Keys are numeric.
+ */
+export const pyDict = (obj) => `{${Object.entries(obj).map(([k, v]) => `${Number(k)}: ${JSON.stringify(v)}`).join(', ')}}`

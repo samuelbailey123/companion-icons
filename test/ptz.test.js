@@ -5,6 +5,7 @@ import { DEFAULT_SPEED, SPEED, STATE, definitions, mergeDefinitions } from '../s
 import { DIRECTION, DRIVE_MS, KNOBS, ROWS, buildKnobs, deriveSpeeds, driveCommand } from '../src/ptz/knobs.js'
 import { PRESET_KEYS, SPEED_STOPS, buildKeys, navKey, nextStop, presetCaption } from '../src/ptz/keys.js'
 import { AUTO_FIELDS, autoKey } from '../src/ptz/image.js'
+import { lookKey } from '../src/ptz/picture.js'
 import { INTERVAL_SECONDS, SCRIPT, SCRIPT_PATH, TRIGGER_ID, pollTrigger } from '../src/ptz/poller.js'
 import { PAGE_NAME, REPLACES, SETUP_NAME, buildConfig, buildPage, buildSetupPage, findConnection } from '../src/ptz/page.js'
 import { TRIGGER_ID as TRACK_TRIGGER_ID } from '../src/ptz/web.js'
@@ -129,7 +130,7 @@ describe('variables', () => {
 })
 
 describe('the knobs', () => {
-	const { strips, knobs } = buildKnobs(CONN)
+	const { strips, knobs } = buildKnobs(CONN, HOST)
 
 	it('come as strip + encoder pairs on the columns the deck has', () => {
 		expect(Object.keys(strips).map(Number).sort()).toEqual(Object.values(KNOBS).sort())
@@ -201,7 +202,8 @@ describe('the knobs', () => {
 		expect(branch.definitionId).toBe('logic_if')
 		expect(branch.children.condition[0].options.expression.value).toBe(`${cv('ptz_armed')} == 1`)
 		expect(branch.children.actions.map((a) => a.definitionId)).toEqual(['setPreset', 'custom_variable_set_value', 'custom_variable_set_value'])
-		expect(branch.children.else_actions.map((a) => a.definitionId)).toEqual(['recallPreset', 'custom_variable_set_value'])
+		expect(branch.children.else_actions.map((a) => a.definitionId)).toEqual(['recallPreset', 'custom_variable_set_value', 'exec'])
+		expect(branch.children.else_actions[2].options.path.value).toBe(`python3 /home/samuelbailey/Desktop/AV_Power_scripts/ptz_web.py ${HOST} look apply`)
 		expect(branch.children.actions[0].options.presetAsText.value).toBe(cv('ptz_preset'))
 		expect(branch.children.actions[0].options.isText.value).toBe(true)
 	})
@@ -223,17 +225,17 @@ describe('the keys', () => {
 	const rows = buildKeys(CONN, HOST, PAGES)
 	const all = Object.values(rows).flatMap((r) => Object.values(r))
 
-	it('fill rows 1 and 2, presets in the left block, Setup, Zoom out and Auto on row 3', () => {
+	it('fill rows 1 and 2, presets in the left block, Look, Setup, Zoom out and Auto on row 3', () => {
 		expect(Object.keys(rows)).toEqual(['1', '2', '3'])
 		expect(Object.keys(rows[1]).map(Number)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8])
 		expect(Object.keys(rows[2]).map(Number)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8])
-		expect(Object.keys(rows[3]).map(Number)).toEqual([3, 4, 5])
+		expect(Object.keys(rows[3]).map(Number)).toEqual([2, 3, 4, 5])
 		// Presets 1-3 then 4-6, left to right, top to bottom.
 		const caption = (c) => c.style.layers.find((l) => l.type === 'text').text.value
 		expect([0, 1, 2].map((c) => caption(rows[1][c]))).toEqual(['1', '2', '3'])
 		expect([0, 1, 2].map((c) => caption(rows[2][c]))).toEqual(['4', '5', '6'])
 		for (const c of all) expect(c.options.rotaryActions).toBe(false)
-		expect(all).toHaveLength(21)
+		expect(all).toHaveLength(22)
 		// No arrow art is left anywhere on the page.
 		for (const c of all) for (const name of imagesUsed(c)) expect(name).not.toMatch(/^arrow-/)
 	})
@@ -312,6 +314,9 @@ describe('the keys', () => {
 			expect(branch.children.actions[0].options.presetAsNumber.value).toBe(n)
 			expect(branch.children.else_actions[0].definitionId).toBe('recallPreset')
 			expect(branch.children.else_actions[0].options.presetAsNumber.value).toBe(n)
+			// A recall puts the saved look back by itself; a save does not touch it.
+			expect(branch.children.else_actions.at(-1).options.path.value).toBe(`python3 /home/samuelbailey/Desktop/AV_Power_scripts/ptz_web.py ${HOST} look apply`)
+			expect(branch.children.actions.some((a) => a.definitionId === 'exec')).toBe(false)
 			expect(k.feedbacks.map((f) => f.options.expression.value)).toEqual([`${cv('ptz_last')} == ${n}`, `${cv('ptz_armed')} == 1`])
 		}
 		const save = rows[1][8]
@@ -394,6 +399,19 @@ describe('the keys', () => {
 		expect(part.styleOverrides.map((o) => o.override.value)).toEqual([BG.notice, 'Auto PART'])
 	})
 
+	it('puts the saved look back from under the presets, and says whether the camera is on it', () => {
+		const look = rows[3][2]
+		expect(look).toEqual(lookKey(HOST))
+		expect(look.steps[0].action_sets.down[0].options.path.value).toBe(`python3 /home/samuelbailey/Desktop/AV_Power_scripts/ptz_web.py ${HOST} look apply`)
+		expect(look.steps[0].action_sets.down[0].options.targetVariable.value).toBe('ptz_look')
+		const set = look.feedbacks.find((f) => f.id === 'look-set').options.expression.value
+		for (const f of ['wb', 'ae', 'shutter', 'iris', 'gain', 'sharp']) {
+			expect(set).toContain(`${field(f)} == jsonpath($(internal:custom_ptz_look), '$.${f}')`)
+		}
+		expect(look.feedbacks.map((f) => f.styleOverrides.find((o) => o.elementProperty === 'text')?.override.value)).toEqual(['Look set', `concat('Look ', jsonpath($(internal:custom_ptz_look), '$.left'), ' left')`, 'Look FAILED'])
+		expect(imagesUsed(look)).toEqual(['ptz-look'])
+	})
+
 	it('zooms while held and homes on demand', () => {
 		expect(rows[1][4].steps[0].action_sets.down[0].options.custom.value).toBe('81 01 04 07 20 FF')
 		expect(rows[3][4].steps[0].action_sets.down[0].options.custom.value).toBe('81 01 04 07 30 FF')
@@ -467,7 +485,7 @@ describe('the page', () => {
 		expect(Object.keys(setup.controls)).toEqual(['1', '2', '3', '4', '5'])
 		expect(Object.keys(setup.controls[1])).toHaveLength(9)
 		expect(Object.keys(setup.controls[2])).toHaveLength(6)
-		expect(Object.keys(setup.controls[3])).toHaveLength(4)
+		expect(Object.keys(setup.controls[3])).toHaveLength(6)
 		// The six value knobs with their readouts, on the strip and encoder rows.
 		expect(Object.keys(setup.controls[4]).map(Number)).toEqual(KNOB_COLS)
 		expect(Object.keys(setup.controls[5]).map(Number)).toEqual(KNOB_COLS)

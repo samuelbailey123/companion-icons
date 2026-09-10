@@ -5,8 +5,8 @@ import { SHAPES } from '../src/glyphs/index.js'
 import { isLabelValid, makeLabelSafe } from './helpers/labelsafe.js'
 
 describe('icon inventory', () => {
-	it('contains exactly 244 icons', () => {
-		expect(ICONS).toHaveLength(244)
+	it('contains exactly 245 icons', () => {
+		expect(ICONS).toHaveLength(245)
 	})
 
 	/**
@@ -69,7 +69,7 @@ describe('icon inventory', () => {
 		expect(counts).toEqual({
 			contrast: 54,
 			folders: 9,
-			camera: 46,
+			camera: 47,
 			system: 8,
 			power: 17,
 			video: 35,

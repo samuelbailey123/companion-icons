@@ -4,7 +4,7 @@
  *   col:   0         1         2            3          4         5         6        7        8
  *   row 1: Exposure  WB        Backlight    Power      Track     Close-up  Half     Full     ◂ PTZ
  *   row 2: Mode      AT speed  Sensitivity  Placement  Headroom  Lost      —        —        —
- *   row 3: Auto      WDR       NR           1-push WB  Match     —         —        —        —
+ *   row 3: Auto      WDR       NR           1-push WB  Match     Save look Look     —        —
  *   row 4: Shutter   ·         Iris         Gain       ·         Exp comp  WB       ·        Sharp    (strip readouts)
  *   row 5: Shutter   ·         Iris         Gain       ·         Exp comp  WB       ·        Sharp    (knobs)
  *
@@ -28,7 +28,7 @@
 
 import { autoKey, backlightKey, exposureKey, powerKey, whiteBalanceKey } from './image.js'
 import { navKey } from './keys.js'
-import { matchKey, nrKey, onePushKey, wdrKey } from './picture.js'
+import { lookKey, matchKey, nrKey, onePushKey, saveLookKey, wdrKey } from './picture.js'
 import { SETTINGS, cycleKey, framingKey, trackKey } from './tracking.js'
 
 export const PAGE_NAME = 'PTZ Setup'
@@ -64,6 +64,8 @@ export function buildSetupKeys(conn, host, pages, other) {
 			2: nrKey(conn),
 			3: onePushKey(conn),
 			...(other ? { 4: matchKey(host, other) } : {}),
+			5: saveLookKey(host),
+			6: lookKey(host, 'setup-look'),
 		},
 	}
 }

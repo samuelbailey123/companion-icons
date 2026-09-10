@@ -28,6 +28,7 @@
  */
 
 import { exec } from './actions.js'
+import { AE_MODES, IRIS, SHUTTER, WB_LABELS, pyDict } from './tables.js'
 
 /** Beside the VISCA poller, with the credentials file next to it. */
 export const SCRIPT_PATH = '/home/samuelbailey/Desktop/AV_Power_scripts/ptz_web.py'
@@ -59,6 +60,13 @@ export const webExec = (id, host, args) => exec(id, `python3 ${SCRIPT_PATH} ${ho
 /** `jsonpath()` over the match JSON. */
 export const matched = (field) => `jsonpath($(internal:custom_${MATCH}), '$.${field}')`
 
+/** The saved look's variable and `jsonpath()` over it. */
+export const LOOK = 'ptz_look'
+export const look = (field) => `jsonpath($(internal:custom_${LOOK}), '$.${field}')`
+
+/** Save, apply or read the look. Apply is a read, up to five block writes and a read back. */
+export const lookExec = (id, host, verb) => exec(id, `python3 ${SCRIPT_PATH} ${host} look ${verb}`, LOOK, 20000)
+
 /**
  * Copy the other camera's picture settings onto this one. Two logins, two reads, up to five
  * block writes and a read back: allowed twenty seconds, well past the few it takes.
@@ -74,15 +82,21 @@ Usage:
   ptz_web.py <host> body <close|half|full>
   ptz_web.py <host> set <field>=<int> [...]      e.g. set nSpeed=0 nCenterPos=1
   ptz_web.py <host> match <other-host>           copy the other camera's picture settings here
+  ptz_web.py <host> look save                    keep the picture settings as they are now
+  ptz_web.py <host> look apply                   put the kept picture settings back
+  ptz_web.py <host> look get                     what is kept, without touching the camera
 
 Prints one line of JSON summarising the tracking block afterwards, always, so the value is
-safe to show on a key; 'match' prints its own one-line summary instead. Credentials are read
-from the file .ptz_web beside this script, as user:pass, never taken on the command line.
+safe to show on a key; 'match' and 'look' print their own one-line summaries instead.
+Credentials are read from the file .ptz_web beside this script, as user:pass, never taken on
+the command line. The look lives in ptz_look_<host>.json beside this script, with the
+previous one kept as .prev.json.
 """
 import http.cookiejar
 import json
 import os
 import sys
+import time
 import urllib.parse
 import urllib.request
 
@@ -159,14 +173,13 @@ def nested(path, value, out):
     cur[path[-1]] = value
 
 
-def match(opener, host, other):
-    """Copy every picture setting that differs from 'other' onto 'host', block by block.
+def apply_params(opener, host, source):
+    """Apply every picture setting in 'source' that differs from the camera, block by block.
 
     The web UI merges the exposure sub-objects whole (iris, shutter, mode, lists and all), so
-    those are sent as the source camera holds them. A block the camera refuses is retried one
-    field at a time, so one bad key cannot block the rest.
+    those are sent as the source holds them. A block the camera refuses is retried one field
+    at a time, so one bad key cannot block the rest. Returns (applied, left).
     """
-    source = video_params(session(other), other)
     before = video_params(opener, host)
     want, have = dict(leaves(source)), dict(leaves(before))
     diff = {p: v for p, v in want.items() if p in have and have[p] != v and p not in MATCH_EXCLUDE}
@@ -192,7 +205,57 @@ def match(opener, host, other):
                     pass
     after = dict(leaves(video_params(opener, host)))
     left = [p for p, v in diff.items() if after.get(p) != v]
-    return {"online": "OK", "from": other, "copied": len(diff) - len(left), "left": len(left)}
+    return len(diff) - len(left), len(left)
+
+
+def match(opener, host, other):
+    """Copy the other camera's picture settings onto this one."""
+    applied, left = apply_params(opener, host, video_params(session(other), other))
+    return {"online": "OK", "from": other, "copied": applied, "left": left}
+
+
+WB = ${pyDict(WB_LABELS)}
+AE = ${pyDict(AE_MODES)}
+SHUTTER = ${pyDict(SHUTTER)}
+IRIS = ${pyDict(IRIS)}
+
+
+def look_path(host):
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), f"ptz_look_{host}.json")
+
+
+def look_summary(look, applied=0, left=0):
+    """The kept look's headline values, in the labels the poller prints, so a key can compare."""
+    p = look["params"]
+    return {
+        "online": "OK", "saved": look["saved"], "applied": applied, "left": left,
+        "wb": WB.get(p["stColor"]["stWbMode"]["emWbMode"], "?"),
+        "ae": AE.get(p["stExp"]["stExpMode"]["emExpMode"], "?"),
+        "shutter": SHUTTER.get(p["stExp"]["stShutter"]["nShutter"], "?"),
+        "iris": IRIS.get(p["stExp"]["stIris"]["nIris"], "?"),
+        "gain": str(p["stExp"]["again"]),
+        "sharp": str(p["stImg"]["sharpness"]),
+    }
+
+
+def look(opener, host, verb):
+    """Keep the picture settings as they are (save), put them back (apply), or read them (get)."""
+    path = look_path(host)
+    if verb == "save":
+        kept = {"host": host, "saved": time.strftime("%Y-%m-%d %H:%M:%S"), "params": video_params(opener, host)}
+        if os.path.exists(path):
+            os.replace(path, path[:-5] + ".prev.json")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(kept, f, indent=1)
+        return look_summary(kept)
+    with open(path, encoding="utf-8") as f:
+        kept = json.load(f)
+    if verb == "apply":
+        applied, left = apply_params(opener, host, kept["params"])
+        return look_summary(kept, applied, left)
+    if verb == "get":
+        return look_summary(kept)
+    raise SystemExit(__doc__)
 
 
 def summary(block):
@@ -215,6 +278,9 @@ def main(argv):
     if verb == "match":
         sys.stdout.write(json.dumps(match(opener, host, argv[3])))
         return
+    if verb == "look":
+        sys.stdout.write(json.dumps(look(opener, host, argv[3])))
+        return
     if verb == "track":
         set_tracking(opener, host, {"bEnable": 1 if argv[3] == "on" else 0})
     elif verb == "body":
@@ -236,6 +302,9 @@ if __name__ == "__main__":
     except Exception:  # noqa: BLE001 - the deck needs JSON, not a traceback
         if len(sys.argv) > 2 and sys.argv[2] == "match":
             sys.stdout.write(json.dumps({"online": "DOWN", "from": sys.argv[3] if len(sys.argv) > 3 else "--", "copied": "--", "left": "--"}))
+        elif len(sys.argv) > 2 and sys.argv[2] == "look":
+            sys.stdout.write(json.dumps({"online": "DOWN", "saved": "--", "applied": "--", "left": "--", "wb": "--", "ae": "--",
+                                         "shutter": "--", "iris": "--", "gain": "--", "sharp": "--"}))
         else:
             sys.stdout.write(json.dumps({"online": "DOWN", "tracking": "--", "body": "--", "mode": "--", "speed": "--",
                                          "sensitivity": "--", "placement": "--", "headroom": "--", "lost": "--"}))

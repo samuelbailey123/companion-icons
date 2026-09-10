@@ -44,7 +44,7 @@ import { cv, field, logicIf, override, overrideExpr, raw, setVar, v, visca, wait
 import { BG, key, knob, strip } from './controls.js'
 import { EXPCOMP_ZERO, RANGE, STANDARD, WB_KELVIN, WB_MAX, WB_MIN, WB_STEP, levelLabel } from './tables.js'
 import * as V from './variables.js'
-import { matchExec, matched } from './web.js'
+import { look, lookExec, matchExec, matched } from './web.js'
 
 /** Columns of the six pairs, on the strip and encoder rows. Exposure left, colour, then image. */
 export const SETUP_KNOBS = { shutter: 0, iris: 2, gain: 3, expcomp: 5, wb: 6, sharp: 8 }
@@ -322,6 +322,68 @@ export const matchKey = (host, other) =>
 			]),
 		],
 		actionSets: { down: [matchExec('match-go', host, other.host)], up: [] },
+	})
+
+/**
+ * The look: the picture settings the operator has declared right, kept on the Pi.
+ *
+ * WHY IT EXISTS. On this camera a preset carries the picture settings it was saved with —
+ * exposure, colour, image, focus, noise reduction — and recalling it puts them all back,
+ * colour included. The operator tunes the colour until it is right, presses a preset to
+ * reframe, and the colour goes back to whatever it was the day the preset was saved
+ * (2026-09-10). Save look keeps today's settings in a file beside the scripts; Look puts them
+ * back. The saved values are the whole picture block, not just colour, because the recall
+ * reverts the whole block and half a fix is not a fix.
+ *
+ * THE KEY SAYS WHETHER THE CAMERA IS ON THE LOOK. The script prints the look's headline values
+ * in the poller's own labels, so the key can compare them with what the camera reports: green
+ * and "Look set" while white balance, exposure mode, shutter, iris, gain and sharpness all
+ * match, plain "Look" as soon as a recall (or a knob) has moved any of them. Amber with a count
+ * if an apply left settings behind; red if the camera's web page could not be reached.
+ */
+const onLook = ['wb', 'ae', 'shutter', 'iris', 'gain', 'sharp'].map((f) => `${field(f)} == ${look(f)}`).join(' && ')
+
+export const lookKey = (host, prefix = 'look') =>
+	key({
+		style: { icon: 'ptz-look', label: 'Look', bg: BG.key },
+		notes:
+			'Puts the saved picture settings back (exposure, colour, image, focus, noise reduction) after a preset recall ' +
+			'has changed them. Green and "Look set" while the camera is on the saved look. Save look, on the setup page, is what saves it.',
+		feedbacks: [
+			when(`${prefix}-set`, `${look('online')} == "OK" && ${onLook}`, [
+				override(`${prefix}-set-bg`, 'box0', 'color', BG.engaged),
+				override(`${prefix}-set-text`, 'text0', 'text', 'Look set'),
+			]),
+			when(`${prefix}-left`, `${look('online')} == "OK" && ${look('left')} > 0`, [
+				override(`${prefix}-left-bg`, 'box0', 'color', BG.notice),
+				overrideExpr(`${prefix}-left-text`, 'text0', 'text', `concat('Look ', ${look('left')}, ' left')`),
+			]),
+			when(`${prefix}-down`, `${look('online')} == "DOWN"`, [
+				override(`${prefix}-down-bg`, 'box0', 'color', BG.armed),
+				override(`${prefix}-down-text`, 'text0', 'text', 'Look FAILED'),
+			]),
+		],
+		actionSets: { down: [lookExec(`${prefix}-apply`, host, 'apply')], up: [] },
+	})
+
+/**
+ * Save look: keep the picture as it is now. Lives on the setup page only, where a press is
+ * deliberate; the previous look is kept beside it as .prev.json, so a wrong press costs a
+ * file rename on the Pi rather than the look.
+ */
+export const saveLookKey = (host) =>
+	key({
+		style: { icon: 'ptz-look', label: 'Save look', bg: BG.key },
+		notes:
+			'Keeps the picture settings exactly as they are now (exposure, colour, image, focus, noise reduction) as the look ' +
+			'that Look puts back. Press when the picture is right. The previous look is kept as .prev.json on the Pi.',
+		feedbacks: [
+			when('savelook-down', `${look('online')} == "DOWN"`, [
+				override('savelook-down-bg', 'box0', 'color', BG.armed),
+				override('savelook-down-text', 'text0', 'text', 'Save FAILED'),
+			]),
+		],
+		actionSets: { down: [lookExec('savelook-go', host, 'save')], up: [] },
 	})
 
 /**

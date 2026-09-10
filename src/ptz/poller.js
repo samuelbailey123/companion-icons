@@ -22,11 +22,8 @@
  */
 
 import { exec } from './actions.js'
-import { EXPCOMP_ZERO, IRIS, SHUTTER, WB_KELVIN, WB_MODES, kelvinLabel } from './tables.js'
+import { AE_MODES, EXPCOMP_ZERO, IRIS, SHUTTER, WB_LABELS, pyDict } from './tables.js'
 import * as V from './variables.js'
-
-/** A JS table as a Python dict literal, so the script's labels come from the same source as the deck's. */
-const pyDict = (obj) => `{${Object.entries(obj).map(([k, v]) => `${Number(k)}: ${JSON.stringify(v)}`).join(', ')}}`
 
 /** Where the script lives on the Pi: next to the AV power scripts the Power page already runs. */
 export const SCRIPT_PATH = '/home/samuelbailey/Desktop/AV_Power_scripts/ptz_state.py'
@@ -57,11 +54,11 @@ TIMEOUT = 0.6
 HOST = sys.argv[1] if len(sys.argv) > 1 else "10.23.0.181"
 PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 5678
 
-WB = ${pyDict({ ...WB_MODES, ...Object.fromEntries(Object.entries(WB_KELVIN).map(([code, k]) => [code, kelvinLabel(k)])) })}
+WB = ${pyDict(WB_LABELS)}
 SHUTTER = ${pyDict(SHUTTER)}
 IRIS = ${pyDict(IRIS)}
 EXPCOMP_ZERO = ${EXPCOMP_ZERO}
-AE = {0x00: "Auto", 0x03: "Manual", 0x0A: "Shutter", 0x0B: "Iris", 0x0D: "Bright"}
+AE = ${pyDict(AE_MODES)}
 FOCUS = {0x02: "Auto", 0x03: "Manual", 0x04: "1-Push"}
 ON_OFF = {0x02: "On", 0x03: "Off"}
 POWER = {0x02: "On", 0x03: "Standby"}

@@ -236,6 +236,7 @@ const camera = [
 	icon('nr', 'nr', 'camera', 'camera', 'Noise reduction'),
 	icon('white-card', 'white-card', 'camera', 'camera', 'One-push white balance off a white card'),
 	icon('ptz-match', 'dsk', 'camera', 'camera', 'Match this camera to the other one'),
+	icon('ptz-look', 'still', 'camera', 'camera', 'The saved picture settings: save them, or put them back'),
 	icon('speed', 'speed', 'camera', 'camera', 'Drive speed'),
 	icon('preset', 'preset', 'camera', 'camera', 'Camera preset'),
 	icon('preset-save', 'preset-save', 'camera', 'camera', 'Save a preset'),

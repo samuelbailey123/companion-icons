@@ -4,7 +4,7 @@
  *   col:   0      1      2   |  3        4         5        6         7          8
  *   row 1: P1     P2     P3  |  Home     Zoom in   AF       Track     Close-up   Save
  *   row 2: P4     P5     P6  |  Speed    STOP      1-push   Half      Full       Menu
- *   row 3: ·      ·      ·   |  Setup ▸  Zoom out  Auto     ·         ·          ·
+ *   row 3: ·      ·      Look|  Setup ▸  Zoom out  Auto     ·         ·          ·
  *
  * RUN HERE, SET UP ON THE NEXT PAGE. This page holds what an operator touches during a
  * service: presets, speed, focus, tracking on/off and its framing. Exposure, white
@@ -14,6 +14,14 @@
  * single press, or both back to manual, and sits under the focus keys because it is the
  * same kind of move as AF, only wider. White balance is deliberately not part of it
  * (`image.js`).
+ *
+ * A RECALL PUTS THE LOOK BACK BY ITSELF. On these cameras a preset carries the picture settings
+ * it was saved with, colour included, so recalling one drags the colour back to whenever that
+ * preset was last saved. Every recall from the deck — the six keys and the dial — therefore
+ * re-applies the saved look straight after the recall command (the operator's choice,
+ * 2026-09-10, over re-saving the presets): about a second of the old colour while the web API
+ * answers, then the picture the operator declared right. The Look key under the presets is the
+ * manual version, for a recall made from anywhere else (`picture.js`).
  *
  * PRESETS SIT UNDER THE THUMB. The left block used to be an eight-way arrow pad that drove
  * while held. The operator never used it — pan and tilt live on the encoders — and on
@@ -44,6 +52,8 @@ import { cv, field, logicIf, override, overrideExpr, raw, setVar, visca, when } 
 import { BG, INK, LABEL, key } from './controls.js'
 import { autoKey, menuKey } from './image.js'
 import { deriveSpeeds } from './knobs.js'
+import { lookKey } from './picture.js'
+import { lookExec } from './web.js'
 import { framingKey, trackKey } from './tracking.js'
 import * as V from './variables.js'
 
@@ -173,10 +183,10 @@ const stopKey = (conn) =>
  */
 export const presetCaption = (n, name) => (name ? `${n} (${name})` : String(n))
 
-const presetKey = (n, conn, name) =>
+const presetKey = (n, conn, host, name) =>
 	key({
 		style: { icon: 'preset', label: presetCaption(n, name), bg: BG.key },
-		notes: `Recall preset ${n}${name ? ` (${name})` : ''}. With Save armed, saves the current shot as preset ${n} instead.`,
+		notes: `Recall preset ${n}${name ? ` (${name})` : ''}, then put the saved look back. With Save armed, saves the current shot as preset ${n} instead.`,
 		feedbacks: [
 			when(`p${n}-last`, `${cv(V.LAST_PRESET)} == ${n}`, [
 				override(`p${n}-last-bw`, 'box0', 'borderWidth', 6),
@@ -190,7 +200,7 @@ const presetKey = (n, conn, name) =>
 					`p${n}-if`,
 					[armed(`p${n}-cond`)],
 					[presetFixed(`p${n}-save`, conn, 'setPreset', n), setVar(`p${n}-disarm`, V.ARMED, '0'), setVar(`p${n}-last-s`, V.LAST_PRESET, String(n))],
-					[presetFixed(`p${n}-recall`, conn, 'recallPreset', n), setVar(`p${n}-last-r`, V.LAST_PRESET, String(n))]
+					[presetFixed(`p${n}-recall`, conn, 'recallPreset', n), setVar(`p${n}-last-r`, V.LAST_PRESET, String(n)), lookExec(`p${n}-look`, host, 'apply')]
 				),
 			],
 			up: [],
@@ -298,7 +308,7 @@ export function buildKeys(conn, host, pages, names = {}) {
 	// Presets 1-3 across row 1, 4-6 across row 2, columns 0-2: three per row, in order.
 	const presets = { 1: {}, 2: {} }
 	PRESET_KEYS.forEach((n, i) => {
-		presets[1 + Math.floor(i / 3)][i % 3] = presetKey(n, conn, names[n])
+		presets[1 + Math.floor(i / 3)][i % 3] = presetKey(n, conn, host, names[n])
 	})
 	return {
 		1: {
@@ -320,6 +330,7 @@ export function buildKeys(conn, host, pages, names = {}) {
 			8: menuKey(conn),
 		},
 		3: {
+			2: lookKey(host),
 			3: navKey('setup', { icon: 'ptz-setup', label: 'Setup', notes: 'Opens the PTZ setup page: exposure, white balance, backlight, power and the tracking settings.' }, pages.setup),
 			4: zoomKey('zo', conn, 'zoom-out', '81 01 04 07 30 FF', 'Zoom out'),
 			5: autoKey(conn),

@@ -48,6 +48,13 @@ export const WB_K = 'ptz_wbk'
 export const WB_CODE = 'ptz_wbcode'
 /** What the last Match press did, as JSON from `ptz_web.py match` (see web.js). */
 export const MATCH = 'ptz_match'
+/**
+ * The saved look — the picture settings the operator declared right — as JSON from
+ * `ptz_web.py look` (see web.js): what it holds, and what the last save or apply did. Persists,
+ * because it describes a file on the Pi rather than the camera, and the Look key compares the
+ * camera against it.
+ */
+export const LOOK = 'ptz_look'
 
 /**
  * The camera's state as one JSON document from the poller. Captions and conditions read
@@ -89,6 +96,7 @@ export function definitions() {
 		[WB_K]: persistent('PTZ white balance dial in kelvin, 2400-7100, set by the WB knob and kept in step with the camera', '4600'),
 		[WB_CODE]: persistent('PTZ VISCA white balance code for ptz_wbk, derived whenever the dial moves', '30'),
 		[MATCH]: live('PTZ result of the last Match press as JSON from ptz_web.py: online, from, copied, left'),
+		[LOOK]: persistent('PTZ saved look as JSON from ptz_web.py look: online, saved, applied, left, and its wb, ae, shutter, iris, gain, sharp', ''),
 		[STATE]: live(`PTZ camera state as JSON, polled every second: ${FIELDS.join(', ')}`),
 	}
 }

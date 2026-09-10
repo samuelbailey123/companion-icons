@@ -35,7 +35,7 @@ export { SETUP_NAME }
  * @param {Record<number, string>} [names]  preset number → shot name, shown on the preset keys
  */
 export function buildPage(conn, host, pages, names = {}) {
-	const { strips, knobs } = buildKnobs(conn)
+	const { strips, knobs } = buildKnobs(conn, host)
 	return {
 		name: PAGE_NAME,
 		controls: { ...buildKeys(conn, host, pages, names), [ROWS.strip]: strips, [ROWS.knob]: knobs },
