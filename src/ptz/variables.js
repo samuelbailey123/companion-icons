@@ -33,6 +33,23 @@ export const TRACK = 'ptz_track'
 export const ATEM_INPUT = 'ptz_atem_input'
 
 /**
+ * The setup page's two dials: values the knob has to know to step, because the camera has no
+ * up/down command for them. Gain is 0..15; the white balance dial is in kelvin, 2400..7100 in
+ * hundreds. Both are operator state and persist; both are also kept in step with the camera by
+ * the sync trigger (`picture.js`), so a change from the web page does not leave the dial stale.
+ */
+export const GAIN = 'ptz_gain'
+export const WB_K = 'ptz_wbk'
+/**
+ * The VISCA code for WB_K. The camera's temperature codes are not in temperature order, and
+ * the module's custom-command parameters take a variable but not an expression, so the code is
+ * worked out into its own variable the moment the dial moves and sent from there.
+ */
+export const WB_CODE = 'ptz_wbcode'
+/** What the last Match press did, as JSON from `ptz_web.py match` (see web.js). */
+export const MATCH = 'ptz_match'
+
+/**
  * The camera's state as one JSON document from the poller. Captions and conditions read
  * fields straight out of it with `jsonpath()` rather than through per-field variables: a
  * trigger does not wait for `exec` to finish before running its next action, so anything
@@ -42,7 +59,11 @@ export const ATEM_INPUT = 'ptz_atem_input'
 export const STATE = 'ptz_state'
 
 /** Field names inside STATE, as the poller writes them. */
-export const FIELDS = ['online', 'pan', 'tilt', 'zoom', 'focus', 'ae', 'wb', 'backlight', 'power', 'menu']
+export const FIELDS = [
+	'online', 'pan', 'tilt', 'zoom', 'focus', 'ae', 'wb', 'backlight', 'power', 'menu',
+	// The setup page's values, added 2026-09-10 so its knobs and keys can show what they set.
+	'shutter', 'iris', 'gain', 'sharp', 'expcomp', 'wdr', 'nr',
+]
 
 export const DEFAULT_SPEED = 12
 
@@ -64,7 +85,11 @@ export function definitions() {
 		[ARMED]: persistent('1 while the next PTZ preset press saves instead of recalling', '0'),
 		[TRACK]: live('PTZ AI-tracking settings as JSON from the camera web API: tracking, body, mode, speed, sensitivity, placement, headroom, lost'),
 		[ATEM_INPUT]: persistent('ATEM input number the PTZ camera is on, for tally on the Stop key', '8'),
-		[STATE]: live('PTZ camera state as JSON, polled every second: online, pan, tilt, zoom, focus, ae, wb, backlight, power, menu'),
+		[GAIN]: persistent('PTZ gain dial 0-15, set by the Gain knob and kept in step with the camera', '0'),
+		[WB_K]: persistent('PTZ white balance dial in kelvin, 2400-7100, set by the WB knob and kept in step with the camera', '4600'),
+		[WB_CODE]: persistent('PTZ VISCA white balance code for ptz_wbk, derived whenever the dial moves', '30'),
+		[MATCH]: live('PTZ result of the last Match press as JSON from ptz_web.py: online, from, copied, left'),
+		[STATE]: live(`PTZ camera state as JSON, polled every second: ${FIELDS.join(', ')}`),
 	}
 }
 

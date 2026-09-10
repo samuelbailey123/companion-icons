@@ -5,7 +5,7 @@
  * deck would know where the camera is pointing. The same mechanism the System page uses —
  * `internal: exec` on a trigger, writing stdout into a custom variable — fills the gap: a
  * small Python script on the Pi opens its own VISCA/TCP connection (the camera accepts
- * several at once, checked), asks eight inquiries, and prints one line of JSON. The trigger
+ * several at once, checked), asks sixteen inquiries, and prints one line of JSON. The trigger
  * stores that line in one custom variable, and every caption and condition on the page reads
  * its field with `jsonpath()`.
  *
@@ -22,7 +22,11 @@
  */
 
 import { exec } from './actions.js'
+import { EXPCOMP_ZERO, IRIS, SHUTTER, WB_KELVIN, WB_MODES, kelvinLabel } from './tables.js'
 import * as V from './variables.js'
+
+/** A JS table as a Python dict literal, so the script's labels come from the same source as the deck's. */
+const pyDict = (obj) => `{${Object.entries(obj).map(([k, v]) => `${Number(k)}: ${JSON.stringify(v)}`).join(', ')}}`
 
 /** Where the script lives on the Pi: next to the AV power scripts the Power page already runs. */
 export const SCRIPT_PATH = '/home/samuelbailey/Desktop/AV_Power_scripts/ptz_state.py'
@@ -53,16 +57,10 @@ TIMEOUT = 0.6
 HOST = sys.argv[1] if len(sys.argv) > 1 else "10.23.0.181"
 PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 5678
 
-WB = {0x00: "Auto", 0x05: "Manual", 0x03: "1-Push"}
-# Colour temperatures, straight from the camera's VISCA list: the codes are not in order.
-WB.update({0x0C: "2400K", 0x0D: "2500K", 0x0E: "2600K", 0x0F: "2700K", 0x10: "2800K", 0x11: "2900K",
-           0x01: "3000K", 0x12: "3100K", 0x13: "3200K", 0x14: "3300K", 0x15: "3400K", 0x07: "3500K",
-           0x16: "3600K", 0x17: "3700K", 0x18: "3800K", 0x19: "3900K", 0x02: "4000K", 0x1A: "4100K",
-           0x1B: "4200K", 0x1C: "4300K", 0x1D: "4400K", 0x08: "4500K", 0x1E: "4600K", 0x1F: "4700K",
-           0x21: "4800K", 0x22: "4900K", 0x04: "5000K", 0x23: "5100K", 0x24: "5200K", 0x25: "5300K",
-           0x26: "5400K", 0x09: "5500K", 0x27: "5600K", 0x28: "5700K", 0x29: "5800K", 0x2A: "5900K",
-           0x0A: "6000K", 0x2B: "6100K", 0x2C: "6200K", 0x2D: "6300K", 0x2E: "6400K", 0x06: "6500K",
-           0x2F: "6600K", 0x30: "6700K", 0x31: "6800K", 0x32: "6900K", 0x0B: "7000K", 0x33: "7100K"})
+WB = ${pyDict({ ...WB_MODES, ...Object.fromEntries(Object.entries(WB_KELVIN).map(([code, k]) => [code, kelvinLabel(k)])) })}
+SHUTTER = ${pyDict(SHUTTER)}
+IRIS = ${pyDict(IRIS)}
+EXPCOMP_ZERO = ${EXPCOMP_ZERO}
 AE = {0x00: "Auto", 0x03: "Manual", 0x0A: "Shutter", 0x0B: "Iris", 0x0D: "Bright"}
 FOCUS = {0x02: "Auto", 0x03: "Manual", 0x04: "1-Push"}
 ON_OFF = {0x02: "On", 0x03: "Off"}
@@ -97,6 +95,19 @@ def degrees(raw):
     return f"{signed16(raw) / UNITS_PER_DEGREE:+.1f}\\u00b0"
 
 
+def level(n, auto=False):
+    return "Off" if n == 0 else "Auto" if auto and n == 8 else str(n)
+
+
+def expcomp(on, n):
+    return ("+" if n > EXPCOMP_ZERO else "") + str(n - EXPCOMP_ZERO) if on else "Off"
+
+
+BLANK = {"online": "DOWN", "pan": "--", "tilt": "--", "zoom": "--", "focus": "--", "ae": "--", "wb": "--",
+         "backlight": "--", "power": "--", "menu": "--", "shutter": "--", "iris": "--", "gain": "--",
+         "sharp": "--", "expcomp": "--", "wdr": "--", "nr": "--"}
+
+
 def read(host, port):
     with socket.create_connection((host, port), timeout=TIMEOUT) as sock:
         sock.settimeout(TIMEOUT)
@@ -110,9 +121,11 @@ def read(host, port):
         # Power first: in standby the camera answers this and little else.
         power = field("81090400ff", lambda r: POWER.get(r[2], "?"))
         if power == "Standby":
-            return {"online": "OK", "pan": "--", "tilt": "--", "zoom": "--", "focus": "--",
-                    "ae": "--", "wb": "--", "backlight": "--", "power": "Standby", "menu": "--"}
+            return dict(BLANK, online="OK", power="Standby")
         pt = field("81090612ff", lambda r: (degrees(nibbles(r, 2, 4)), degrees(nibbles(r, 6, 4))))
+        # Exposure compensation is two inquiries, on/off and level, shown as one signed value.
+        ec_on = field("8109043eff", lambda r: r[2] == 0x02)
+        ec_level = field("8109044eff", lambda r: nibbles(r, 4, 2))
         return {
             "online": "OK",
             "pan": pt if pt == "--" else pt[0],
@@ -124,6 +137,17 @@ def read(host, port):
             "backlight": field("81090433ff", lambda r: ON_OFF.get(r[2], "?")),
             "power": power,
             "menu": field("81090606ff", lambda r: ON_OFF.get(r[2], "?")),
+            # The setup page's values. Labels come from the camera's own lists (tables.js), not
+            # the module's Sony scales, which name every one of these wrongly on this camera.
+            "shutter": field("8109044aff", lambda r: SHUTTER.get(nibbles(r, 4, 2), "?")),
+            "iris": field("8109044bff", lambda r: IRIS.get(nibbles(r, 4, 2), "?")),
+            "gain": field("8109044cff", lambda r: str(nibbles(r, 4, 2))),
+            "sharp": field("81090442ff", lambda r: str(nibbles(r, 4, 2))),
+            "expcomp": "--" if "--" in (ec_on, ec_level) else expcomp(ec_on, ec_level),
+            # The camera answers the WDR inquiry with a short reply, y0 50 0p FF, not the six
+            # bytes its own list documents; the level is the nibble before the terminator either way.
+            "wdr": field("81090451ff", lambda r: level(r[-2] & 0x0F)),
+            "nr": field("81090454ff", lambda r: level(r[2] & 0x0F, auto=True)),
         }
 
 
@@ -131,8 +155,7 @@ def main():
     try:
         state = read(HOST, PORT)
     except Exception:  # noqa: BLE001 - any failure means "not reachable", and the output must stay JSON
-        state = {"online": "DOWN", "pan": "--", "tilt": "--", "zoom": "--", "focus": "--",
-                 "ae": "--", "wb": "--", "backlight": "--", "power": "--", "menu": "--"}
+        state = dict(BLANK)
     sys.stdout.write(json.dumps(state))
 
 

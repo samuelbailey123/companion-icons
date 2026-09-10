@@ -35,6 +35,8 @@ export const CREDENTIALS_FILE = '.ptz_web'
 
 /** The custom variable holding the script's one-line JSON summary. */
 export const TRACK = 'ptz_track'
+/** Where a Match press keeps its result: the tracking variable must not be overwritten by it. */
+export const MATCH = 'ptz_match'
 
 /** Seconds between tracking polls. Each is a login plus a read, so not every second. */
 export const INTERVAL_SECONDS = 5
@@ -54,6 +56,15 @@ export const track = (field) => `jsonpath($(internal:custom_${TRACK}), '$.${fiel
 /** An exec that runs the script and keeps its printed state. */
 export const webExec = (id, host, args) => exec(id, `python3 ${SCRIPT_PATH} ${host} ${args}`, TRACK, 6000)
 
+/** `jsonpath()` over the match JSON. */
+export const matched = (field) => `jsonpath($(internal:custom_${MATCH}), '$.${field}')`
+
+/**
+ * Copy the other camera's picture settings onto this one. Two logins, two reads, up to five
+ * block writes and a read back: allowed twenty seconds, well past the few it takes.
+ */
+export const matchExec = (id, host, other) => exec(id, `python3 ${SCRIPT_PATH} ${host} match ${other}`, MATCH, 20000)
+
 export const SCRIPT = `#!/usr/bin/env python3
 """Read or change a FoMaKo PTZ camera's AI-tracking settings through its web API.
 
@@ -62,10 +73,11 @@ Usage:
   ptz_web.py <host> track <on|off>
   ptz_web.py <host> body <close|half|full>
   ptz_web.py <host> set <field>=<int> [...]      e.g. set nSpeed=0 nCenterPos=1
+  ptz_web.py <host> match <other-host>           copy the other camera's picture settings here
 
 Prints one line of JSON summarising the tracking block afterwards, always, so the value is
-safe to show on a key. Credentials are read from the file .ptz_web beside this script,
-as user:pass, never taken on the command line.
+safe to show on a key; 'match' prints its own one-line summary instead. Credentials are read
+from the file .ptz_web beside this script, as user:pass, never taken on the command line.
 """
 import http.cookiejar
 import json
@@ -121,6 +133,68 @@ def set_tracking(opener, host, fields):
     ajax(opener, host, {"SetEnv": {"MonoTracking": fields}})
 
 
+# Picture settings that belong to the mounting, not the picture: never copied between cameras.
+MATCH_EXCLUDE = {("stImg", "nAutoFlip"), ("stImg", "nFlipH"), ("stImg", "nFlipV")}
+
+
+def video_params(opener, host):
+    val = ajax(opener, host, {"GetEnv": {"VideoParam": {"nChannel": -1}}})
+    return val[0] if isinstance(val, list) else val
+
+
+def leaves(d, path=()):
+    for k, v in d.items():
+        if k.endswith("List") or k == "nChannel":
+            continue
+        if isinstance(v, dict):
+            yield from leaves(v, path + (k,))
+        else:
+            yield path + (k,), v
+
+
+def nested(path, value, out):
+    cur = out
+    for k in path[:-1]:
+        cur = cur.setdefault(k, {})
+    cur[path[-1]] = value
+
+
+def match(opener, host, other):
+    """Copy every picture setting that differs from 'other' onto 'host', block by block.
+
+    The web UI merges the exposure sub-objects whole (iris, shutter, mode, lists and all), so
+    those are sent as the source camera holds them. A block the camera refuses is retried one
+    field at a time, so one bad key cannot block the rest.
+    """
+    source = video_params(session(other), other)
+    before = video_params(opener, host)
+    want, have = dict(leaves(source)), dict(leaves(before))
+    diff = {p: v for p, v in want.items() if p in have and have[p] != v and p not in MATCH_EXCLUDE}
+    blocks = {}
+    for p, v in diff.items():
+        nested(p, v, blocks)
+    for block, body in blocks.items():
+        if block == "stExp":
+            for sub in ("stIris", "stShutter", "stExpMode"):
+                if sub in body:
+                    body[sub] = source["stExp"][sub]
+        try:
+            ajax(opener, host, {"SetEnv": {"VideoParam": [{block: body, "nChannel": 0}]}})
+        except Exception:  # noqa: BLE001 - fall back to one field at a time
+            for p, v in diff.items():
+                if p[0] != block:
+                    continue
+                one = {}
+                nested(p, v, one)
+                try:
+                    ajax(opener, host, {"SetEnv": {"VideoParam": [{**one, "nChannel": 0}]}})
+                except Exception:  # noqa: BLE001 - counted as "left" below
+                    pass
+    after = dict(leaves(video_params(opener, host)))
+    left = [p for p, v in diff.items() if after.get(p) != v]
+    return {"online": "OK", "from": other, "copied": len(diff) - len(left), "left": len(left)}
+
+
 def summary(block):
     return {
         "online": "OK",
@@ -138,6 +212,9 @@ def summary(block):
 def main(argv):
     host, verb = argv[1], argv[2]
     opener = session(host)
+    if verb == "match":
+        sys.stdout.write(json.dumps(match(opener, host, argv[3])))
+        return
     if verb == "track":
         set_tracking(opener, host, {"bEnable": 1 if argv[3] == "on" else 0})
     elif verb == "body":
@@ -157,8 +234,11 @@ if __name__ == "__main__":
     try:
         main(sys.argv)
     except Exception:  # noqa: BLE001 - the deck needs JSON, not a traceback
-        sys.stdout.write(json.dumps({"online": "DOWN", "tracking": "--", "body": "--", "mode": "--", "speed": "--",
-                                     "sensitivity": "--", "placement": "--", "headroom": "--", "lost": "--"}))
+        if len(sys.argv) > 2 and sys.argv[2] == "match":
+            sys.stdout.write(json.dumps({"online": "DOWN", "from": sys.argv[3] if len(sys.argv) > 3 else "--", "copied": "--", "left": "--"}))
+        else:
+            sys.stdout.write(json.dumps({"online": "DOWN", "tracking": "--", "body": "--", "mode": "--", "speed": "--",
+                                         "sensitivity": "--", "placement": "--", "headroom": "--", "lost": "--"}))
 `
 
 /**

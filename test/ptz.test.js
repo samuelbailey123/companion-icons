@@ -8,6 +8,7 @@ import { AUTO_FIELDS, autoKey } from '../src/ptz/image.js'
 import { INTERVAL_SECONDS, SCRIPT, SCRIPT_PATH, TRIGGER_ID, pollTrigger } from '../src/ptz/poller.js'
 import { PAGE_NAME, REPLACES, SETUP_NAME, buildConfig, buildPage, buildSetupPage, findConnection } from '../src/ptz/page.js'
 import { TRIGGER_ID as TRACK_TRIGGER_ID } from '../src/ptz/web.js'
+import { SYNC_TRIGGER_ID } from '../src/ptz/picture.js'
 import { KNOB_COLS, KNOB_ROW, STRIP_ROW } from '../src/layout.js'
 import { NAV_ORDER } from '../src/navrow.js'
 import { ICONS } from '../src/variants.js'
@@ -333,10 +334,15 @@ describe('the keys', () => {
 		const modes = allActions(exposure).filter((a) => a.definitionId === 'expM').map((a) => a.options.val.value)
 		expect(modes).toEqual(['2', '3', '1', '0'])
 
+		// White balance: Auto, or the temperature on the WB dial — the fixed presets went with the dial.
 		const wb = setupRows[1][1]
-		const wbModes = allActions(wb).filter((a) => a.definitionId === 'wb').map((a) => a.options.val.value)
-		expect(wbModes).toEqual(['indoor', 'outdoor', 'onepush', 'automatic'])
-		expect(allActions(wb).some((a) => a.definitionId === 'wbOPT')).toBe(true)
+		const wbBranch = wb.steps[0].action_sets.down[0]
+		expect(wbBranch.children.condition[0].options.expression.value).toBe(`${field('wb')} == "Auto"`)
+		expect(wbBranch.children.actions.map((a) => a.definitionId)).toEqual(['custom_variable_set_value', 'custom'])
+		expect(wbBranch.children.actions[0].options.name.value).toBe('ptz_wbcode')
+		expect(wbBranch.children.actions[1].options.parameter0.value).toBe(cv('ptz_wbcode'))
+		expect(wbBranch.children.else_actions.map((a) => a.options.val?.value)).toEqual(['automatic'])
+		expect(JSON.stringify(wb)).not.toMatch(/indoor|outdoor|onepush|wbOPT/)
 
 		const backlight = setupRows[1][2]
 		expect(allActions(backlight).map((a) => a.options.custom?.value).filter(Boolean)).toEqual(['81 01 04 33 03 FF', '81 01 04 33 02 FF'])
@@ -458,10 +464,14 @@ describe('the page', () => {
 		expect(page.gridSize).toEqual({ minColumn: 0, maxColumn: 8, minRow: 0, maxRow: 5 })
 		const setup = buildSetupPage(CONN, HOST, PAGES)
 		expect(setup.name).toBe(SETUP_NAME)
-		expect(Object.keys(setup.controls)).toEqual(['1', '2', '3'])
+		expect(Object.keys(setup.controls)).toEqual(['1', '2', '3', '4', '5'])
 		expect(Object.keys(setup.controls[1])).toHaveLength(9)
 		expect(Object.keys(setup.controls[2])).toHaveLength(6)
-		expect(Object.keys(setup.controls[3])).toHaveLength(1)
+		expect(Object.keys(setup.controls[3])).toHaveLength(4)
+		// The six value knobs with their readouts, on the strip and encoder rows.
+		expect(Object.keys(setup.controls[4]).map(Number)).toEqual(KNOB_COLS)
+		expect(Object.keys(setup.controls[5]).map(Number)).toEqual(KNOB_COLS)
+		for (const col of KNOB_COLS) expect(setup.controls[5][col].options.rotaryActions).toBe(true)
 		expect(setup.controls[1][8].steps[0].action_sets.down[0].options.page.value).toBe('9')
 	})
 
@@ -482,7 +492,7 @@ describe('the page', () => {
 		}
 		expect(out.custom_variables.vh_dest).toEqual(rig().custom_variables.vh_dest)
 		expect(out.custom_variables[SPEED]).toBeDefined()
-		expect(Object.keys(out.triggers).sort()).toEqual(['keep', TRIGGER_ID, TRACK_TRIGGER_ID].sort())
+		expect(Object.keys(out.triggers).sort()).toEqual(['keep', TRIGGER_ID, TRACK_TRIGGER_ID, SYNC_TRIGGER_ID].sort())
 		expect(out.triggers[TRIGGER_ID].actions[0].options.path.value).toContain('10.23.0.181')
 		expect(out.triggers[TRACK_TRIGGER_ID].actions[0].options.path.value).toContain('ptz_web.py 10.23.0.181 get')
 		expect(out.connection.id).toBe('abc')
@@ -507,6 +517,6 @@ describe('the page', () => {
 		const bare = rig()
 		delete bare.triggers
 		delete bare.custom_variables
-		expect(Object.keys(buildConfig(bare).triggers).sort()).toEqual([TRIGGER_ID, TRACK_TRIGGER_ID].sort())
+		expect(Object.keys(buildConfig(bare).triggers).sort()).toEqual([TRIGGER_ID, TRACK_TRIGGER_ID, SYNC_TRIGGER_ID].sort())
 	})
 })

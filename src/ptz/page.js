@@ -16,6 +16,7 @@ import { COLUMNS, GRID_SIZE } from '../layout.js'
 import { assertNavCoverage, folderFor, navRow } from '../navrow.js'
 import { buildKeys } from './keys.js'
 import { buildKnobs, ROWS } from './knobs.js'
+import { SYNC_TRIGGER_ID, buildSetupKnobs, syncTrigger } from './picture.js'
 import { TRIGGER_ID, pollTrigger } from './poller.js'
 import { PAGE_NAME as SETUP_NAME, buildSetupKeys } from './setup.js'
 import { mergeDefinitions } from './variables.js'
@@ -42,9 +43,14 @@ export function buildPage(conn, host, pages, names = {}) {
 	}
 }
 
-/** The setup sub-page, rows 1-2. */
-export function buildSetupPage(conn, host, pages) {
-	return { name: SETUP_NAME, controls: buildSetupKeys(conn, host, pages), gridSize: { ...GRID_SIZE } }
+/** The setup sub-page: rows 1-3 of keys, and the six value knobs with their readouts. */
+export function buildSetupPage(conn, host, pages, other) {
+	const { strips, knobs } = buildSetupKnobs(conn)
+	return {
+		name: SETUP_NAME,
+		controls: { ...buildSetupKeys(conn, host, pages, other), [ROWS.strip]: strips, [ROWS.knob]: knobs },
+		gridSize: { ...GRID_SIZE },
+	}
 }
 
 /**
@@ -95,7 +101,11 @@ export function buildConfig(full) {
 	}
 
 	const triggers = structuredClone(full.triggers ?? {})
-	for (const [id, trigger] of [[TRIGGER_ID, pollTrigger(connection.host)], [TRACK_TRIGGER_ID, trackingTrigger(connection.host)]]) {
+	for (const [id, trigger] of [
+		[TRIGGER_ID, pollTrigger(connection.host)],
+		[TRACK_TRIGGER_ID, trackingTrigger(connection.host)],
+		[SYNC_TRIGGER_ID, syncTrigger()],
+	]) {
 		for (const [existing, t] of Object.entries(triggers)) {
 			if (t?.options?.name === trigger.options.name) delete triggers[existing]
 		}

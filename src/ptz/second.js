@@ -102,14 +102,18 @@ export function definitions2() {
  *
  * @throws if the two pages are not the same page
  */
-export function assertMirrored(pageOne, pageTwo, { connOne, connTwo, hostOne, hostTwo, pagesOne, pagesTwo, namesOne, namesTwo, name }) {
+export function assertMirrored(pageOne, pageTwo, { connOne, connTwo, hostOne, hostTwo, pagesOne, pagesTwo, namesOne, namesTwo, otherOne, otherTwo, name }) {
 	/*
 	 * Page numbers are normalised through the `"page":{"value":"N"` form rather than by replacing
 	 * the bare number, which would also hit coordinates, sizes and colours and turn a real
 	 * difference into a false pass.
+	 *
+	 * The other camera is identity too: the Match key names it and runs the script against its
+	 * address, and each camera's "other" is a different camera.
 	 */
-	const normalise = (page, conn, host, numbers, names) => {
+	const normalise = (page, conn, host, numbers, names, other) => {
 		let s = JSON.stringify(page).split(conn).join('<CONN>').split(host).join('<HOST>')
+		if (other) s = s.split(other.host).join('<OTHER-HOST>').split(`CAM ${other.atem}`).join('<OTHER>')
 		for (const [role, n] of Object.entries(numbers ?? {})) {
 			s = s.split(`"page":{"value":"${n}"`).join(`"page":{"value":"<${role.toUpperCase()}>"`)
 		}
@@ -119,8 +123,8 @@ export function assertMirrored(pageOne, pageTwo, { connOne, connTwo, hostOne, ho
 		return s
 	}
 
-	const one = normalise(pageOne, connOne, hostOne, pagesOne, namesOne)
-	const two = normalise(JSON.parse(JSON.stringify(renameVariablesBack(pageTwo))), connTwo, hostTwo, pagesTwo, namesTwo)
+	const one = normalise(pageOne, connOne, hostOne, pagesOne, namesOne, otherOne)
+	const two = normalise(JSON.parse(JSON.stringify(renameVariablesBack(pageTwo))), connTwo, hostTwo, pagesTwo, namesTwo, otherTwo)
 
 	if (one !== two) {
 		let i = 0

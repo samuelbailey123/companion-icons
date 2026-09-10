@@ -87,14 +87,25 @@ describe('tracking keys', () => {
 describe('the setup page', () => {
 	const rows = buildSetupKeys('conn', HOST, { run: 9 })
 
-	it('carries picture, power, tracking, the six settings and Auto, with a way back', () => {
+	it('carries picture, power, tracking, the six settings, Auto, WDR, NR and 1-push, with a way back', () => {
 		expect(Object.keys(rows[1])).toHaveLength(9)
 		expect(Object.keys(rows[2])).toHaveLength(6)
-		expect(Object.keys(rows[3])).toEqual(['0'])
+		expect(Object.keys(rows[3])).toEqual(['0', '1', '2', '3'])
 		expect(rows[3][0]).toEqual(autoKey('conn'))
+		expect(rows[3][1].style.layers[3].text.value).toContain('WDR')
+		expect(rows[3][2].style.layers[3].text.value).toContain('NR')
+		expect(rows[3][3].style.layers[3].text.value).toBe('1-push WB')
 		expect(rows[1][8].steps[0].action_sets.down[0].options.page.value).toBe('9')
 		expect(rows[1][4].feedbacks[0].id).toBe('setup-track-on')
 		expect(rows[1][5].feedbacks[0].id).toBe('setup-frame-close-sel')
+	})
+
+	it('adds Match only when it is told about the other camera', () => {
+		const paired = buildSetupKeys('conn', HOST, { run: 9 }, { host: '10.0.0.8', atem: 1 })
+		expect(Object.keys(paired[3])).toEqual(['0', '1', '2', '3', '4'])
+		expect(paired[3][4].style.layers[3].text.value).toBe('Match ◂ CAM 1')
+		expect(paired[3][4].steps[0].action_sets.down[0].options.path.value).toContain('10.0.0.8')
+		expect(rows[3][4]).toBeUndefined()
 	})
 
 	it('uses ids that do not collide with the run page', () => {

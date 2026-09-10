@@ -84,6 +84,7 @@ describe('glyph shapes', () => {
 			'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right',
 			'arrow-up-left', 'arrow-up-right', 'arrow-down-left', 'arrow-down-right',
 			'ptz', 'pan', 'tilt', 'stop', 'zoom-in', 'zoom-out', 'focus', 'focus-auto', 'ptz-auto', 'speed',
+			'shutter', 'iris', 'exp-comp', 'sharpness', 'wdr', 'nr', 'white-card',
 			'preset', 'preset-save', 'tracking', 'exposure', 'backlight', 'menu', 'folder-ptz',
 			'frame-close', 'frame-half', 'frame-full',
 		]

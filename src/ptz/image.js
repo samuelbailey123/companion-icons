@@ -3,17 +3,19 @@
  *
  * Each one branches on the state the poller last read from the camera (`$.ae`, `$.wb`,
  * `$.backlight`, `$.menu`, `$.power` in the JSON), so a press does the right thing even after
- * the setting was changed from the camera's own web page. The cycles step through the values
- * that matter in a sanctuary — full auto first, then the priorities, then manual — and the
- * caption always names the current one.
+ * the setting was changed from the camera's own web page. The exposure cycle steps through the
+ * values that matter in a sanctuary — full auto first, then the priorities, then manual — and
+ * the caption always names the current one.
  *
  * Menu stays on the run page (it is the key that turns the arrows into menu navigation);
  * the rest live on the setup page. Auto — focus and exposure together — is the exception that
  * goes back to the run page, because it is the one picture change made in a hurry.
  */
 
-import { field, logicIf, raw, v, visca, wait, when, override } from './actions.js'
+import { cv, field, logicIf, raw, setVar, v, visca, wait, when, override } from './actions.js'
 import { BG, key } from './controls.js'
+import { wbCodeExpression } from './picture.js'
+import * as V from './variables.js'
 
 const menuOpen = (id) => when(id, `${field('menu')} == "On"`)
 
@@ -60,25 +62,31 @@ export const exposureKey = (conn) => {
 	})
 }
 
-/** Cycle Auto → Indoor (3000K) → Outdoor (4000K) → One push → Auto. */
+/**
+ * White balance: Auto, or the temperature on the setup page's WB dial.
+ *
+ * This used to cycle Auto → Indoor 3000K → Outdoor 4000K → One-push, back when there was no
+ * way to dial a temperature. Now there is (`picture.js`), two fixed presets next to a dial
+ * that reaches both would only confuse, and one-push has its own key. So: a press takes the
+ * camera off Auto onto the dial, and the next puts it back on Auto. The caption is what the
+ * camera reports either way.
+ */
 export const whiteBalanceKey = (conn) => {
-	const mode = (id, val) => visca(id, conn, 'wb', { val: { value: val, isExpression: false } })
-	const is = (id, s) => when(id, `${field('wb')} == "${s}"`)
+	const isAuto = `${field('wb')} == "Auto"`
 	return key({
 		style: { icon: 'white-balance', label: `concat('WB ', ${field('wb')})`, bg: BG.key, labelIsExpression: true },
-		notes: 'Steps white balance: Auto, Indoor 3000K, Outdoor 4000K, One-push (measures now), then Auto.',
+		notes: 'Toggles white balance between Auto and the colour temperature on the WB dial. The caption is what the camera reports.',
 		actionSets: {
 			down: [
-				logicIf('wb-if-auto', [is('wb-c-auto', 'Auto')], [mode('wb-indoor', 'indoor')], [
-					logicIf('wb-if-indoor', [is('wb-c-indoor', '3000K')], [mode('wb-outdoor', 'outdoor')], [
-						logicIf(
-							'wb-if-outdoor',
-							[is('wb-c-outdoor', '4000K')],
-							[mode('wb-onepush', 'onepush'), wait('wb-onepush-wait', 300), visca('wb-trigger', conn, 'wbOPT')],
-							[mode('wb-auto', 'automatic')]
-						),
-					]),
-				]),
+				logicIf(
+					'wb-if-auto',
+					[when('wb-c-auto', isAuto)],
+					[
+						setVar('wb-code', V.WB_CODE, wbCodeExpression(cv(V.WB_K)), true),
+						raw('wb-dial', conn, '81 01 04 35 00 FF', '8,9', [cv(V.WB_CODE)]),
+					],
+					[visca('wb-auto', conn, 'wb', { val: v('automatic') })]
+				),
 			],
 			up: [],
 		},

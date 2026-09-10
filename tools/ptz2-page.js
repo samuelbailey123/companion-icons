@@ -26,6 +26,7 @@ import { COLUMNS, GRID_SIZE } from '../src/layout.js'
 import { assertNavCoverage, folderFor, navRow } from '../src/navrow.js'
 import { buildPage, buildSetupPage } from '../src/ptz/page.js'
 import { buildHubPage, PAGE_NAME as HUB_NAME, runName, setupName } from '../src/ptz/hub.js'
+import { SYNC_TRIGGER_ID, syncTrigger } from '../src/ptz/picture.js'
 import { TRIGGER_ID, pollTrigger } from '../src/ptz/poller.js'
 import { mergeDefinitions } from '../src/ptz/variables.js'
 import { TRIGGER_ID as TRACK_TRIGGER_ID, trackingTrigger } from '../src/ptz/web.js'
@@ -123,8 +124,9 @@ for (const [which, cam] of Object.entries(CAMERAS)) {
 			console.warn(`  WARNING CAM ${cam.atem} preset ${n}: the deck says "${live[n] ?? ''}", this build says "${cam.presets[n] ?? ''}" — the build wins`)
 		}
 	}
+	const other = which === 'first' ? CAMERAS.second : CAMERAS.first
 	const run = buildPage(cam.conn, cam.host, cam.numbers, cam.presets)
-	const setup = buildSetupPage(cam.conn, cam.host, cam.numbers)
+	const setup = buildSetupPage(cam.conn, cam.host, cam.numbers, { host: other.host, atem: other.atem })
 	built[which] = which === 'first' ? { run, setup } : { run: renameVariables(run), setup: renameVariables(setup) }
 }
 
@@ -133,6 +135,8 @@ const mirror = {
 	hostOne: CAMERAS.first.host, hostTwo: CAMERAS.second.host,
 	pagesOne: CAMERAS.first.numbers, pagesTwo: CAMERAS.second.numbers,
 	namesOne: CAMERAS.first.presets, namesTwo: CAMERAS.second.presets,
+	otherOne: { host: CAMERAS.second.host, atem: CAMERAS.second.atem },
+	otherTwo: { host: CAMERAS.first.host, atem: CAMERAS.first.atem },
 }
 assertMirrored(built.first.run, built.second.run, { ...mirror, name: 'run page' })
 assertMirrored(built.first.setup, built.second.setup, { ...mirror, name: 'setup page' })
@@ -179,15 +183,18 @@ for (const [name, def] of Object.entries(definitions2())) {
 const triggers = structuredClone(full.triggers ?? {})
 const second = (trigger, suffix) => {
 	const t = renameVariables(structuredClone(trigger))
-	t.options = { ...t.options, name: t.options.name.replace(/^Poll PTZ/, 'Poll PTZ 2') }
+	t.options = { ...t.options, name: t.options.name.replace(/^(Poll|Sync) PTZ/, '$1 PTZ 2') }
 	t.actions = (t.actions ?? []).map((a) => ({ ...a, id: `${a.id}-${suffix}` }))
+	t.events = (t.events ?? []).map((e) => ({ ...e, id: `${e.id}-${suffix}` }))
 	return t
 }
 const wanted = {
 	[TRIGGER_ID]: pollTrigger(CAMERAS.first.host),
 	[TRACK_TRIGGER_ID]: trackingTrigger(CAMERAS.first.host),
+	[SYNC_TRIGGER_ID]: syncTrigger(),
 	[TRIGGER_ID.replace('ptz', 'ptz2')]: second(pollTrigger(CAMERAS.second.host), 'cam2'),
 	[TRACK_TRIGGER_ID.replace('ptz', 'ptz2')]: second(trackingTrigger(CAMERAS.second.host), 'cam2'),
+	[SYNC_TRIGGER_ID.replace('ptz', 'ptz2')]: second(syncTrigger(), 'cam2'),
 }
 for (const [id, trigger] of Object.entries(wanted)) {
 	for (const [existing, t] of Object.entries(triggers)) {

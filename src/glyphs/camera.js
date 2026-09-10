@@ -127,6 +127,43 @@ export default {
 		paths: [{ rect: [18, 18, 84, 84, 10] }, { circle: [60, 48, 13] }, 'M38 88 A22 22 0 0 1 82 88'],
 	},
 
+	/*
+	 * The setup page's values (2026-09-10). One glyph per knob and cycle key, all in the same
+	 * plain register as the rest of the page: a stopwatch for shutter speed, aperture blades for
+	 * iris, a plus over a minus for exposure compensation, nested peaks for sharpening, a rising
+	 * line that rolls over for WDR (the highlight knee), a jagged line settling flat for noise
+	 * reduction, and a card with a spot on it for the one-push white balance measure.
+	 */
+	shutter: {
+		paths: [{ circle: [60, 66, 32] }, 'M60 22 V34', 'M48 22 H72', 'M60 66 L76 50'],
+	},
+
+	/** Six blades around an open hexagon: the aperture logo every lens cap carries. */
+	iris: {
+		paths: [{ circle: [60, 60, 34] }, 'M76 60 L68 46.1 L52 46.1 L44 60 L52 73.9 L68 73.9 Z', 'M76 60 L86 38.1 M68 46.1 L54.1 26.5 M52 46.1 L28.1 48.4 M44 60 L34 81.9 M52 73.9 L65.9 93.5 M68 73.9 L91.9 71.6'],
+	},
+
+	'exp-comp': {
+		paths: ['M60 18 V62', 'M38 40 H82', 'M38 92 H82'],
+	},
+
+	sharpness: {
+		paths: ['M22 90 L60 30 L98 90 Z', 'M44 90 L60 64 L76 90'],
+	},
+
+	/** A response curve: linear until it reaches the highlights, then rolled off. */
+	wdr: {
+		paths: ['M22 98 V22', 'M22 98 H98', 'M22 96 L60 46 Q72 30 98 28'],
+	},
+
+	nr: {
+		paths: ['M20 62 L28 40 L36 82 L44 48 L52 72 L60 56 L68 64 L76 60 L100 60'],
+	},
+
+	'white-card': {
+		paths: [{ rect: [22, 30, 76, 60, 8] }, { circle: [60, 60, 9], fill: true }],
+	},
+
 	/** The half-filled disc is the conventional exposure-compensation mark. */
 	exposure: {
 		paths: [{ circle: [60, 60, 34] }, { d: 'M60 26 A34 34 0 0 1 60 94 Z', fill: true }],
