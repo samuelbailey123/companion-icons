@@ -83,7 +83,7 @@ describe('glyph shapes', () => {
 			// camera
 			'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right',
 			'arrow-up-left', 'arrow-up-right', 'arrow-down-left', 'arrow-down-right',
-			'ptz', 'pan', 'tilt', 'stop', 'zoom-in', 'zoom-out', 'focus', 'focus-auto', 'speed',
+			'ptz', 'pan', 'tilt', 'stop', 'zoom-in', 'zoom-out', 'focus', 'focus-auto', 'ptz-auto', 'speed',
 			'preset', 'preset-save', 'tracking', 'exposure', 'backlight', 'menu', 'folder-ptz',
 			'frame-close', 'frame-half', 'frame-full',
 		]

@@ -8,10 +8,11 @@
  * caption always names the current one.
  *
  * Menu stays on the run page (it is the key that turns the arrows into menu navigation);
- * the rest live on the setup page.
+ * the rest live on the setup page. Auto — focus and exposure together — is the exception that
+ * goes back to the run page, because it is the one picture change made in a hurry.
  */
 
-import { field, logicIf, raw, visca, wait, when, override } from './actions.js'
+import { field, logicIf, raw, v, visca, wait, when, override } from './actions.js'
 import { BG, key } from './controls.js'
 
 const menuOpen = (id) => when(id, `${field('menu')} == "On"`)
@@ -131,3 +132,80 @@ export const powerKey = (conn) =>
 		},
 	})
 
+
+/**
+ * The two modes the Auto key drives, as the poller names them in the JSON. "Auto" is the
+ * value each field reads when the camera has that mode.
+ *
+ * WHITE BALANCE IS DELIBERATELY NOT HERE. The operator excluded colour (2026-09-10): the
+ * sanctuary's LED wall changes colour constantly and auto white balance drifts with it, so a
+ * key that put it on auto in a hurry would trade an exposure problem for a colour one. White
+ * balance stays whatever the setup page or the camera's web page set it to.
+ */
+export const AUTO_FIELDS = ['focus', 'ae']
+
+/** Milliseconds between the two commands, so the camera's two-deep command queue never overflows. */
+const AUTO_STEP_MS = 100
+
+/**
+ * Auto: focus and exposure, both automatic or both manual, on one key.
+ *
+ * WHY ONE KEY. The setup page steps exposure on its own and the run page toggles autofocus,
+ * but the operator asked for one press that puts the camera on auto and one that takes it
+ * back off (2026-09-10). Auto is the recovery move when the picture has gone wrong
+ * mid-service and there is no time to work out which of the two did it; off is the return to
+ * the locked service settings once it looks right again.
+ *
+ * WHAT "OFF" MEANS. Manual exposure runs the camera's stored shutter, iris and gain — the
+ * reference block on the Pi (`ptz_reference_params.json`) is exactly that mode, with the
+ * registers at 18, 12 and 0 — and manual focus keeps the focus where it is. Nothing is
+ * left for the camera to decide, which is the only sense of "off" that matters for the
+ * picture.
+ *
+ * THE KEY READS THE CAMERA. Green and ON while both fields the poller reads say Auto; amber
+ * and PART while one does; plain and OFF while neither does. A press from anything but
+ * all-on goes to all-on, so the key always ends in a known state whatever the AF key, the
+ * setup page or the camera's web page did in the meantime.
+ */
+export const autoKey = (conn) => {
+	const isAuto = AUTO_FIELDS.map((f) => `${field(f)} == "Auto"`)
+	const allAuto = isAuto.join(' && ')
+	const someAuto = `(${isAuto.join(' || ')}) && !(${allAuto})`
+	return key({
+		style: { icon: 'ptz-auto', label: 'Auto OFF', bg: BG.key },
+		notes:
+			'Toggles focus and exposure together between automatic and manual (the locked service ' +
+			'settings). White balance is left alone. Green while both are auto, amber while only one ' +
+			'is. Any press from a not-both-auto state goes to both auto.',
+		feedbacks: [
+			when('auto-part', someAuto, [
+				override('auto-part-bg', 'box0', 'color', BG.notice),
+				override('auto-part-text', 'text0', 'text', 'Auto PART'),
+			]),
+			when('auto-all', allAuto, [
+				override('auto-all-bg', 'box0', 'color', BG.engaged),
+				override('auto-all-icon', 'image0', 'base64Image', '$(image:ptz-auto-on)'),
+				override('auto-all-text', 'text0', 'text', 'Auto ON'),
+			]),
+		],
+		actionSets: {
+			down: [
+				logicIf(
+					'auto-if',
+					[when('auto-cond', allAuto)],
+					[
+						visca('auto-focus-manual', conn, 'focusM', { bol: v('1') }),
+						wait('auto-wait-off', AUTO_STEP_MS),
+						visca('auto-exp-manual', conn, 'expM', { val: v('1') }),
+					],
+					[
+						visca('auto-focus-auto', conn, 'focusM', { bol: v('0') }),
+						wait('auto-wait-on', AUTO_STEP_MS),
+						visca('auto-exp-auto', conn, 'expM', { val: v('0') }),
+					]
+				),
+			],
+			up: [],
+		},
+	})
+}

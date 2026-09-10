@@ -99,6 +99,15 @@ export default {
 		paths: [...CORNERS, { circle: [60, 60, 16] }],
 	},
 
+	/**
+	 * Corners with an A: the camera choosing for itself — focus and exposure together. The
+	 * letter is the mark every camera body uses for its auto modes, and it sits in the same
+	 * viewfinder frame as the focus marks so the key reads as one of that family.
+	 */
+	'ptz-auto': {
+		paths: [...CORNERS, 'M42 84 L60 36 L78 84', 'M49 68 H71'],
+	},
+
 	/** A gauge: arc, needle, hub. */
 	speed: {
 		paths: ['M24 82 A40 40 0 1 1 96 82', 'M60 82 L82 50', { circle: [60, 82, 7], fill: true }],
