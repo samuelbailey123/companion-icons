@@ -17,6 +17,9 @@
  *   nHeadRoomRatio         0..4 = 5/10 .. 9/10
  *   nLostReac              0 home · 4 preset 0 · 2 stay where it lost them
  *   bEnable                1 on · 0 off
+ *   stSelect               {bEnable, x, y}: the person to track, as a point in a 1920x1080
+ *                          frame — what the web page sends when the picture is clicked
+ *                          (`coordinate1920x1080` in its bundle, read 2026-09-10)
  *
  * THE CREDENTIALS NEVER TOUCH COMPANION. The script reads `user:pass` from `.ptz_web` beside
  * itself on the Pi; the deck only ever runs `ptz_web.py <host> <verb> <arg>`, so nothing
@@ -81,6 +84,7 @@ Usage:
   ptz_web.py <host> track <on|off>
   ptz_web.py <host> body <close|half|full>
   ptz_web.py <host> set <field>=<int> [...]      e.g. set nSpeed=0 nCenterPos=1
+  ptz_web.py <host> select <x> <y>               track the person at this point of the 1920x1080 frame
   ptz_web.py <host> match <other-host>           copy the other camera's picture settings here
   ptz_web.py <host> look save                    keep the picture settings as they are now
   ptz_web.py <host> look apply                   put the kept picture settings back
@@ -285,6 +289,10 @@ def main(argv):
         set_tracking(opener, host, {"bEnable": 1 if argv[3] == "on" else 0})
     elif verb == "body":
         set_tracking(opener, host, {"nBodyPos": {"emBodyPosMod": BODY[argv[3]]}})
+    elif verb == "select":
+        # What the web page sends when the picture is clicked: a point in a 1920x1080 frame,
+        # with the click-to-select switch on. The camera takes the person there.
+        set_tracking(opener, host, {"stSelect": {"bEnable": 1, "x": int(argv[3]), "y": int(argv[4])}})
     elif verb == "set":
         fields = {}
         for kv in argv[3:]:

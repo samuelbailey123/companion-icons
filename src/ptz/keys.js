@@ -4,7 +4,7 @@
  *   col:   0      1      2   |  3        4         5        6         7          8
  *   row 1: P1     P2     P3  |  Home     Zoom in   AF       Track     Close-up   Save
  *   row 2: P4     P5     P6  |  Speed    STOP      1-push   Half      Full       Menu
- *   row 3: ·      ·      Look|  Setup ▸  Zoom out  Auto     ·         ·          ·
+ *   row 3: ·      ·      Look|  Setup ▸  Zoom out  Auto     ◂ Left    Middle     Right ▸
  *
  * RUN HERE, SET UP ON THE NEXT PAGE. This page holds what an operator touches during a
  * service: presets, speed, focus, tracking on/off and its framing. Exposure, white
@@ -14,6 +14,11 @@
  * single press, or both back to manual, and sits under the focus keys because it is the
  * same kind of move as AF, only wider. White balance is deliberately not part of it
  * (`image.js`).
+ *
+ * WHO TO TRACK SITS UNDER THE TRACKING BLOCK. Track, Close-up, Half and Full occupy columns
+ * 6-7 of rows 1-2; the three keys that choose the person — left, middle or right of the
+ * frame — close the block on row 3, so everything about tracking is one glance
+ * (`tracking.js`).
  *
  * A RECALL PUTS THE LOOK BACK BY ITSELF. On these cameras a preset carries the picture settings
  * it was saved with, colour included, so recalling one drags the colour back to whenever that
@@ -54,7 +59,7 @@ import { autoKey, menuKey } from './image.js'
 import { deriveSpeeds } from './knobs.js'
 import { lookKey } from './picture.js'
 import { lookExec } from './web.js'
-import { framingKey, trackKey } from './tracking.js'
+import { framingKey, targetKey, trackKey } from './tracking.js'
 import * as V from './variables.js'
 
 /** The page's accent, for the "last preset" border. */
@@ -334,6 +339,9 @@ export function buildKeys(conn, host, pages, names = {}) {
 			3: navKey('setup', { icon: 'ptz-setup', label: 'Setup', notes: 'Opens the PTZ setup page: exposure, white balance, backlight, power and the tracking settings.' }, pages.setup),
 			4: zoomKey('zo', conn, 'zoom-out', '81 01 04 07 30 FF', 'Zoom out'),
 			5: autoKey(conn),
+			6: targetKey(host, 'left'),
+			7: targetKey(host, 'middle'),
+			8: targetKey(host, 'right'),
 		},
 	}
 }

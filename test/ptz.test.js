@@ -6,6 +6,7 @@ import { DIRECTION, DRIVE_MS, KNOBS, ROWS, buildKnobs, deriveSpeeds, driveComman
 import { PRESET_KEYS, SPEED_STOPS, buildKeys, navKey, nextStop, presetCaption } from '../src/ptz/keys.js'
 import { AUTO_FIELDS, autoKey } from '../src/ptz/image.js'
 import { lookKey } from '../src/ptz/picture.js'
+import { FRAME, TARGETS, targetKey } from '../src/ptz/tracking.js'
 import { INTERVAL_SECONDS, SCRIPT, SCRIPT_PATH, TRIGGER_ID, pollTrigger } from '../src/ptz/poller.js'
 import { PAGE_NAME, REPLACES, SETUP_NAME, buildConfig, buildPage, buildSetupPage, findConnection } from '../src/ptz/page.js'
 import { TRIGGER_ID as TRACK_TRIGGER_ID } from '../src/ptz/web.js'
@@ -229,13 +230,13 @@ describe('the keys', () => {
 		expect(Object.keys(rows)).toEqual(['1', '2', '3'])
 		expect(Object.keys(rows[1]).map(Number)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8])
 		expect(Object.keys(rows[2]).map(Number)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8])
-		expect(Object.keys(rows[3]).map(Number)).toEqual([2, 3, 4, 5])
+		expect(Object.keys(rows[3]).map(Number)).toEqual([2, 3, 4, 5, 6, 7, 8])
 		// Presets 1-3 then 4-6, left to right, top to bottom.
 		const caption = (c) => c.style.layers.find((l) => l.type === 'text').text.value
 		expect([0, 1, 2].map((c) => caption(rows[1][c]))).toEqual(['1', '2', '3'])
 		expect([0, 1, 2].map((c) => caption(rows[2][c]))).toEqual(['4', '5', '6'])
 		for (const c of all) expect(c.options.rotaryActions).toBe(false)
-		expect(all).toHaveLength(22)
+		expect(all).toHaveLength(25)
 		// No arrow art is left anywhere on the page.
 		for (const c of all) for (const name of imagesUsed(c)) expect(name).not.toMatch(/^arrow-/)
 	})
@@ -410,6 +411,22 @@ describe('the keys', () => {
 		}
 		expect(look.feedbacks.map((f) => f.styleOverrides.find((o) => o.elementProperty === 'text')?.override.value)).toEqual(['Look set', `concat('Look ', jsonpath($(internal:custom_ptz_look), '$.left'), ' left')`, 'Look FAILED'])
 		expect(imagesUsed(look)).toEqual(['ptz-look'])
+	})
+
+	it('chooses who to track by a point in each third of the frame, under the tracking block', () => {
+		for (const [col, which, x] of [[6, 'left', 320], [7, 'middle', 960], [8, 'right', 1600]]) {
+			const k = rows[3][col]
+			expect(k).toEqual(targetKey(HOST, which))
+			expect(k.steps[0].action_sets.down[0].options.path.value).toBe(`python3 /home/samuelbailey/Desktop/AV_Power_scripts/ptz_web.py ${HOST} select ${x} 486`)
+			expect(k.steps[0].action_sets.down[0].options.targetVariable.value).toBe('ptz_track')
+			expect(k.feedbacks).toEqual([])
+		}
+		for (const t of Object.values(TARGETS)) {
+			expect(t.x).toBeGreaterThan(0)
+			expect(t.x).toBeLessThan(FRAME.width)
+			expect(t.y).toBeGreaterThan(0)
+			expect(t.y).toBeLessThan(FRAME.height)
+		}
 	})
 
 	it('zooms while held and homes on demand', () => {

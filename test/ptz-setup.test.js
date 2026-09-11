@@ -35,6 +35,8 @@ describe('the web API bridge', () => {
 
 	it('ships a Python script that takes no credentials on its command line', () => {
 		expect(SCRIPT).toContain('.ptz_web')
+		expect(SCRIPT).toContain('verb == "select"')
+		expect(SCRIPT).toContain('"stSelect": {"bEnable": 1, "x": int(argv[3]), "y": int(argv[4])}')
 		expect(SCRIPT).not.toMatch(/password=|--user/)
 		for (const field of ['tracking', 'body', 'mode', 'speed', 'sensitivity', 'placement', 'headroom', 'lost']) {
 			expect(SCRIPT).toContain(`"${field}"`)

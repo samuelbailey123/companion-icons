@@ -164,6 +164,16 @@ export default {
 		paths: [{ rect: [22, 30, 76, 60, 8] }, { circle: [60, 60, 9], fill: true }],
 	},
 
+	/*
+	 * Who to track: a person standing in the left, middle or right third of a frame. The
+	 * picture the operator cannot see, drawn as the key itself. Not arrows — the run page
+	 * has a standing rule that no arrow art returns to it, because the old drive pad was
+	 * an arrow pad and nobody used it.
+	 */
+	'who-left': { paths: [{ rect: [18, 26, 84, 68, 8] }, { circle: [40, 50, 9] }, 'M24 82 A16 16 0 0 1 56 82'] },
+	'who-middle': { paths: [{ rect: [18, 26, 84, 68, 8] }, { circle: [60, 50, 9] }, 'M44 82 A16 16 0 0 1 76 82'] },
+	'who-right': { paths: [{ rect: [18, 26, 84, 68, 8] }, { circle: [80, 50, 9] }, 'M64 82 A16 16 0 0 1 96 82'] },
+
 	/** The half-filled disc is the conventional exposure-compensation mark. */
 	exposure: {
 		paths: [{ circle: [60, 60, 34] }, { d: 'M60 26 A34 34 0 0 1 60 94 Z', fill: true }],

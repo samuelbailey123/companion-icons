@@ -62,6 +62,32 @@ export const framingKey = (host, which, prefix = `frame-${which}`) =>
 	})
 
 /**
+ * Who to track: the person on the left, in the middle or on the right of the frame.
+ *
+ * The camera picks its subject by a point in its 1920x1080 picture — the web page sends the
+ * coordinates of a click, and the camera takes whoever is there. A deck cannot show the
+ * picture, but a stage is wide and shallow, so a point a sixth, a half and five sixths of the
+ * way across, at torso height, reaches whoever stands in each third of the frame: a worship
+ * leader on the left, a speaker in the middle. Momentary keys with no state, because the
+ * person moves the moment they are chosen.
+ */
+export const FRAME = { width: 1920, height: 1080 }
+export const TARGETS = {
+	left: { x: 320, y: 486, icon: 'who-left', label: '◂ Left' },
+	middle: { x: 960, y: 486, icon: 'who-middle', label: 'Middle' },
+	right: { x: 1600, y: 486, icon: 'who-right', label: 'Right ▸' },
+}
+
+export const targetKey = (host, which, prefix = `target-${which}`) => {
+	const { x, y, icon, label } = TARGETS[which]
+	return key({
+		style: { icon, label, bg: BG.key },
+		notes: `Tracks the person on the ${which === 'middle' ? 'middle' : which} of the frame (the camera is told to take whoever is at a point ${which === 'middle' ? 'halfway' : which === 'left' ? 'a sixth of the way' : 'five sixths of the way'} across, at torso height). Works while tracking is on.`,
+		actionSets: { down: [webExec(`${prefix}-go`, host, `select ${x} ${y}`)], up: [] },
+	})
+}
+
+/**
  * A key that steps a tracking setting through its values.
  *
  * @param {object} spec
