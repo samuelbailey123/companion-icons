@@ -54,6 +54,7 @@ const SHAPES = {
 	Next: 'slide-next',
 	'All Screens': 'macro',
 	'Stage Notes': 'stage-display',
+	Countdown: 'timer-start',
 	Thunder: 'thunder',
 	'Transition Song': 'transition',
 	'Worship Set': 'playlist',
