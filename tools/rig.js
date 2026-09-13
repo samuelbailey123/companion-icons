@@ -4,6 +4,7 @@
  * Usage:
  *   node tools/rig.js export <out.json>
  *   node tools/rig.js import <bundle.companionconfig> <section>[,<section>...]
+ *   node tools/rig.js import-page <page.companionconfig> <targetPage>
  *   node tools/rig.js create-vars <bundle.companionconfig>
  *   node tools/rig.js log [minutes]
  *
@@ -81,12 +82,13 @@ export async function exportFull(base = RIG) {
 }
 
 /**
- * Upload a bundle and import the named sections.
+ * Upload a bundle so the next import mutation on this client can read it.
  *
  * The upload lives on the WebSocket connection that made it — `pendingImport` is per
- * client — so the same client must issue the import.
+ * client — so the same client must issue the import. Returns Companion's summary of what
+ * the file offers.
  */
-export async function importBundle(client, file, sections) {
+export async function uploadBundle(client, file) {
 	const data = await fs.readFile(file)
 	const sessionId = await client.mutation('importExport.prepareImport.start', { name: file, size: data.length })
 	for (let offset = 0; offset < data.length; offset += CHUNK) {
@@ -102,6 +104,12 @@ export async function importBundle(client, file, sections) {
 		userData: null,
 	})
 	if (error) throw new Error(`Companion rejected the file: ${error}`)
+	return summary
+}
+
+/** Upload a bundle and import the named sections. */
+export async function importBundle(client, file, sections) {
+	const summary = await uploadBundle(client, file)
 
 	const config = selection(sections)
 	const offered = {
@@ -120,6 +128,43 @@ export async function importBundle(client, file, sections) {
 
 	await client.mutation('importExport.importFull', { config })
 	return { summary, config }
+}
+
+/**
+ * Replace ONE page on the rig with the page a page bundle carries.
+ *
+ * `importFull` refuses a page bundle outright ("Invalid import object"), and had it not, a
+ * buttons import would first delete every control on every page. A page bundle goes through
+ * `importSinglePage` instead — the mutation behind the UI's "import to page N" — which resets
+ * the target page alone.
+ *
+ * TWO GUARDS, BOTH FROM READING THAT MUTATION. The connection mapping is not optional: a
+ * connection in the bundle that the mapping does not point at an existing connection is
+ * CREATED, disabled, as a duplicate. So every connection is mapped to itself and must already
+ * exist on the rig — true of any bundle built from this rig's own export. And the target page
+ * must carry the same name as the page in the file, so a typo cannot land PP1 on ATEM.
+ */
+export async function importPage(client, file, bundle, live, targetPage) {
+	if (bundle.type !== 'page') throw new Error(`${file} is a "${bundle.type}" bundle, not a page`)
+	const target = live.pages?.[targetPage]
+	if (!target) throw new Error(`the rig has no page ${targetPage}`)
+	if (target.name !== bundle.page.name) {
+		throw new Error(`page ${targetPage} on the rig is "${target.name}" but the file holds "${bundle.page.name}"`)
+	}
+	const connectionIdRemapping = {}
+	for (const id of Object.keys(bundle.instances ?? {})) {
+		if (!live.instances?.[id]) {
+			throw new Error(`connection ${id} is in the file but not on the rig; importing would create a duplicate`)
+		}
+		connectionIdRemapping[id] = id
+	}
+	const summary = await uploadBundle(client, file)
+	await client.mutation('importExport.importSinglePage', {
+		targetPage,
+		sourcePage: bundle.oldPageNumber ?? 1,
+		connectionIdRemapping,
+	})
+	return { summary, connectionIdRemapping }
 }
 
 /** The UI's selection object with the named sections set to import and the rest untouched. */
@@ -174,6 +219,19 @@ if (command === 'export') {
 	} finally {
 		client.close()
 	}
+} else if (command === 'import-page') {
+	const [file, target] = args
+	if (!file || !target) throw new Error('usage: import-page <page-bundle> <targetPage>')
+	const bundle = JSON.parse(await fs.readFile(file, 'utf8'))
+	const live = await exportFull()
+	const client = connect()
+	try {
+		const { connectionIdRemapping } = await importPage(client, file, bundle, live, Number(target))
+		console.log(`imported "${bundle.page.name}" from ${file} onto page ${target}`)
+		console.log(`  connections kept as themselves: ${Object.keys(connectionIdRemapping).length}`)
+	} finally {
+		client.close()
+	}
 } else if (command === 'create-vars') {
 	const bundle = JSON.parse(await fs.readFile(args[0], 'utf8'))
 	const live = await exportFull()
@@ -189,6 +247,6 @@ if (command === 'export') {
 	const res = await fetch(`${RIG}/int/log`)
 	console.log(res.ok ? (await res.text()).slice(-8000) : `log unavailable over HTTP (${res.status}); use journalctl on the Pi for the last ${minutes} minutes`)
 } else {
-	console.error('usage: node tools/rig.js export <out.json> | import <bundle> <sections> | create-vars <bundle> | log [minutes]')
+	console.error('usage: node tools/rig.js export <out.json> | import <bundle> <sections> | import-page <page-bundle> <targetPage> | create-vars <bundle> | log [minutes]')
 	process.exit(1)
 }
