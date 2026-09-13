@@ -19,9 +19,9 @@
  * THE KEY ITSELF sits beside the other "fire this in ProPresenter" keys (All Screens, Stage
  * Notes), on the page's quiet dark ground so it cannot be mistaken for the loud orange
  * transport pair or the purple timer zones — it plays a video, it does not run a clock. The
- * `timer-start` glyph is the library's own, in its natural "on" green, which measures 8.4:1
- * on this ground (`MIN_CONTRAST` is 3). `pp1-icons.js` knows the caption too, so a rerun of
- * that tool keeps the same glyph on it.
+ * `countdown` glyph was drawn for this key after `timer-start` read as a ring and a speck at
+ * key size; in its natural present-orange it measures 6.5:1 on this ground (`MIN_CONTRAST`
+ * is 3). `pp1-icons.js` knows the caption too, so a rerun of that tool keeps the glyph on it.
  */
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -40,7 +40,7 @@ const SECTION = 'Countdown'
 const LABEL = 'Countdown'
 const CELL = { row: 2, column: 6 }
 const BG = 0x1f2937
-const ICON = 'timer-start'
+const ICON = 'countdown'
 
 const v = (value) => ({ value, isExpression: false })
 

@@ -65,7 +65,7 @@ describe('glyph shapes', () => {
 			// present
 			'slide-next', 'slide-prev', 'slide-first', 'slide-last', 'clear', 'clear-slide',
 			'clear-props', 'clear-audio', 'logo', 'stage-display', 'message', 'timer-start',
-			'timer-stop', 'timer-reset', 'media', 'prop', 'playlist',
+			'timer-stop', 'timer-reset', 'countdown', 'media', 'prop', 'playlist',
 			'focus-next', 'focus-prev',
 			'green-wall', 'water-calm', 'water-storm', 'thunder',
 			'clear-messages', 'clear-announce', 'clear-media', 'clear-video',
