@@ -25,6 +25,8 @@
  */
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { createRequire } from 'node:module'
+import { maxFontSize, toFontSizePercent } from '../src/labels.js'
 
 const [, , src, outDir] = process.argv
 if (!src || !outDir) {
@@ -43,6 +45,32 @@ const BG = 0x1f2937
 const ICON = 'countdown'
 
 const v = (value) => ({ value, isExpression: false })
+
+/**
+ * THE CAPTION IS MEASURED, NOT ASSUMED.
+ *
+ * This key first shipped with `fontsize: 51` — the page-wide ceiling `readable-labels.js`
+ * hands out — copied rather than measured. 51% of the 58px band is about 30px, and "Countdown"
+ * at 30px wants 166px on a 112px key. Companion WRAPS before it shrinks, and a single word has
+ * no space to wrap at, so the deck drew "Countdo / wn" with the word split mid-syllable.
+ *
+ * So the size is measured here, in the face the deck actually draws with, at the largest value
+ * that keeps the caption on one line. A label change moves the number with it instead of
+ * quietly reintroducing the break. Shrink stays on as a backstop.
+ */
+const KEY_PX = 112
+const TEXT_BAND = 52
+const requireCompanion = createRequire('/Applications/Companion.app/Contents/Resources/')
+const { Canvas, GlobalFonts } = requireCompanion('@napi-rs/canvas')
+const FONT = 'CompanionSans'
+GlobalFonts.registerFromPath('/Applications/Companion.app/Contents/Resources/assets/Fonts/NotoSans-Regular.otf', FONT)
+const measureCtx = new Canvas(10, 10).getContext('2d')
+const measure = (text, size) => {
+	measureCtx.font = `${size}px ${FONT}`
+	return measureCtx.measureText(text).width
+}
+const FONT_SIZE = toFontSizePercent(maxFontSize(LABEL, TEXT_BAND, KEY_PX, measure), (TEXT_BAND / 100) * KEY_PX)
+console.log(`  caption "${LABEL}" measured at fontsize ${FONT_SIZE} — one line on a ${KEY_PX}px key`)
 
 const full = JSON.parse(await fs.readFile(src, 'utf8'))
 const number = Object.entries(full.pages).find(([, p]) => p.name === 'PP1')?.[0]
@@ -127,7 +155,7 @@ const key = {
 				x: v(0), y: v(46), width: v(100), height: v(52), rotation: v(0),
 				text: v(LABEL), color: v(0xffffff),
 				halign: v('center'), valign: v('center'),
-				fontsize: v(51), fontsizeAllowShrink: v(true), font: v('companion-sans'),
+				fontsize: v(FONT_SIZE), fontsizeAllowShrink: v(true), font: v('companion-sans'),
 				outlineColor: v(0xff000000),
 			},
 		],
