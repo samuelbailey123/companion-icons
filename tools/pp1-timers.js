@@ -44,7 +44,8 @@
  * ADJUSTMENT IS PER CLOCK, NOT MODAL. Each timer keeps its own minus and plus rather than a
  * shared pair acting on "the selected timer". With two clocks running, a shared adjuster needs
  * a mode, and a mode is a thing to get wrong while a service waits. `increment` takes SECONDS
- * and a negative subtracts — the module's own tooltip — so five minutes is ±300.
+ * and a negative subtracts — the module's own tooltip — so one minute is ±60. It was five,
+ * which is a blunt instrument on a seven-minute hosting slot.
  */
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -98,7 +99,7 @@ const FIRE_COLUMNS = [3, 4, 5]
 const RESET_COLUMNS = [6, 7, 8]
 
 /** Seconds a nudge moves the clock. Negative subtracts, per the module's own tooltip. */
-const NUDGE = 300
+const NUDGE = 60
 
 /**
  * Strip layout: the two clocks first, then the four adjusters.
@@ -271,7 +272,9 @@ for (const [clockName, slot] of Object.entries(READOUT_SLOTS)) {
 			name: dynamic ? `$(internal:custom_${MAIN_LABEL})` : 'Worship',
 			value: `${sign}${NUDGE / 60} min`,
 			bg: NUDGE_BG,
-			notes: `${sign}${NUDGE / 60} minutes on "${clock.proName}". Applies to the running clock.`,
+			notes:
+					`${sign}${NUDGE / 60} minute${NUDGE === 60 ? '' : 's'} on "${clock.proName}". ` +
+					`Applies to the running clock.`,
 			actions: [
 				timerAction(`pp1-${clockName}-${seconds}`, connectionId, clock.uuid, {
 					timer_operation: v('increment'),
