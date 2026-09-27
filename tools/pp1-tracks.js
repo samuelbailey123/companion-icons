@@ -17,7 +17,8 @@
  * the play state in `chrome_tracks` (the keys go green on Playing), the volume in
  * `chrome_tracks_volume` (the strip shows it).
  *
- * THE TRACKS KEY OPENS THE FOLDER, and asks for the play state and the volume on the way in, so
+ * THE TRACKS KEY OPENS THE FOLDER, and wears a folder icon to say so: with the old play icon
+ * it looked like the old play/pause key and nobody could tell a folder was there. It asks for the play state and the volume on the way in, so
  * the page is right when it lands even if someone paused the tracks at the iMac. It stays at PP1
  * row 2, column 4, and Play/Pause sits at the same cell on the Tracks page, so two taps in one
  * place open the folder and play.
@@ -69,7 +70,7 @@ const goTo = (id, page) => ({
 /** PP1's Tracks key: open the folder, and refresh what it will show. */
 export const tracksKey = (tracksPage) =>
 	key({
-		style: { icon: 'media', label: FOLDER_NAME, bg: BG_REST },
+		style: { icon: 'folder-audio', label: FOLDER_NAME, bg: BG_REST },
 		notes: `Opens the Tracks folder (page ${tracksPage}): play/pause, skip and volume for the tracks in Chrome on the PP1 iMac. Green while playing.`,
 		feedbacks: greenWhilePlaying('tracks-playing'),
 		actionSets: {
@@ -149,7 +150,7 @@ export function buildConfig(full) {
 	const existing = numberOf(FOLDER_NAME)
 	const tracks = existing ?? String(numbers.length + 1)
 
-	for (const icon of ['media', 'cue-next', 'fader']) {
+	for (const icon of ['folder-audio', 'media', 'cue-next', 'fader']) {
 		if (!(full.imageLibrary ?? []).some((i) => i.info?.name === icon)) {
 			throw new Error(`the rig library has no "${icon}" icon — import dist/library.companionconfig first`)
 		}
