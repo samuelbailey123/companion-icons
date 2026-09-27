@@ -1,13 +1,18 @@
 /**
- * Turn the projectors and the PA on at 08:00 every Sunday.
+ * Turn the projectors and the PA on at 08:05 Central every Sunday.
  *
  * Usage: node tools/sunday-power-trigger.js <live-full.json> <outdir>
  *   then: node tools/rig.js import <outdir>/triggers.companionconfig triggers
  *
  * WHY. Both already have a key on Home and on Power, and both take time to come up — a
  * projector needs its warm-up before anyone wants a picture. Whoever arrives first should find
- * them on rather than remember to press two buttons, and 08:00 is early enough to be ready and
+ * them on rather than remember to press two buttons, and 08:05 is early enough to be ready and
  * late enough not to run them all night.
+ *
+ * CENTRAL TIME, FROM COMPANION'S OWN SETTING. The Pi's system clock is on Europe/London, but a
+ * time-of-day trigger reads Companion's `timezone` setting when it is set, and on this rig it
+ * is America/Chicago (`$(internal:timezone)`), so TIME below is Central and follows daylight
+ * saving. Unset that setting and every scheduled trigger fires on London time, hours early.
  *
  * IT COPIES THE COMMANDS, IT DOES NOT RETYPE THEM. The two shell commands are lifted off the
  * Home page's own Projectors and PA keys at build time, so the script paths, the nohup, and the
@@ -17,7 +22,7 @@
  * ON, NOT TOGGLE. The keys pass `$(internal:custom_projector_action)`, which is the OPPOSITE of
  * the current state — that is what makes a key a toggle. A trigger must not toggle: fired
  * against gear that is already on, a toggle turns it OFF, which is the exact opposite of the
- * job and would do it silently at 08:00 with nobody in the room. So every `..._action` variable
+ * job and would do it silently at 08:05 with nobody in the room. So every `..._action` variable
  * in the copied command is replaced with a literal `on`, and the trigger is deterministic: it
  * turns them on, and running twice leaves them on.
  *
@@ -37,7 +42,7 @@ if (!src || !outDir) {
 }
 
 /** When it fires. `days` is 0=Sunday .. 6=Saturday. */
-const TIME = '08:00:00'
+const TIME = '08:05:00'
 const DAYS = [0]
 
 const TRIGGER_NAME = 'Sunday power on'
