@@ -170,6 +170,8 @@ export const SUB_PAGES = {
 	// The single-camera layout (tools/ptz-page.js) still names its sub-page this. Both layouts
 	// have to stay reachable while both tools exist.
 	'PTZ Setup': 'PTZ',
+	// The backing tracks' transport and volume, opened from PP1's Tracks key (tools/pp1-tracks.js).
+	Tracks: 'PP1',
 }
 
 /** The folder-row page a page belongs to: itself, or its parent for a sub-page. */
