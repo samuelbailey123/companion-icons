@@ -4,7 +4,8 @@
  * Usage:
  *   node tools/rig.js export <out.json>
  *   node tools/rig.js import <bundle.companionconfig> <section>[,<section>...]
- *   node tools/rig.js import-page <page.companionconfig> <targetPage>
+ *   node tools/rig.js import-page <page.companionconfig> <targetPage>|new
+ *   node tools/rig.js add-trigger <bundle.companionconfig> <triggerId>
  *   node tools/rig.js create-vars <bundle.companionconfig>
  *   node tools/rig.js log [minutes]
  *
@@ -146,11 +147,29 @@ export async function importBundle(client, file, sections) {
  */
 export async function importPage(client, file, bundle, live, targetPage) {
 	if (bundle.type !== 'page') throw new Error(`${file} is a "${bundle.type}" bundle, not a page`)
-	const target = live.pages?.[targetPage]
-	if (!target) throw new Error(`the rig has no page ${targetPage}`)
-	if (target.name !== bundle.page.name) {
-		throw new Error(`page ${targetPage} on the rig is "${target.name}" but the file holds "${bundle.page.name}"`)
+	if (targetPage === 'new') {
+		// Companion's own "import to a new page": appended after the last page.
+		const clash = Object.entries(live.pages ?? {}).find(([, p]) => p.name === bundle.page.name)
+		if (clash) throw new Error(`the rig already has a "${bundle.page.name}" page (${clash[0]}); import onto that number`)
+	} else {
+		const target = live.pages?.[targetPage]
+		if (!target) throw new Error(`the rig has no page ${targetPage}`)
+		if (target.name !== bundle.page.name) {
+			throw new Error(`page ${targetPage} on the rig is "${target.name}" but the file holds "${bundle.page.name}"`)
+		}
 	}
+	const connectionIdRemapping = selfMapping(bundle, live)
+	const summary = await uploadBundle(client, file)
+	await client.mutation('importExport.importSinglePage', {
+		targetPage: targetPage === 'new' ? -1 : targetPage,
+		sourcePage: bundle.oldPageNumber ?? 1,
+		connectionIdRemapping,
+	})
+	return { summary, connectionIdRemapping }
+}
+
+/** Map every connection in a bundle to itself, refusing one the rig lacks (see importPage). */
+function selfMapping(bundle, live) {
 	const connectionIdRemapping = {}
 	for (const id of Object.keys(bundle.instances ?? {})) {
 		if (!live.instances?.[id]) {
@@ -158,13 +177,32 @@ export async function importPage(client, file, bundle, live, targetPage) {
 		}
 		connectionIdRemapping[id] = id
 	}
-	const summary = await uploadBundle(client, file)
-	await client.mutation('importExport.importSinglePage', {
-		targetPage,
-		sourcePage: bundle.oldPageNumber ?? 1,
+	return connectionIdRemapping
+}
+
+/**
+ * Add ONE trigger from a bundle, leaving every other trigger on the rig running.
+ *
+ * `importTriggers` with `replaceExisting: false` imports only the selected ids; with `true` it
+ * deletes every trigger first, so it is never passed. It never replaces a trigger either (an id
+ * already in use gets a fresh one), so a trigger the rig already has by name is refused: moving
+ * one is still the full `import … triggers`.
+ */
+export async function addTrigger(client, file, bundle, live, triggerId) {
+	const trigger = bundle.triggers?.[triggerId]
+	if (!trigger) throw new Error(`${file} has no trigger ${triggerId}`)
+	const name = trigger.options?.name
+	if (Object.values(live.triggers ?? {}).some((t) => t.options?.name === name)) {
+		throw new Error(`the rig already has a "${name}" trigger; replace it with the full triggers import`)
+	}
+	const connectionIdRemapping = selfMapping(bundle, live)
+	await uploadBundle(client, file)
+	await client.mutation('importExport.importTriggers', {
+		selectedTriggerIds: [triggerId],
 		connectionIdRemapping,
+		replaceExisting: false,
 	})
-	return { summary, connectionIdRemapping }
+	return name
 }
 
 /** The UI's selection object with the named sections set to import and the rest untouched. */
@@ -221,14 +259,26 @@ if (command === 'export') {
 	}
 } else if (command === 'import-page') {
 	const [file, target] = args
-	if (!file || !target) throw new Error('usage: import-page <page-bundle> <targetPage>')
+	if (!file || !target) throw new Error('usage: import-page <page-bundle> <targetPage>|new')
 	const bundle = JSON.parse(await fs.readFile(file, 'utf8'))
 	const live = await exportFull()
 	const client = connect()
 	try {
-		const { connectionIdRemapping } = await importPage(client, file, bundle, live, Number(target))
-		console.log(`imported "${bundle.page.name}" from ${file} onto page ${target}`)
+		const { connectionIdRemapping } = await importPage(client, file, bundle, live, target === 'new' ? 'new' : Number(target))
+		console.log(`imported "${bundle.page.name}" from ${file} onto ${target === 'new' ? 'a new page' : `page ${target}`}`)
 		console.log(`  connections kept as themselves: ${Object.keys(connectionIdRemapping).length}`)
+	} finally {
+		client.close()
+	}
+} else if (command === 'add-trigger') {
+	const [file, triggerId] = args
+	if (!file || !triggerId) throw new Error('usage: add-trigger <bundle> <triggerId>')
+	const bundle = JSON.parse(await fs.readFile(file, 'utf8'))
+	const live = await exportFull()
+	const client = connect()
+	try {
+		const name = await addTrigger(client, file, bundle, live, triggerId)
+		console.log(`added "${name}" (${triggerId}) from ${file}; the other ${Object.keys(live.triggers ?? {}).length} triggers were not touched`)
 	} finally {
 		client.close()
 	}
@@ -247,6 +297,6 @@ if (command === 'export') {
 	const res = await fetch(`${RIG}/int/log`)
 	console.log(res.ok ? (await res.text()).slice(-8000) : `log unavailable over HTTP (${res.status}); use journalctl on the Pi for the last ${minutes} minutes`)
 } else {
-	console.error('usage: node tools/rig.js export <out.json> | import <bundle> <sections> | import-page <page-bundle> <targetPage> | create-vars <bundle> | log [minutes]')
+	console.error('usage: node tools/rig.js export <out.json> | import <bundle> <sections> | import-page <page-bundle> <targetPage>|new | add-trigger <bundle> <triggerId> | create-vars <bundle> | log [minutes]')
 	process.exit(1)
 }
