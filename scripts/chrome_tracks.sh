@@ -17,7 +17,8 @@
 # read back from that button's label; anything else is driven through the page's <audio>/<video>
 # element.
 #
-# VOLUME GOES THROUGH YOUTUBE MUSIC'S OWN SLIDER, in steps of 5 on its 0-100 scale. The slider
+# VOLUME GOES THROUGH YOUTUBE MUSIC'S OWN SLIDER, on its 0-100 scale, one click to the next
+# multiple of 5 (46 goes up to 50 and down to 45), so the readout never shows 51, 56, 61. The slider
 # is perceptual: YouTube Music maps it through a curve onto the player (40 on the slider is 13
 # on the player). Setting the player directly leaves the slider showing the old level, and the
 # app puts its own level back on the next track. Moving the slider and firing its `change` is
@@ -58,7 +59,7 @@ function run(argv) {
   const ACTS = { toggle: "true", play: "paused" }
   const js = (src, verb) => src.replace(/ACT/g, ACTS[verb] || "false")
   const NEXT = "(()=>{const b=document.querySelector(\"ytmusic-player-bar .next-button, .ytp-next-button, [data-testid=control-button-skip-forward]\");if(!b)return \"none\";(b.querySelector(\"button\")||b).click();return \"Skipped\"})()"
-  const VOLUME = "(()=>{const s=document.querySelector(\"ytmusic-player-bar #volume-slider\");const a=s&&s.getAttribute(\"aria-valuenow\");if(a===null||a===undefined)return \"none\";const now=Number(a);if(!STEP)return now+\"%\";const next=Math.max(0,Math.min(100,now+STEP));s.setAttribute(\"value\",String(next));s.dispatchEvent(new CustomEvent(\"change\"));return next+\"%\"})()"
+  const VOLUME = "(()=>{const s=document.querySelector(\"ytmusic-player-bar #volume-slider\");const a=s&&s.getAttribute(\"aria-valuenow\");if(a===null||a===undefined)return \"none\";const now=Number(a);if(!STEP)return now+\"%\";const g=Math.abs(STEP),next=Math.max(0,Math.min(100,STEP>0?Math.floor(now/g)*g+g:Math.ceil(now/g)*g-g));s.setAttribute(\"value\",String(next));s.dispatchEvent(new CustomEvent(\"change\"));return next+\"%\"})()"
   const STEPS = { up: 5, down: -5, volume: 0 }
   const isPlayer = (url) => /open\.spotify\.com|youtube\.com/.test(url)
   let tab = null, fallback = null
