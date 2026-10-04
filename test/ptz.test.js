@@ -4,6 +4,7 @@ import { BG, control, key, knob, layers, strip } from '../src/ptz/controls.js'
 import { DEFAULT_SPEED, SPEED, STATE, definitions, mergeDefinitions } from '../src/ptz/variables.js'
 import { DIRECTION, DRIVE_MS, KNOBS, ROWS, buildKnobs, deriveSpeeds, driveCommand } from '../src/ptz/knobs.js'
 import { PRESET_KEYS, SPEED_STOPS, buildKeys, navKey, nextStop, presetCaption } from '../src/ptz/keys.js'
+import { AUTO_FIELDS, autoKey } from '../src/ptz/image.js'
 import { INTERVAL_SECONDS, SCRIPT, SCRIPT_PATH, TRIGGER_ID, pollTrigger } from '../src/ptz/poller.js'
 import { PAGE_NAME, REPLACES, SETUP_NAME, buildConfig, buildPage, buildSetupPage, findConnection } from '../src/ptz/page.js'
 import { TRIGGER_ID as TRACK_TRIGGER_ID } from '../src/ptz/web.js'
@@ -221,17 +222,17 @@ describe('the keys', () => {
 	const rows = buildKeys(CONN, HOST, PAGES)
 	const all = Object.values(rows).flatMap((r) => Object.values(r))
 
-	it('fill rows 1 and 2, presets in the left block, Setup and Zoom out alone on row 3', () => {
+	it('fill rows 1 and 2, presets in the left block, Setup, Zoom out and Auto on row 3', () => {
 		expect(Object.keys(rows)).toEqual(['1', '2', '3'])
 		expect(Object.keys(rows[1]).map(Number)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8])
 		expect(Object.keys(rows[2]).map(Number)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8])
-		expect(Object.keys(rows[3]).map(Number)).toEqual([3, 4])
+		expect(Object.keys(rows[3]).map(Number)).toEqual([3, 4, 5])
 		// Presets 1-3 then 4-6, left to right, top to bottom.
 		const caption = (c) => c.style.layers.find((l) => l.type === 'text').text.value
 		expect([0, 1, 2].map((c) => caption(rows[1][c]))).toEqual(['1', '2', '3'])
 		expect([0, 1, 2].map((c) => caption(rows[2][c]))).toEqual(['4', '5', '6'])
 		for (const c of all) expect(c.options.rotaryActions).toBe(false)
-		expect(all).toHaveLength(20)
+		expect(all).toHaveLength(21)
 		// No arrow art is left anywhere on the page.
 		for (const c of all) for (const name of imagesUsed(c)) expect(name).not.toMatch(/^arrow-/)
 	})
@@ -357,6 +358,36 @@ describe('the keys', () => {
 		expect(() => navKey('x', { icon: 'ptz-setup', label: '', notes: '' }, undefined)).toThrow(/not a destination/)
 	})
 
+	it('puts focus and exposure on auto together, and takes both off together, never colour', () => {
+		expect(AUTO_FIELDS).toEqual(['focus', 'ae'])
+		const auto = rows[3][5]
+		expect(auto).toEqual(autoKey(CONN))
+		expect(auto.style.layers[3].text).toEqual(v('Auto OFF'))
+		expect(imagesUsed(auto).sort()).toEqual(['ptz-auto', 'ptz-auto-on'])
+
+		const branch = auto.steps[0].action_sets.down[0]
+		expect(branch.definitionId).toBe('logic_if')
+		expect(branch.children.condition[0].options.expression.value).toBe(`${field('focus')} == "Auto" && ${field('ae')} == "Auto"`)
+		// Both auto → both manual (focus '1', exposure '1'); anything else → both auto ('0', '0').
+		// A wait sits between the two so the camera's two-deep command queue is never overrun.
+		expect(branch.children.actions.map((a) => a.definitionId)).toEqual(['focusM', 'wait', 'expM'])
+		expect(branch.children.actions[0].options.bol.value).toBe('1')
+		expect(branch.children.actions[2].options.val.value).toBe('1')
+		expect(branch.children.else_actions.map((a) => a.definitionId)).toEqual(['focusM', 'wait', 'expM'])
+		expect(branch.children.else_actions[0].options.bol.value).toBe('0')
+		expect(branch.children.else_actions[2].options.val.value).toBe('0')
+		expect(auto.steps[0].action_sets.up).toEqual([])
+		// White balance is excluded on purpose: nothing on the key touches it.
+		expect(JSON.stringify(auto)).not.toMatch(/"wb"|04 35|\$\.wb/)
+
+		// Lit green while both are auto, amber while only one is, plain otherwise.
+		const [part, all] = auto.feedbacks
+		expect(all.options.expression.value).toBe(branch.children.condition[0].options.expression.value)
+		expect(all.styleOverrides.map((o) => o.override.value)).toEqual([BG.engaged, '$(image:ptz-auto-on)', 'Auto ON'])
+		expect(part.options.expression.value).toBe(`(${field('focus')} == "Auto" || ${field('ae')} == "Auto") && !(${all.options.expression.value})`)
+		expect(part.styleOverrides.map((o) => o.override.value)).toEqual([BG.notice, 'Auto PART'])
+	})
+
 	it('zooms while held and homes on demand', () => {
 		expect(rows[1][4].steps[0].action_sets.down[0].options.custom.value).toBe('81 01 04 07 20 FF')
 		expect(rows[3][4].steps[0].action_sets.down[0].options.custom.value).toBe('81 01 04 07 30 FF')
@@ -427,9 +458,10 @@ describe('the page', () => {
 		expect(page.gridSize).toEqual({ minColumn: 0, maxColumn: 8, minRow: 0, maxRow: 5 })
 		const setup = buildSetupPage(CONN, HOST, PAGES)
 		expect(setup.name).toBe(SETUP_NAME)
-		expect(Object.keys(setup.controls)).toEqual(['1', '2'])
+		expect(Object.keys(setup.controls)).toEqual(['1', '2', '3'])
 		expect(Object.keys(setup.controls[1])).toHaveLength(9)
 		expect(Object.keys(setup.controls[2])).toHaveLength(6)
+		expect(Object.keys(setup.controls[3])).toHaveLength(1)
 		expect(setup.controls[1][8].steps[0].action_sets.down[0].options.page.value).toBe('9')
 	})
 

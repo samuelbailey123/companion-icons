@@ -222,6 +222,8 @@ const camera = [
 	icon('focus', 'focus', 'camera', 'camera', 'Focus / one-push autofocus'),
 	icon('focus-auto', 'focus-auto', 'on', 'camera', 'Autofocus engaged'),
 	icon('focus-manual', 'focus-auto', 'idle', 'camera', 'Manual focus'),
+	icon('ptz-auto', 'ptz-auto', 'camera', 'camera', 'Auto focus and exposure'),
+	icon('ptz-auto-on', 'ptz-auto', 'on', 'camera', 'Auto focus and exposure both engaged'),
 	icon('speed', 'speed', 'camera', 'camera', 'Drive speed'),
 	icon('preset', 'preset', 'camera', 'camera', 'Camera preset'),
 	icon('preset-save', 'preset-save', 'camera', 'camera', 'Save a preset'),

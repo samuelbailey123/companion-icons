@@ -4,12 +4,16 @@
  *   col:   0      1      2   |  3        4         5        6         7          8
  *   row 1: P1     P2     P3  |  Home     Zoom in   AF       Track     Close-up   Save
  *   row 2: P4     P5     P6  |  Speed    STOP      1-push   Half      Full       Menu
- *   row 3: ·      ·      ·   |  Setup ▸  Zoom out  ·        ·         ·          ·
+ *   row 3: ·      ·      ·   |  Setup ▸  Zoom out  Auto     ·         ·          ·
  *
  * RUN HERE, SET UP ON THE NEXT PAGE. This page holds what an operator touches during a
  * service: presets, speed, focus, tracking on/off and its framing. Exposure, white
  * balance, backlight, power and the tracking parameters live on the setup sub-page
  * (`setup.js`), one press away on Setup ▸ and back on the folder row or its own ◂ key.
+ * Auto is the one picture key kept here: it puts focus and exposure on automatic in a
+ * single press, or both back to manual, and sits under the focus keys because it is the
+ * same kind of move as AF, only wider. White balance is deliberately not part of it
+ * (`image.js`).
  *
  * PRESETS SIT UNDER THE THUMB. The left block used to be an eight-way arrow pad that drove
  * while held. The operator never used it — pan and tilt live on the encoders — and on
@@ -38,7 +42,7 @@
 
 import { cv, field, logicIf, override, overrideExpr, raw, setVar, visca, when } from './actions.js'
 import { BG, INK, LABEL, key } from './controls.js'
-import { menuKey } from './image.js'
+import { autoKey, menuKey } from './image.js'
 import { deriveSpeeds } from './knobs.js'
 import { framingKey, trackKey } from './tracking.js'
 import * as V from './variables.js'
@@ -318,6 +322,7 @@ export function buildKeys(conn, host, pages, names = {}) {
 		3: {
 			3: navKey('setup', { icon: 'ptz-setup', label: 'Setup', notes: 'Opens the PTZ setup page: exposure, white balance, backlight, power and the tracking settings.' }, pages.setup),
 			4: zoomKey('zo', conn, 'zoom-out', '81 01 04 07 30 FF', 'Zoom out'),
+			5: autoKey(conn),
 		},
 	}
 }

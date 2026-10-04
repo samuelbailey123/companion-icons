@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { SETTINGS, cycleKey, framingKey, trackKey } from '../src/ptz/tracking.js'
 import { BODY, SCRIPT, SCRIPT_PATH, TRACK, track, trackingTrigger, webExec } from '../src/ptz/web.js'
 import { buildSetupKeys } from '../src/ptz/setup.js'
-import { backlightKey, exposureKey, menuKey, powerKey, whiteBalanceKey } from '../src/ptz/image.js'
+import { autoKey, backlightKey, exposureKey, menuKey, powerKey, whiteBalanceKey } from '../src/ptz/image.js'
 import { SUB_PAGES, assertNavCoverage, folderFor } from '../src/navrow.js'
 import { COLUMNS } from '../src/layout.js'
 import { ICONS } from '../src/variants.js'
@@ -87,16 +87,18 @@ describe('tracking keys', () => {
 describe('the setup page', () => {
 	const rows = buildSetupKeys('conn', HOST, { run: 9 })
 
-	it('carries picture, power, tracking and the six settings, with a way back', () => {
+	it('carries picture, power, tracking, the six settings and Auto, with a way back', () => {
 		expect(Object.keys(rows[1])).toHaveLength(9)
 		expect(Object.keys(rows[2])).toHaveLength(6)
+		expect(Object.keys(rows[3])).toEqual(['0'])
+		expect(rows[3][0]).toEqual(autoKey('conn'))
 		expect(rows[1][8].steps[0].action_sets.down[0].options.page.value).toBe('9')
 		expect(rows[1][4].feedbacks[0].id).toBe('setup-track-on')
 		expect(rows[1][5].feedbacks[0].id).toBe('setup-frame-close-sel')
 	})
 
 	it('uses ids that do not collide with the run page', () => {
-		const ids = [...Object.values(rows[1]), ...Object.values(rows[2])].flatMap((c) => [...allActions(c).map((a) => a.id), ...c.feedbacks.map((f) => f.id)])
+		const ids = Object.values(rows).flatMap((row) => Object.values(row)).flatMap((c) => [...allActions(c).map((a) => a.id), ...c.feedbacks.map((f) => f.id)])
 		expect(new Set(ids).size).toBe(ids.length)
 		expect(ids.some((id) => id === 'track-on' || id === 'frame-close-sel')).toBe(false)
 	})
@@ -104,7 +106,7 @@ describe('the setup page', () => {
 
 describe('picture and power keys', () => {
 	it('build on their own', () => {
-		for (const build of [exposureKey, whiteBalanceKey, backlightKey, powerKey, menuKey]) {
+		for (const build of [exposureKey, whiteBalanceKey, backlightKey, powerKey, menuKey, autoKey]) {
 			const k = build('conn')
 			expect(k.type).toBe('button-layered')
 			for (const a of allActions(k)) expect(['conn', 'internal']).toContain(a.connectionId)
