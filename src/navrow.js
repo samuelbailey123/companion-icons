@@ -167,6 +167,9 @@ export const SUB_PAGES = {
 	'CAM 3 Setup': 'PTZ',
 	'CAM 1': 'PTZ',
 	'CAM 1 Setup': 'PTZ',
+	// Both cameras on one page, by part of the service (src/ptz/service.js), entered from the chooser.
+	Worship: 'PTZ',
+	Sermon: 'PTZ',
 	// The single-camera layout (tools/ptz-page.js) still names its sub-page this. Both layouts
 	// have to stay reachable while both tools exist.
 	'PTZ Setup': 'PTZ',

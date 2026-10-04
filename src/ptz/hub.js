@@ -13,6 +13,10 @@
  *
  * GETTING BACK IS FREE. Row 0's PTZ key is on every page and already points here, so the run
  * pages need no back key of their own — which is what returns preset 6 to row 1.
+ *
+ * THE SHARED PAGES ENTER FROM THE MIDDLE. Worship and Sermon (`service.js`) put both cameras on
+ * one page; their keys sit in the centre column, between the two cameras they cover. The camera
+ * pages stay for everything the shared pages leave out.
  */
 
 import { cv, v, when, override } from './actions.js'
@@ -32,12 +36,27 @@ const ROW = { enter: 1, state: 2, setup: 3 }
 /** Border weight on a camera's entry key, in percent. */
 const BORDER = 8
 
-/** A camera's identity. CAM 3 keeps the PTZ page's pink; CAM 1 takes a cyan far from it. */
+/**
+ * A camera's identity. CAM 3 keeps the PTZ page's pink; CAM 1 takes a cyan far from it.
+ *
+ * `tint` is the same identity at key-background strength, for the camera's half of the shared
+ * Worship and Sermon pages (`service.js`). CAM 3's is the PTZ strip's own dark pink; both are dark
+ * enough that every glyph on those pages keeps its contrast.
+ */
 export const LOOK = {
-	1: { bg: 0x0e3038, accent: 0x22d3ee },
-	3: { bg: 0x3b1230, accent: 0xf472b6 },
-	default: { bg: 0x1f2937, accent: 0xe9e9ee },
+	1: { bg: 0x0e3038, accent: 0x22d3ee, tint: 0x09252b },
+	3: { bg: 0x3b1230, accent: 0xf472b6, tint: 0x2a0f22 },
+	default: { bg: 0x1f2937, accent: 0xe9e9ee, tint: 0x0d0d0f },
 }
+
+/** The shared pages' keys, as the chooser and the pages' own cross-links show them. */
+export const SERVICE_LOOK = {
+	worship: { icon: 'preset', label: 'Worship', notes: 'Both cameras on one page for worship: their presets, Save, and pan, tilt and zoom by hand.' },
+	sermon: { icon: 'tracking', label: 'Sermon', notes: 'Both cameras on one page for the sermon: tracking, framing, who to follow, and pan, tilt and zoom by hand.' },
+}
+
+/** The shared pages' entries sit in the centre column, between the two cameras. */
+const SERVICE_COLUMN = 4
 
 const layersFor = ({ atem, bg, accent }) => [
 	{
@@ -145,8 +164,10 @@ const stateKey = ({ atem, stateVar, presetVar }) =>
  *
  * @param {Array<{atem: number, runPage: number|string, setupPage: number|string,
  *                stateVar: string, presetVar: string}>} cameras  left to right
+ * @param {{worship: number|string, sermon: number|string}} [service]  the shared pages, when the
+ *   deck has them: Worship and Sermon go in the centre column, one above the other
  */
-export function buildHubPage(cameras) {
+export function buildHubPage(cameras, service) {
 	if (cameras.length !== 2) throw new Error(`the chooser is laid out for two cameras, got ${cameras.length}`)
 	const controls = { [ROW.enter]: {}, [ROW.state]: {}, [ROW.setup]: {} }
 	const columns = [COLUMN.first, COLUMN.second]
@@ -165,6 +186,11 @@ export function buildHubPage(cameras) {
 			cam.setupPage
 		)
 	})
+
+	if (service) {
+		controls[ROW.enter][SERVICE_COLUMN] = navKey('hub-worship', SERVICE_LOOK.worship, service.worship)
+		controls[ROW.state][SERVICE_COLUMN] = navKey('hub-sermon', SERVICE_LOOK.sermon, service.sermon)
+	}
 
 	return controls
 }
