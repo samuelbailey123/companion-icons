@@ -1,0 +1,124 @@
+# Checklists
+
+## Pre-service
+
+The first block matters most — every item in it is destroyed at capture if you get it
+wrong, and no amount of post fixes it.
+
+### Format — do this first
+
+- [ ] Every camera menu reads `1080p59.94` (check the camera, not the ATEM display)
+- [ ] ATEM video standard reads `1080p59.94`
+- [ ] Recorder **input** format reads `1080p59.94`
+- [ ] Recorder **record** format reads `1080p59.94`
+- [ ] Any converter / scaler / extender in the path is 59.94
+
+Both PTZs answer from a laptop on the LAN, so the camera half is one command:
+
+```bash
+for ip in 10.23.0.181 10.23.0.196; do
+  curl -s -X POST "http://$ip/ajaxcom?szCmd={\"GetEnv\":{\"VideoOut\":{\"nChannel\":-1}}}"
+done   # emVoutFormat must be 20 = 1080P59.94. 47 is 4KP30, which is how CAM 1 arrived
+```
+
+**Then prove it.** Record 10 seconds and run:
+
+```bash
+ffmpeg -i test.mp4 -an -filter_complex \
+  "[0:v]split=2[a][b];[b]trim=start_frame=1,setpts=PTS-STARTPTS[b2];[a][b2]psnr" \
+  -f null - 2>&1 | tail -3
+```
+
+Then read the per-frame log. **Good:** consecutive-frame PSNR is roughly even.
+**Bad:** it alternates high/low with a gap of 10 dB or more — that is every second frame
+carrying no new picture, and it is what is wrong today.
+
+### Cameras
+
+Do each line across **all** cameras before moving to the next. Matching is the point, and
+taking one camera all the way through then starting the next is how they end up unmatched.
+
+- [ ] Shutter `1/125`, auto-shutter off, on all cameras. **Not 1/60** — that is 180° only
+      at 29.97, and this chain is 59.94
+- [ ] Gain `0 dB` and iris manual on all cameras — `F5.6` on the PTZs, the static matched by
+      result (face 65–70 IRE on a waveform), not by copying the f-number
+- [ ] White balance fixed at `4600K`, AWB off. Better still, blank the wall and **One Push**
+      every camera off one white card at the preaching position without moving the card
+- [ ] **Recall each PTZ preset and check it still reads Manual.** A preset stores the
+      exposure it was saved with, so any exposure change has to be re-saved into every
+      preset or the first press in the service undoes it
+- [ ] **No preset sits inside its camera's moiré band** — 52–60% zoom on CAM 3, 56–60% on
+      CAM 1. Look at the wall on each preset; rainbow banding means reframe and re-save
+- [ ] Wall brightness set so it sits *under* the face — the VW encoder, never the iris
+- [ ] Zebras at 100% — the white shirt must not trip them
+- [ ] Knee / highlight compression enabled
+- [ ] Pan/tilt locks engaged on static shots
+- [ ] The off-stage black edge is out of frame on every camera
+
+### Audio
+
+- [ ] SQ7 output meters not pinned
+- [ ] Feed to the recorder pulled down ~6 dB
+- [ ] Limiter engaged at −1.5 dBTP on the recorder feed
+- [ ] Pulpit mic compression increased
+
+### Recording and control
+
+- [ ] Seamless file splitting confirmed on
+- [ ] Enough space on the media, and the media is healthy
+- [ ] `node tools/rig.js export` run, so there is a current Companion backup
+- [ ] **Every connection on the deck is green** — addresses drift, and on 2026-08-28 three
+      of the four Shure receivers were silently pointing at dead hosts. Companion's status
+      dots lie about this, so check a readout on each page rather than the connections list
+- [ ] Deck is on the page you want to start from (it resumes wherever it was left)
+
+### Operators
+
+- [ ] Move the PTZ **off-air only** — cut away before reframing
+- [ ] Hold locked frames at least 10 seconds; do not micro-reframe
+- [ ] Face is the priority for light and focus, not the chest
+
+### Last thing
+
+- [ ] Record 10 s and confirm the white shirt still holds fabric detail
+
+---
+
+## Post-service
+
+### Getting the files off
+
+- [ ] Copy the recorder files to `Services/YYYY-MM-DD/originals/` on the media drive
+- [ ] Name them `YYYY-MM-DD Sunday Service NN.mp4`
+- [ ] **Never modify anything in `originals/`** — every later step reads from it
+- [ ] Note any stops or restarts during the service, and roughly when
+
+### Run the pipeline
+
+Scripted at `Services/_tools/` on the media drive; its README explains each step and why.
+
+```bash
+./01-fix-source.sh YYYY-MM-DD   # de-duplicate frames, normalise loudness
+./02-grade-join.sh ...          # lift the face, dissolve any recording gap
+./03-title-card.sh ...          # 3s card into a 1.5s dissolve
+./04-transcribe.sh ...          # whisper transcript, for chapters and clips
+./05-clips.sh ...               # 16:9 and 9:16 clips
+python3 cover.py                # thumbnail
+python3 cover.py card.png 1.5   # title card
+```
+
+Each script prints a verification command when it finishes. **Run them.**
+
+### Before uploading
+
+- [ ] Loudness reads −14 LUFS integrated, true peak under −1.5 dBTP
+- [ ] Full decode is clean: `ffmpeg -v error -i final.mp4 -f null -`
+- [ ] Opening title card and dissolve look right
+- [ ] Any recording gap is covered by a dissolve, not a jump cut
+- [ ] Chapter times match the file being uploaded — the title-card version is ~3 s offset
+      from the no-card master
+
+### Write down what went wrong
+
+Anything noticed during the service — a stop, a bad cut, a camera that drifted — goes in
+`docs/production/findings/YYYY-MM-DD.md`. That file is what makes next week better.
