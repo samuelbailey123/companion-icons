@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { cv, exec, expr, field, logicIf, override, raw, setVar, v, visca, wait, when } from '../src/ptz/actions.js'
 import { BG, control, key, knob, layers, strip } from '../src/ptz/controls.js'
 import { DEFAULT_SPEED, SPEED, STATE, definitions, mergeDefinitions } from '../src/ptz/variables.js'
-import { DIRECTION, DRIVE_MS, KNOBS, ROWS, buildKnobs, deriveSpeeds, driveCommand } from '../src/ptz/knobs.js'
+import { AXES, HOLD_MS, KNOBS, ROWS, SLACK_MS, buildKnobs, deriveSpeeds, panTiltCommand } from '../src/ptz/knobs.js'
 import { PRESET_KEYS, SPEED_STOPS, buildKeys, navKey, nextStop, presetCaption } from '../src/ptz/keys.js'
 import { AUTO_FIELDS, autoKey } from '../src/ptz/image.js'
 import { lookKey } from '../src/ptz/picture.js'
@@ -144,44 +144,140 @@ describe('the knobs', () => {
 		expect(ROWS).toEqual({ strip: STRIP_ROW, knob: KNOB_ROW })
 	})
 
-	it('drive pan and tilt as raw VISCA with the speed nibbles from the variables, then stop', () => {
-		for (const [col, dirs] of [[KNOBS.pan, ['left', 'right']], [KNOBS.tilt, ['down', 'up']]]) {
+	it('drive pan and tilt as one raw VISCA command that carries both axes', () => {
+		for (const [axis, dirs] of [['pan', ['left', 'right']], ['tilt', ['down', 'up']]]) {
+			const other = AXES[axis].other
 			for (const [set, dir] of [['rotate_left', dirs[0]], ['rotate_right', dirs[1]]]) {
-				const chain = knobs[col].steps[0].action_sets[set]
-				expect(chain.map((a) => a.definitionId)).toEqual(['custom', 'wait', 'stop'])
-				expect(chain[0].options.custom.value).toBe(`81 01 06 01 00 00 ${DIRECTION[dir]} FF`)
-				expect(chain[0].options.command_parameters.value).toBe('8,9;10,11')
-				expect(chain[0].options.parameter0.value).toBe(cv('ptz_speed'))
-				expect(chain[0].options.parameter1.value).toBe(cv('ptz_tspeed'))
-				expect(chain[1].options.time.value).toBe(String(DRIVE_MS))
+				const chain = knobs[KNOBS[axis]].steps[0].action_sets[set]
+				const byte = String(AXES[axis].bytes[dir])
+				expect(chain.map((a) => a.definitionId)).toEqual(['custom_variable_set_value', 'custom_variable_set_value', 'custom', 'wait', 'logic_if'])
+				expect(chain[0].options.name.value).toBe(`ptz_${axis}_at`)
+				expect(chain[0].options.value).toEqual(expr('unixNow()'))
+				expect(chain[1].options.name.value).toBe(`ptz_${axis}_dir`)
+				expect(chain[1].options.value).toEqual(v(byte))
+
+				const go = chain[2].options
+				expect(go.custom.value).toBe('81 01 06 01 00 00 00 00 FF')
+				expect(go.command_parameters.value).toBe('8,9;10,11;12,13;14,15')
+				expect(go.parameter0.value).toBe(cv('ptz_speed'))
+				expect(go.parameter1.value).toBe(cv('ptz_tspeed'))
+				// Pan's byte first, then tilt's: this axis's literal, the other axis's variable.
+				const [pan, tilt] = axis === 'pan' ? [byte, cv(`ptz_${other}_dir`)] : [cv(`ptz_${other}_dir`), byte]
+				expect([go.parameter2.value, go.parameter3.value]).toEqual([pan, tilt])
+				expect(chain[3].options.time.value).toBe(String(HOLD_MS))
 			}
-			expect(knobs[col].steps[0].action_sets.down.map((a) => a.definitionId)).toEqual(['stop'])
+			expect(knobs[KNOBS[axis]].steps[0].action_sets.down.map((a) => a.definitionId)).toEqual(['stop'])
 		}
+		expect(AXES.pan.bytes).toEqual({ left: 1, right: 2 })
+		expect(AXES.tilt.bytes).toEqual({ up: 1, down: 2 })
 	})
 
-	it('covers all eight drive directions with the camera byte table', () => {
-		expect(Object.keys(DIRECTION)).toHaveLength(8)
-		expect(driveCommand('d', CONN, 'upLeft').options.custom.value).toBe('81 01 06 01 00 00 01 01 FF')
+	it('stop an axis only on the last detent, and leave the other axis moving', () => {
+		const [last] = knobs[KNOBS.pan].steps[0].action_sets.rotate_right.slice(-1)
+		expect(last.children.condition[0].options.expression).toEqual(expr(`unixNow() - ${cv('ptz_pan_at')} >= ${HOLD_MS - SLACK_MS}`))
+		const [rest, other] = last.children.actions
+		expect(rest.options.name.value).toBe('ptz_pan_dir')
+		expect(rest.options.value).toEqual(v('3'))
+		expect(other.children.condition[0].options.expression.value).toBe(`${cv('ptz_tilt_dir')} == 1 || ${cv('ptz_tilt_dir')} == 2`)
+		const [own] = other.children.actions
+		expect([own.options.parameter2.value, own.options.parameter3.value]).toEqual(['3', cv('ptz_tilt_dir')])
+		// The last axis to stop reads no variable: a bad one cannot spoil the final stop.
+		expect(other.children.else_actions.map((a) => a.definitionId)).toEqual(['stop'])
+		expect(panTiltCommand('p', CONN, '3', '3').options.parameter2.value).toBe('3')
 	})
 
-	it('zooms and focuses at the derived speed, and stops both', () => {
+	it('zooms and focuses at the derived speed, and stops each on its last detent', () => {
 		const zoom = knobs[KNOBS.zoom].steps[0].action_sets
-		expect(zoom.rotate_right[0].options.custom.value).toBe('81 01 04 07 20 FF')
-		expect(zoom.rotate_left[0].options.custom.value).toBe('81 01 04 07 30 FF')
-		expect(zoom.rotate_right.map((a) => a.definitionId)).toEqual(['custom', 'wait', 'zoomS'])
+		expect(zoom.rotate_right[1].options.custom.value).toBe('81 01 04 07 20 FF')
+		expect(zoom.rotate_left[1].options.custom.value).toBe('81 01 04 07 30 FF')
+		expect(zoom.rotate_right.map((a) => a.definitionId)).toEqual(['custom_variable_set_value', 'custom', 'wait', 'logic_if'])
+		expect(zoom.rotate_right[0].options.name.value).toBe('ptz_zoom_at')
+		expect(zoom.rotate_right[3].children.condition[0].options.expression.value).toContain(cv('ptz_zoom_at'))
+		expect(zoom.rotate_right[3].children.actions.map((a) => a.definitionId)).toEqual(['zoomS'])
 		expect(zoom.down.map((a) => a.definitionId)).toEqual(['zoomS'])
 
 		const focus = knobs[KNOBS.focus].steps[0].action_sets
-		// Drive, wait, stop — the same shape as pan, tilt and zoom. The stop answers with a
-		// syntax error and halts the drive anyway; without it one detent runs the focus to the
-		// endstop, which is what a knob that runs away feels like.
-		expect(focus.rotate_right.map((a) => a.definitionId)).toEqual(['focusM', 'custom', 'wait', 'custom'])
+		// The stop answers with a syntax error and halts the drive anyway; without it one detent
+		// runs the focus to the endstop, which is what a knob that runs away feels like.
+		expect(focus.rotate_right.map((a) => a.definitionId)).toEqual(['focusM', 'custom_variable_set_value', 'custom', 'wait', 'logic_if'])
 		expect(focus.rotate_right[0].options.bol.value).toBe('1')
-		expect(focus.rotate_left[1].options.custom.value).toBe('81 01 04 08 30 FF')
-		expect(focus.rotate_left[3].options.custom.value).toBe('81 01 04 08 00 FF')
-		expect(focus.rotate_right[3].options.custom.value).toBe('81 01 04 08 00 FF')
+		expect(focus.rotate_right[1].options.name.value).toBe('ptz_focus_at')
+		expect(focus.rotate_left[2].options.custom.value).toBe('81 01 04 08 30 FF')
+		for (const set of ['rotate_left', 'rotate_right']) {
+			expect(focus[set][4].children.actions.map((a) => a.options.custom.value)).toEqual(['81 01 04 08 00 FF'])
+		}
 		expect(focus.down[0].options.custom.value).toBe('81 01 04 38 04 FF')
 		expect(JSON.stringify(focus)).not.toContain('focusS')
+	})
+
+	/**
+	 * Replays detents through the chains the way Companion runs them: every detent is its own
+	 * chain, a chain's actions up to a wait are dispatched together, and the wait holds back only
+	 * what follows it in that chain. Returns the commands the camera would receive, in order.
+	 */
+	const replay = (detents, { stampLag = 0 } = {}) => {
+		const vars = { ptz_speed: '12', ptz_tspeed: '12', ptz_pan_dir: '3', ptz_tilt_dir: '3', ptz_pan_at: '0', ptz_tilt_at: '0' }
+		const sent = []
+		const queue = []
+		let now = 0
+		const sub = (s) => String(s).replace(/\$\(internal:custom_([a-z0-9_]+)\)/g, (_, n) => vars[n])
+		const evaluate = (e) => Function(`return (${sub(e).replace(/unixNow\(\)/g, String(now))})`)()
+		const run = (actions) => {
+			for (const a of actions) {
+				if (a.definitionId === 'custom_variable_set_value') {
+					const value = a.options.value.isExpression ? evaluate(a.options.value.value) : a.options.value.value
+					if (a.options.value.value === 'unixNow()' && stampLag) queue.push({ at: now + stampLag, fn: () => (vars[a.options.name.value] = String(now)) })
+					else vars[a.options.name.value] = String(value)
+				} else if (a.definitionId === 'custom') {
+					sent.push({ at: now, pan: sub(a.options.parameter2?.value), tilt: sub(a.options.parameter3?.value) })
+				} else if (a.definitionId === 'stop') {
+					sent.push({ at: now, pan: '3', tilt: '3' })
+				} else if (a.definitionId === 'logic_if') {
+					const ok = a.children.condition.every((c) => evaluate(c.options.expression.value))
+					run(ok ? a.children.actions : a.children.else_actions)
+				}
+			}
+		}
+		const chain = (actions) => {
+			const i = actions.findIndex((a) => a.definitionId === 'wait')
+			run(actions.slice(0, i))
+			queue.push({ at: now + Number(actions[i].options.time.value), fn: () => run(actions.slice(i + 1)) })
+		}
+		for (const { at, axis, set } of detents) queue.push({ at, fn: () => chain(knobs[KNOBS[axis]].steps[0].action_sets[set]) })
+		while (queue.length) {
+			queue.sort((a, b) => a.at - b.at)
+			const next = queue.shift()
+			now = next.at
+			next.fn()
+		}
+		return sent
+	}
+	const turn = (axis, set, from, to, every) =>
+		Array.from({ length: Math.floor((to - from) / every) + 1 }, (_, i) => ({ at: from + i * every, axis, set }))
+
+	it('keeps a steady turn moving and stops once, a hold after the last detent', () => {
+		const sent = replay(turn('pan', 'rotate_right', 0, 1000, 50))
+		const stops = sent.filter((c) => c.pan === '3')
+		expect(stops).toEqual([{ at: 1000 + HOLD_MS, pan: '3', tilt: '3' }])
+		expect(sent.filter((c) => c.at <= 1000).every((c) => c.pan === '2')).toBe(true)
+	})
+
+	it('still stops on the last detent when its stamp lands late', () => {
+		const sent = replay(turn('pan', 'rotate_left', 0, 300, 60), { stampLag: SLACK_MS - 5 })
+		expect(sent.filter((c) => c.pan === '3').map((c) => c.at)).toEqual([300 + HOLD_MS])
+	})
+
+	it('lets pan and tilt turn together without stopping each other', () => {
+		const sent = replay([...turn('pan', 'rotate_right', 0, 1000, 50), ...turn('tilt', 'rotate_right', 200, 600, 40)])
+		// Pan never stops while its knob turns, even when tilt's commands carry its byte.
+		expect(sent.filter((c) => c.at <= 1000).every((c) => c.pan === '2')).toBe(true)
+		// Tilt stops on its own, a hold after its last detent less at most the slack (its detents
+		// come closer together than the slack), and the command keeps pan going.
+		const tiltStop = sent.find((c) => c.tilt === '3' && c.at > 600)
+		expect(tiltStop.pan).toBe('2')
+		expect(tiltStop.at).toBeGreaterThanOrEqual(600 + HOLD_MS - SLACK_MS)
+		expect(tiltStop.at).toBeLessThanOrEqual(600 + HOLD_MS)
+		expect(sent.filter((c) => c.pan === '3').map((c) => c.at)).toEqual([1000 + HOLD_MS])
 	})
 
 	it('keeps the speed inside 1..24 and derives tilt, zoom and focus speeds from it', () => {

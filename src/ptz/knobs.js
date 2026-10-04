@@ -7,12 +7,30 @@
  * for the same reason: a knob without its zone turns silently and shows nothing.
  *
  * HOW A DETENT BECOMES MOVEMENT. VISCA has no "move one notch". A drive command starts the
- * camera moving and it keeps moving until told to stop, so each detent fires
- * drive → wait → stop. Turn steadily and the restarts overlap the stops, so the camera
- * moves for as long as the knob turns and halts a beat after it stops; the speed of that
- * movement is the Speed knob's, not how fast the knob is spun. Relative-position moves were
+ * camera moving and it keeps moving until told to stop. Relative-position moves were
  * considered — the camera executes them exactly — but the camera only queues two commands
  * at a time, so a quick spin would drop most of its detents on the floor.
+ *
+ * ONLY THE LAST DETENT OF A TURN STOPS THE CAMERA. Until 2026-10-04 every detent fired its
+ * own drive → wait → stop, on the theory that a steady turn's restarts would overlap the
+ * stops. They did not: Companion runs each detent as its own concurrent chain, so while the
+ * knob turned, the earlier detents' stops kept landing between the later drives and the
+ * camera braked and restarted every few tens of milliseconds. Turned slowly, it was 150ms of
+ * movement per click. The operator called it clicky.
+ *
+ * So each detent stamps the time (`unixNow()`, milliseconds) into the axis's variable, drives,
+ * waits HOLD_MS, and stops only if no later detent has stamped it since. A turn becomes one
+ * drive that is refreshed while the knob moves and one stop HOLD_MS after it stops; the
+ * speed is still the Speed knob's, not how fast the knob is spun. SLACK_MS is the allowance
+ * for the stamp landing a moment after the wait starts — the actions are dispatched together
+ * — and without it the last detent could find its own stamp "too recent" and never stop.
+ *
+ * PAN AND TILT TRAVEL IN ONE COMMAND. `81 01 06 01 VV WW pp tt FF` carries both axes, so a
+ * pan-only drive used to tell tilt to stop: turning both knobs at once made them fight. Each
+ * axis now records its direction byte (1/2 moving, 3 stopped) and every pan/tilt command fills
+ * the other axis's byte from it. An axis stopping while the other still moves sends its own 3
+ * and the other's direction; the last axis to stop sends the module's plain `stop`, which reads
+ * no variable at all, so the final stop cannot be spoiled by a bad variable.
  *
  * THE SPEED TRAVELS IN THE BYTES, NOT IN THE MODULE. The module keeps its own pan/tilt speed
  * and offers an action to set it, but that action's option is not evaluated when fed an
@@ -34,8 +52,11 @@ import { BG, INK, knob, strip } from './controls.js'
 import * as V from './variables.js'
 import { lookExec } from './web.js'
 
-/** Milliseconds the camera keeps driving after a detent before the stop lands. */
-export const DRIVE_MS = 150
+/** Milliseconds the camera keeps driving after the last detent of a turn. */
+export const HOLD_MS = 200
+
+/** A detent stamped within this long of its own wait starting still counts as the last one. */
+export const SLACK_MS = 40
 
 /** Columns that exist on the strip and encoder rows, in the order the knobs are laid out. */
 export const KNOBS = { pan: 0, tilt: 2, zoom: 3, focus: 5, speed: 6, preset: 8 }
@@ -51,45 +72,80 @@ export const deriveSpeeds = (prefix) => [
 ]
 
 /**
- * One pan/tilt drive command at the knob's speed, as raw VISCA.
- *
- * `81 01 06 01 VV WW dd dd FF`: VV is pan speed (nibbles 8-9), WW tilt speed (10-11), both
- * filled from the speed variables; the direction bytes are the camera's own table.
+ * Pan and tilt: the variables each axis keeps, and its direction bytes. The bytes are the
+ * camera's own — pan 01 left, 02 right; tilt 01 up, 02 down — and 03 is stop on either axis.
  */
-export const DIRECTION = {
-	up: '03 01', down: '03 02', left: '01 03', right: '02 03',
-	upLeft: '01 01', upRight: '02 01', downLeft: '01 02', downRight: '02 02',
+export const AXES = {
+	pan: { at: V.PAN_AT, dir: V.PAN_DIR, other: 'tilt', bytes: { left: 1, right: 2 } },
+	tilt: { at: V.TILT_AT, dir: V.TILT_DIR, other: 'pan', bytes: { up: 1, down: 2 } },
 }
-export const driveCommand = (id, conn, direction) =>
-	raw(id, conn, `81 01 06 01 00 00 ${DIRECTION[direction]} FF`, '8,9;10,11', [cv(V.SPEED), cv(V.TILT_SPEED)])
 
 /**
- * A pan or tilt drive in one direction for one detent: drive, wait, stop.
+ * The pan/tilt drive as raw VISCA, every field a parameter.
  *
- * @param {string} prefix   id prefix
- * @param {string} conn     connection id
- * @param {string} direction key of DIRECTION
+ * `81 01 06 01 VV WW pp tt FF`: VV pan speed (nibbles 8-9) and WW tilt speed (10-11) from the
+ * speed variables, pp pan direction (12-13) and tt tilt direction (14-15). The module reads
+ * each parameter as a decimal number after substituting variables, so a direction is either a
+ * literal byte or a direction variable.
+ *
+ * @param {string} pan   pan direction: '1', '2', '3' or a variable reference
+ * @param {string} tilt  tilt direction, likewise
  */
-const drive = (prefix, conn, direction) => [
-	driveCommand(`${prefix}-go`, conn, direction),
-	wait(`${prefix}-wait`, DRIVE_MS),
-	visca(`${prefix}-stop`, conn, 'stop'),
-]
+export const panTiltCommand = (id, conn, pan, tilt) =>
+	raw(id, conn, '81 01 06 01 00 00 00 00 FF', '8,9;10,11;12,13;14,15', [cv(V.SPEED), cv(V.TILT_SPEED), pan, tilt])
+
+/** True once nothing has stamped `at` for HOLD_MS - SLACK_MS: the detent that waited was the last. */
+const lastDetent = (id, at) => when(id, `unixNow() - ${cv(at)} >= ${HOLD_MS - SLACK_MS}`)
 
 /**
- * Zoom at the camera's variable speed, through the module's custom-command action.
+ * One detent on pan or tilt: stamp the time, record the direction, drive, wait, and stop the
+ * axis only if no later detent has come.
+ *
+ * @param {string} prefix     id prefix
+ * @param {string} conn       connection id
+ * @param {'pan'|'tilt'} axis
+ * @param {string} direction  key of the axis's `bytes`
+ */
+const drive = (prefix, conn, axis, direction) => {
+	const own = AXES[axis]
+	const other = AXES[own.other]
+	const byte = String(own.bytes[direction])
+	// The command lists pan before tilt, whichever axis is turning.
+	const command = (id, mine) =>
+		axis === 'pan' ? panTiltCommand(id, conn, mine, cv(other.dir)) : panTiltCommand(id, conn, cv(other.dir), mine)
+	return [
+		setVar(`${prefix}-at`, own.at, 'unixNow()', true),
+		setVar(`${prefix}-dir`, own.dir, byte),
+		command(`${prefix}-go`, byte),
+		wait(`${prefix}-wait`, HOLD_MS),
+		logicIf(`${prefix}-last`, [lastDetent(`${prefix}-last-cond`, own.at)], [
+			setVar(`${prefix}-rest`, own.dir, String(V.STOPPED)),
+			logicIf(
+				`${prefix}-other`,
+				[when(`${prefix}-other-cond`, `${cv(other.dir)} == 1 || ${cv(other.dir)} == 2`)],
+				[command(`${prefix}-stop-own`, String(V.STOPPED))],
+				[visca(`${prefix}-stop`, conn, 'stop')]
+			),
+		]),
+	]
+}
+
+/**
+ * One detent on zoom, at the camera's variable speed: stamp, drive, wait, stop if it was the
+ * last detent.
  *
  * `81 01 04 07 2p FF` is tele, `3p` wide. The speed nibble `p` is the command's ninth
  * half-byte, filled from the derived speed variable.
  */
 const zoomDrive = (prefix, conn, bytes) => [
+	setVar(`${prefix}-at`, V.ZOOM_AT, 'unixNow()', true),
 	raw(`${prefix}-go`, conn, bytes, '9', [cv(V.ZOOM_SPEED)]),
-	wait(`${prefix}-wait`, DRIVE_MS),
-	visca(`${prefix}-stop`, conn, 'zoomS'),
+	wait(`${prefix}-wait`, HOLD_MS),
+	logicIf(`${prefix}-last`, [lastDetent(`${prefix}-last-cond`, V.ZOOM_AT)], [visca(`${prefix}-stop`, conn, 'zoomS')]),
 ]
 
 /**
- * One focus step: drive, wait, stop — the same shape as pan, tilt and zoom.
+ * One focus detent: stamp, drive, wait, stop if it was the last — the same shape as zoom.
  *
  * `81 01 04 08 2p FF` is far, `3p` near, `p` the speed nibble.
  *
@@ -104,9 +160,10 @@ const zoomDrive = (prefix, conn, bytes) => [
  * than removing the stop.
  */
 const focusStep = (prefix, conn, bytes) => [
+	setVar(`${prefix}-at`, V.FOCUS_AT, 'unixNow()', true),
 	raw(`${prefix}-go`, conn, bytes, '9', [cv(V.FOCUS_SPEED)]),
-	wait(`${prefix}-wait`, DRIVE_MS),
-	raw(`${prefix}-stop`, conn, '81 01 04 08 00 FF'),
+	wait(`${prefix}-wait`, HOLD_MS),
+	logicIf(`${prefix}-last`, [lastDetent(`${prefix}-last-cond`, V.FOCUS_AT)], [raw(`${prefix}-stop`, conn, '81 01 04 08 00 FF')]),
 ]
 
 /** Focus drives only work in manual mode; the camera refuses them during autofocus. */
@@ -143,12 +200,12 @@ export function buildKnobs(conn, host) {
 	})
 	knobs[KNOBS.pan] = knob({
 		style: { icon: 'pan', label: 'Pan', bg: BG.knob },
-		notes: `Turn to pan at the Speed knob's speed; each detent drives for ${DRIVE_MS}ms. Press stops.`,
+		notes: `Turn to pan at the Speed knob's speed; the camera moves while the knob turns and stops ${HOLD_MS}ms after the last click. Press stops.`,
 		actionSets: {
 			down: [visca('pan-press-stop', conn, 'stop')],
 			up: [],
-			rotate_left: drive('pan-l', conn, 'left'),
-			rotate_right: drive('pan-r', conn, 'right'),
+			rotate_left: drive('pan-l', conn, 'pan', 'left'),
+			rotate_right: drive('pan-r', conn, 'pan', 'right'),
 		},
 	})
 
@@ -158,12 +215,12 @@ export function buildKnobs(conn, host) {
 	})
 	knobs[KNOBS.tilt] = knob({
 		style: { icon: 'tilt', label: 'Tilt', bg: BG.knob },
-		notes: `Turn clockwise to tilt up, anticlockwise down, at the Speed knob's speed. Press stops.`,
+		notes: `Turn clockwise to tilt up, anticlockwise down, at the Speed knob's speed; stops ${HOLD_MS}ms after the last click. Press stops.`,
 		actionSets: {
 			down: [visca('tilt-press-stop', conn, 'stop')],
 			up: [],
-			rotate_left: drive('tilt-l', conn, 'down'),
-			rotate_right: drive('tilt-r', conn, 'up'),
+			rotate_left: drive('tilt-l', conn, 'tilt', 'down'),
+			rotate_right: drive('tilt-r', conn, 'tilt', 'up'),
 		},
 	})
 
