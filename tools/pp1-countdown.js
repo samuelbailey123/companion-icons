@@ -78,6 +78,18 @@ if (!number) throw new Error('no PP1 page on this rig')
 
 const found = Object.entries(full.instances).find(([, i]) => i.moduleId === 'renewedvision-propresenter-api')
 if (!found) throw new Error('no ProPresenter connection on this rig')
+
+/*
+ * THEN THE SWITCHER RECORDS. Asked for on 2026-10-04: the recording starts when the countdown
+ * does, so the service is on disk from the countdown on without anyone remembering to press Record.
+ * `record: 'true'` is the bmd-atem module's Start — read from its callback, which starts only on
+ * the literal "true" and stops on anything else, so 'start' would STOP. Never `toggle`: that would
+ * stop a recording someone had already started. The Sunday countdown trigger copies this key's
+ * actions, so it records too.
+ */
+const atem = Object.entries(full.instances).find(([, i]) => i.moduleId === 'bmd-atem')
+if (!atem) throw new Error('no ATEM connection on this rig')
+const [atemId] = atem
 const [connectionId, instance] = found
 console.log(`  connection "${instance.label}"  ${instance.moduleId} ${instance.moduleVersionId}`)
 
@@ -164,7 +176,8 @@ const key = {
 		stepProgression: 'auto', stepExpression: '', rotaryActions: false, canModifyStyleInApis: false,
 		notes:
 			`Fires the "${SECTION}" section of the "${PLAYLIST}" playlist: item ${index}, ` +
-			`${target.type} "${target.id.name}". ProPresenter triggers by index, so if the playlist ` +
+			`${target.type} "${target.id.name}", then starts the ATEM recording (start only, never stops ` +
+			`one already running). ProPresenter triggers by index, so if the playlist ` +
 			`changes above it, re-run tools/pp1-countdown.js. Pointed here ${when}.`,
 	},
 	feedbacks: [],
@@ -182,6 +195,14 @@ const key = {
 							index: v(String(index)),
 							cue_index: v('0'),
 						},
+						upgradeIndex: null,
+						type: 'action',
+					},
+					{
+						id: 'pp1-countdown-record',
+						definitionId: 'recordStartStop',
+						connectionId: atemId,
+						options: { record: v('true') },
 						upgradeIndex: null,
 						type: 'action',
 					},
