@@ -92,6 +92,19 @@ export default {
 		paths: [...CLOCK, { d: 'M74 20 L94 28 L74 36 Z', fill: true }],
 	},
 
+	/**
+	 * The pre-service countdown: a clock face with the first third swept solid.
+	 *
+	 * `timer-start` was tried on this key first and failed on the deck. Its clock is drawn
+	 * small to leave room for a play mark in the corner, and at key size the two read as a
+	 * small ring and a speck — the caption was doing all the work. This is ONE bold form the
+	 * width of the other glyphs, and the swept wedge says "counting down" without a second
+	 * mark. It fires a video, not a ProPresenter timer, so it does not share the CLOCK family.
+	 */
+	countdown: {
+		paths: [{ circle: [60, 60, 36] }, { d: 'M60 60 L60 24 A36 36 0 0 1 91.18 78 Z', fill: true }],
+	},
+
 	media: {
 		paths: [{ rect: [20, 32, 80, 56, 8] }, { d: 'M50 48 L76 60 L50 72 Z', fill: true }],
 	},

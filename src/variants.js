@@ -130,6 +130,7 @@ const present = [
 	icon('timer-start', 'timer-start', 'on', 'present', 'Start timer'),
 	icon('timer-stop', 'timer-stop', 'off', 'present', 'Stop timer'),
 	icon('timer-reset', 'timer-reset', 'warn', 'present', 'Reset timer'),
+	icon('countdown', 'countdown', 'present', 'present', 'Pre-service countdown'),
 	icon('media', 'media', 'present', 'present', 'Play media'),
 	icon('prop', 'prop', 'present', 'present', 'Trigger prop'),
 	icon('playlist', 'playlist', 'present', 'present', 'Playlist'),
