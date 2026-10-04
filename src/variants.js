@@ -69,6 +69,7 @@ const video = [
 	icon('macro-stop', 'macro-stop', 'off', 'video', 'Stop macro'),
 	icon('transition', 'transition', 'video', 'video', 'Transition'),
 	icon('still', 'still', 'video', 'video', 'Still / background image'),
+	icon('brightness', 'brightness', 'video', 'video', 'LED wall brightness'),
 ]
 
 const routing = [
@@ -105,7 +106,13 @@ const system = [
 	icon('memory', 'memory', 'neutral', 'system', 'Memory in use'),
 	icon('disk', 'disk', 'neutral', 'system', 'Disk in use'),
 	icon('uptime', 'clock', 'neutral', 'system', 'Time since boot'),
+	icon('network', 'network', 'neutral', 'system', 'Network address'),
+	// The filesystem going read-only is a silent Pi failure: Companion keeps running and
+	// nothing it writes survives a restart. Open padlock is healthy, closed is the fault.
+	icon('storage-ok', 'unlock', 'on', 'system', 'Filesystem is writable'),
+	icon('storage-locked', 'lock', 'off', 'system', 'Filesystem has gone read-only'),
 	icon('folder-system', 'folder-system', 'audio', 'folders', 'Open the system page'),
+	icon('folder-wireless', 'folder-wireless', 'on', 'folders', 'Open the wireless mics page'),
 ]
 
 const present = [
@@ -128,6 +135,33 @@ const present = [
 	icon('playlist', 'playlist', 'present', 'present', 'Playlist'),
 	icon('focus-next', 'focus-next', 'present', 'present', 'Focus the next presentation'),
 	icon('focus-prev', 'focus-prev', 'present', 'present', 'Focus the previous presentation'),
+
+	/*
+	 * Stage looks. Colour is the SECOND signal here, behind silhouette — see the glyphs.
+	 *
+	 * The two water looks share a hue on purpose. They are one subject in two states, and
+	 * giving them separate colours would claim a distinction that is not there while making
+	 * the pair harder to group at a glance.
+	 */
+	/*
+	 * The MA2 page. Its transport reuses the slide-triangle geometry under lighting names,
+	 * because a triangle pointing forward is the same idea whether it is a slide or a cue —
+	 * but the NAME has to say cue, or a future reader wires a lighting desk to a slide icon
+	 * and quietly builds a page that lies about what it drives.
+	 */
+	icon('cue-next', 'slide-next', 'warn', 'present', 'Advance the lighting cue'),
+	icon('cue-back', 'slide-prev', 'warn', 'present', 'Step the lighting cue back'),
+	icon('executor', 'executor', 'warn', 'present', 'Lighting executor'),
+
+	icon('clear-messages', 'clear-messages', 'off', 'present', 'Clear the messages layer'),
+	icon('clear-announce', 'clear-announce', 'off', 'present', 'Clear the announcements layer'),
+	icon('clear-media', 'clear-media', 'off', 'present', 'Clear the media layer'),
+	icon('clear-video', 'clear-video', 'off', 'present', 'Clear the video input layer'),
+
+	icon('green-wall', 'green-wall', 'on', 'present', 'Foliage wall look'),
+	icon('water-calm', 'water-calm', 'audio', 'present', 'Calm water look'),
+	icon('water-storm', 'water-storm', 'audio', 'present', 'Storm water look'),
+	icon('thunder', 'thunder', 'warn', 'present', 'Thunder sting'),
 ]
 
 const audio = [
@@ -160,7 +194,53 @@ const wireless = [
 		icon(`battery-${n}`, 'battery', color, 'wireless', `Transmitter battery ${n} of 4`)
 	),
 	...RF_COLORS.map((color, n) => icon(`rf-${n}`, 'rf', color, 'wireless', `RF signal ${n} of 3`)),
+	// Bare antenna, no bars: nothing is transmitting, which is not a signal failure.
+	icon('rf-idle', 'rf', 'idle', 'wireless', 'No transmitter on air'),
 	icon('tx-fault', 'tx-fault', 'off', 'wireless', 'Transmitter fault'),
+]
+
+/**
+ * The PTZ camera page. Everything carries the camera's own hue so the page reads as one
+ * instrument, with two exceptions: STOP is red because it is the key you hit when something
+ * has gone wrong, and the autofocus ring is green for "the camera has it".
+ */
+const camera = [
+	icon('arrow-up', 'arrow-up', 'camera', 'camera', 'Tilt up'),
+	icon('arrow-down', 'arrow-down', 'camera', 'camera', 'Tilt down'),
+	icon('arrow-left', 'arrow-left', 'camera', 'camera', 'Pan left'),
+	icon('arrow-right', 'arrow-right', 'camera', 'camera', 'Pan right'),
+	icon('arrow-up-left', 'arrow-up-left', 'camera', 'camera', 'Up and left'),
+	icon('arrow-up-right', 'arrow-up-right', 'camera', 'camera', 'Up and right'),
+	icon('arrow-down-left', 'arrow-down-left', 'camera', 'camera', 'Down and left'),
+	icon('arrow-down-right', 'arrow-down-right', 'camera', 'camera', 'Down and right'),
+	icon('ptz', 'ptz', 'camera', 'camera', 'Pan/tilt/zoom camera'),
+	icon('pan', 'pan', 'camera', 'camera', 'Pan axis'),
+	icon('tilt', 'tilt', 'camera', 'camera', 'Tilt axis'),
+	icon('stop', 'stop', 'off', 'camera', 'Stop all movement'),
+	icon('zoom-in', 'zoom-in', 'camera', 'camera', 'Zoom in'),
+	icon('zoom-out', 'zoom-out', 'camera', 'camera', 'Zoom out'),
+	icon('focus', 'focus', 'camera', 'camera', 'Focus / one-push autofocus'),
+	icon('focus-auto', 'focus-auto', 'on', 'camera', 'Autofocus engaged'),
+	icon('focus-manual', 'focus-auto', 'idle', 'camera', 'Manual focus'),
+	icon('speed', 'speed', 'camera', 'camera', 'Drive speed'),
+	icon('preset', 'preset', 'camera', 'camera', 'Camera preset'),
+	icon('preset-save', 'preset-save', 'camera', 'camera', 'Save a preset'),
+	icon('tracking', 'tracking', 'camera', 'camera', 'Auto tracking'),
+	icon('tracking-on', 'tracking', 'on', 'camera', 'Auto tracking engaged'),
+	icon('exposure', 'exposure', 'camera', 'camera', 'Exposure mode'),
+	icon('white-balance', 'thermometer', 'camera', 'camera', 'White balance'),
+	icon('backlight', 'backlight', 'camera', 'camera', 'Backlight compensation'),
+	icon('backlight-on', 'backlight', 'on', 'camera', 'Backlight compensation engaged'),
+	icon('menu', 'menu', 'camera', 'camera', 'Camera on-screen menu'),
+	icon('ptz-home', 'home', 'camera', 'camera', 'Camera home position'),
+	icon('ptz-power', 'power', 'camera', 'camera', 'Camera power'),
+	icon('ptz-standby', 'power', 'off', 'camera', 'Camera in standby'),
+	icon('frame-close', 'frame-close', 'camera', 'camera', 'Tracking framing: close-up'),
+	icon('frame-half', 'frame-half', 'camera', 'camera', 'Tracking framing: half body'),
+	icon('frame-full', 'frame-full', 'camera', 'camera', 'Tracking framing: full body'),
+	icon('ptz-setup', 'settings', 'camera', 'camera', 'Camera setup page'),
+	icon('ptz-back', 'back', 'camera', 'camera', 'Back to the camera page'),
+	icon('folder-ptz', 'folder-ptz', 'camera', 'folders', 'Open the PTZ camera page'),
 ]
 
 const utility = [
@@ -179,7 +259,29 @@ const utility = [
  * Shapes that land on buttons whose background is feedback-driven, and therefore need
  * high-contrast variants for the per-state swap. See `contrastVariant` in wiring.js.
  */
-const CONTRAST_SHAPES = ['projector', 'pa', 'clear-slide', 'clear-audio', 'camera', 'media', 'macro-run']
+const CONTRAST_SHAPES = [
+	'projector', 'pa', 'clear-slide', 'clear-audio', 'camera', 'media', 'macro-run',
+	// The ATEM bus and its transition column: every one of these sits on a key whose background
+	// is red when live, green when cued, and near-black when neither. No single icon colour
+	// survives all three, so each needs its pair. See src/atem.js.
+	'message', 'cut', 'auto',
+	// PP1 sits on strong flat colours the operator chose — bright orange transport, red clears,
+	// blue looks. A semantic hue on top of those is not reliably legible (the orange transport
+	// keys measured 1.31:1), so these need the paper/ink pair to fall back on. The rest of the
+	// page keeps its colour, because on the dark backgrounds it clears the threshold easily.
+	'clear', 'stage-display', 'slide-prev', 'slide-next',
+	'clear-messages', 'clear-props', 'clear-announce', 'clear-media', 'clear-video',
+	// MA2's keys sit on saturated green and red, where an amber icon measures about 2:1.
+	'ftb', 'executor', 'fader',
+	// VH arms a destination by turning its key light violet, where the violet routing icon
+	// vanishes into its own background.
+	'destination', 'source',
+	// A muted DCA turns its key red, where the audio-blue icon drops to about 2:1.
+	'dca',
+	// The PTZ stop key carries ATEM tally (red live, green preview), and the save key turns
+	// solid red while it is armed. Both are backgrounds the camera hue cannot survive.
+	'stop', 'preset-save',
+]
 
 const contrast = CONTRAST_SHAPES.flatMap((shape) => [
 	icon(`${shape}-paper`, shape, 'paper', 'contrast', `${shape} (light, for dark backgrounds)`),
@@ -197,6 +299,7 @@ export const ICONS = [
 	...audio,
 	...wireless,
 	...utility,
+	...camera,
 	...contrast,
 ]
 
@@ -209,5 +312,12 @@ export const ICONS = [
 export function resolveShape(entry) {
 	const shape = SHAPES[entry.shape]
 	if (typeof shape.levels !== 'function') return shape
-	return shape.levels(Number(entry.name.slice(entry.name.lastIndexOf('-') + 1)))
+	const level = Number(entry.name.slice(entry.name.lastIndexOf('-') + 1))
+	/*
+	 * A non-numeric suffix (`rf-idle`) means the family's BASE drawing, with no level marks
+	 * at all. That is not the same picture as level zero: `rf-0` is a red antenna reading
+	 * "no signal", which is a fault, whereas an idle rig has nothing to report and must not
+	 * look like one. Levels are numbers; absence is a word.
+	 */
+	return Number.isInteger(level) ? shape.levels(level) : shape
 }

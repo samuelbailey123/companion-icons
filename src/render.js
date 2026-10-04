@@ -18,10 +18,19 @@ import { INTRINSIC, STROKE, VIEWBOX } from './palette.js'
  *
  * `group` places an existing glyph's geometry inside another drawing — used by the folder
  * icons, which set a system emblem into a folder body. `at` is the top-left corner in
- * viewBox units and `scale` shrinks the nested 0..120 space. The group counter-scales its
- * own stroke-width so nested geometry keeps the library's single stroke weight instead of
- * thinning in proportion to the scale; without that, an emblem at 0.45 would draw at half
- * the weight of everything around it.
+ * viewBox units and `scale` shrinks the nested 0..120 space.
+ *
+ * The nested stroke is deliberately NOT counter-scaled. An SVG `scale()` transform shrinks
+ * stroke-width along with the geometry, and that is the behaviour we want: every glyph is
+ * authored at one stroke weight relative to its own 120-unit box, so scaling both together
+ * is what preserves the drawing.
+ *
+ * This was originally written the other way — pinning the nested stroke to the library's
+ * absolute weight — on the reasoning that one weight should read across the whole icon. At
+ * the folder's 0.48 scale that put an 11-unit stroke on a 57-unit glyph, roughly double the
+ * proportion it was drawn at, and every interior gap closed up: the CPU emblem rendered as a
+ * solid blob and the microphone as an arrow. Verified at the real 67px key size, where the
+ * scaled stroke stays legible for all eight folder emblems.
  */
 
 /**
@@ -30,19 +39,16 @@ import { INTRINSIC, STROKE, VIEWBOX } from './palette.js'
  * @param {string} colorHex
  * @returns {string}
  */
-function element(p, colorHex, stroke = STROKE) {
+function element(p, colorHex) {
 	const paint = p.fill ? ` fill="${colorHex}" stroke="none"` : ''
 
 	if (typeof p === 'string') return `<path d="${p}"/>`
 
 	if (p.group) {
 		const [x, y] = p.at
-		const inner = p.group.map((c) => element(c, colorHex, stroke)).join('')
-		// Counter-scale the stroke so nested geometry keeps the library's one weight.
-		return (
-			`<g transform="translate(${x} ${y}) scale(${p.scale})" ` +
-			`stroke-width="${stroke / p.scale}">${inner}</g>`
-		)
+		const inner = p.group.map((c) => element(c, colorHex)).join('')
+		// No stroke-width here: the transform scales the inherited one, which is the point.
+		return `<g transform="translate(${x} ${y}) scale(${p.scale})">${inner}</g>`
 	}
 	if (p.d) return `<path d="${p.d}"${paint}/>`
 
@@ -80,7 +86,7 @@ export function renderIcon(shape, colorHex, opts = {}) {
 	const stroke = opts.stroke ?? STROKE
 	const size = opts.size ?? INTRINSIC
 
-	const body = shape.paths.map((p) => element(p, colorHex, stroke)).join('')
+	const body = shape.paths.map((p) => element(p, colorHex)).join('')
 
 	return (
 		`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" ` +

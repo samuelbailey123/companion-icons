@@ -1,340 +1,277 @@
 /**
- * Build a System page watching the Raspberry Pi that Companion runs on, plus the trigger
- * that feeds it.
+ * System: the Pi's health, spread across the deck instead of packed into four columns.
  *
- * Usage: node tools/system-page.js <prod-full.json> <systemPageNumber> <homePageNumber> <outdir>
+ * Usage: node tools/system-page.js <live-full.json> <outdir>
  *
- * WHY A TRIGGER AND NOT VARIABLES. Companion publishes `internal:hostname` (which reads
- * "CompanionPi" here) but no CPU, temperature, memory or disk variables at all — the
- * cpu_usage references inside its bundle belong to a vendored library, not to Companion.
- * `internal:uptime` exists but is COMPANION's uptime, not the machine's. So the numbers have
- * to be read from the OS, and `internal: exec` can do that: it runs a shell command on the
- * Companion host and writes stdout into a custom variable via `targetVariable`.
+ *   row 0   folder row
+ *   row 1   CPU temp, CPU load, memory, disk, power — what goes wrong under load
+ *   row 2   internet, address, uptime, Companion, storage — identity and continuity
  *
- * That is the same mechanism the Power page already uses for its projector and PA scripts,
- * so it is known to work on this install — shell command support has to be enabled with
- * `--enable-shell-command-support`, and those buttons prove it is.
+ * Both rows sit on columns 0, 2, 4, 6 and 8: ten tiles, evenly spaced edge to edge. Five is the
+ * only count that divides nine evenly, which is why disk percentage and disk free share a key
+ * rather than taking two — and they belong together anyway, since "88% full" and "3 GB left"
+ * answer the same question at two useful resolutions.
  *
- * EVERY COMMAND HERE IS READ-ONLY. They only read /sys, /proc and `df`/`free`/`vcgencmd`
- * output. Nothing writes, installs or restarts anything. Each is also formatted at source
- * with awk so the variable holds a display-ready value rather than something the button then
- * has to parse.
+ * EXISTING TILES ARE MOVED, NOT REBUILT. Their thresholds — 65/78 °C, load 2.5/4, memory
+ * 75/90%, disk 80/92% — were chosen against this machine and are not mine to re-derive. They
+ * come across with their feedbacks intact; only position and, for disk, the value line change.
  *
- * THROTTLING IS THE ONE THAT MATTERS. `vcgencmd get_throttled` reports undervoltage and
- * thermal capping — on a Pi that is the failure that actually bites mid-service, and it is
- * invisible otherwise. 0x0 means healthy.
+ * TWO OF THE NEW READINGS NEED NO SHELL AT ALL. Companion publishes `internal:uptime` (its OWN
+ * uptime, in seconds — not the machine's, which is why the existing Uptime tile reads the OS)
+ * and `internal:version`. Using those beats polling for them: no command to be wrong about, no
+ * variable to keep fed, and they are correct the instant Companion starts.
+ *
+ * The remaining three do need the poller, and every command is strictly read-only — `df`,
+ * `hostname`, and a read of /proc/mounts. Each ends in a fallback so an assumption that does
+ * not hold on this machine shows "n/a" rather than something misleading, which is the
+ * convention the throttle tile already uses.
+ *
+ * WHY STORAGE IS WORTH A KEY. An SD card that has flipped read-only is the Pi failure that
+ * costs a service: Companion keeps running, the deck keeps working, and every change made from
+ * that moment is lost at the next restart. Nothing else on this page would show it.
  */
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { COLUMNS, GRID_SIZE } from '../src/layout.js'
+import { assertNavCoverage, navRow } from '../src/navrow.js'
 
-const [, , src, sysArg, homeArg, outdir] = process.argv
-if (!src || !sysArg || !homeArg || !outdir) {
-	console.error('usage: node tools/system-page.js <prod-full.json> <systemPage> <homePage> <outdir>')
+const [, , src, outDir] = process.argv
+if (!src || !outDir) {
+	console.error('usage: node tools/system-page.js <live-full.json> <outdir>')
 	process.exit(1)
 }
-const SYS = String(Number(sysArg))
-const HOME = String(Number(homeArg))
+
+/** Five tiles to a row, evenly spaced across the nine columns. */
+const SPREAD = [0, 2, 4, 6, 8]
+
+/**
+ * New readings, and the read-only shell that produces each.
+ *
+ * These become custom variables, which must exist on the rig before the page is imported — a
+ * page import cannot carry them, and importing custom variables wholesale would reset live
+ * values like the MA2 fader levels.
+ */
+const COMMANDS = {
+	sys_disk_free: `df -BG -P / 2>/dev/null | awk 'NR==2 {gsub(/G/,"",$4); print $4} END {if (NR<2) print "n/a"}'`,
+	sys_ip: `hostname -I 2>/dev/null | awk '{print ($1=="" ? "n/a" : $1)}'`,
+	sys_rw: `awk '$2=="/" {print ($4 ~ /(^|,)ro(,|$)/) ? "READ-ONLY" : "OK"; exit}' /proc/mounts 2>/dev/null || echo n/a`,
+}
+
+const BG = 0x1c2b2b
+const WARN_BG = 0x7a5a00
+const BAD_BG = 0xcc0000
 
 const v = (value) => ({ value, isExpression: false })
 const expr = (value) => ({ value, isExpression: true })
 
-let seq = 0
-const id = (p) => `${p}-${(seq++).toString(36)}`
-
-const CARD_BG = 0x14161c
-const NAV_BG = 0x1f2937
-
-/**
- * The metrics, in reading order.
- *
- * `cmd` writes a display-ready string into `variable`. `warn`/`bad` are Companion
- * expressions over that variable; when one is true the key takes that colour. They are
- * expressions rather than fixed thresholds on the button so the rule lives next to the
- * reading it judges.
- */
-const METRICS = [
-	{
-		key: 'temp', label: 'CPU Temp', image: 'temperature', variable: 'sys_temp',
-		// Emits a bare number. Units are added by the button, so the threshold below can
-		// compare the variable directly instead of stripping characters back off it.
-		cmd: `awk '{printf "%.0f", $1/1000}' /sys/class/thermal/thermal_zone0/temp`,
-		suffix: '°C',
-		// A Pi 4 soft-throttles at 80C and hard-throttles at 85C.
-		warn: '{v} >= 65', bad: '{v} >= 78',
-	},
-	{
-		key: 'load', label: 'CPU Load', image: 'cpu', variable: 'sys_load',
-		cmd: `cut -d' ' -f1 /proc/loadavg`,
-		suffix: '',
-		// Load is per-core, so on the Pi's four cores 4.0 means saturated.
-		warn: '{v} >= 2.5', bad: '{v} >= 4',
-	},
-	{
-		key: 'mem', label: 'Memory', image: 'memory', variable: 'sys_mem',
-		cmd: `free | awk '/^Mem:/ {printf "%.0f", $3/$2*100}'`,
-		suffix: '%',
-		warn: '{v} >= 75', bad: '{v} >= 90',
-	},
-	{
-		key: 'disk', label: 'Disk', image: 'disk', variable: 'sys_disk',
-		cmd: `df -P / | awk 'NR==2 {gsub(/%/,"",$5); print $5}'`,
-		suffix: '%',
-		warn: '{v} >= 80', bad: '{v} >= 92',
-	},
-	{
-		key: 'throttle', label: 'Power', image: 'alert', variable: 'sys_throttle',
-		// Undervoltage is the failure that actually bites a Pi mid-service, and it is silent.
-		//
-		// `vcgencmd get_throttled` is the direct read, but it needs /dev/vcio, which the
-		// Companion user cannot open unless it is in the `video` group — on this host it
-		// returns "Can't open device file: /dev/vcio_gencmd". So fall back to the hwmon
-		// undervoltage alarm, which is a plain sysfs read anyone can do.
-		//
-		// Output is deliberately a word, not a raw hex code: "OK" or "UNDERVOLT" or "n/a".
-		// The vcgencmd branch is validated to start 0x before being trusted, so an error
-		// message can never masquerade as a reading.
-		cmd:
-			`v=$(vcgencmd get_throttled 2>/dev/null | cut -d= -f2); ` +
-			`case "$v" in 0x0) echo OK;; 0x*) echo "$v";; *) ` +
-			`a=$(cat /sys/class/hwmon/hwmon*/in0_lcrit_alarm 2>/dev/null | head -1); ` +
-			`case "$a" in 0) echo OK;; 1) echo UNDERVOLT;; *) echo n/a;; esac;; esac`,
-		suffix: '',
-		warn: '{v} == "n/a"', bad: '{v} != "OK" && {v} != "n/a"',
-	},
-	{
-		key: 'uptime', label: 'Uptime', image: 'uptime', variable: 'sys_uptime',
-		cmd: `awk '{d=int($1/86400); h=int(($1%86400)/3600); m=int(($1%3600)/60); if (d>0) printf "%dd %dh", d, h; else printf "%dh %dm", h, m}' /proc/uptime`,
-		suffix: '',
-		warn: null, bad: null,
-	},
-]
-
-const OK_GREEN = 0x15803d
-const WARN_AMBER = 0xa16207
-const BAD_RED = 0xb91c1c
-
-const full = JSON.parse(await fs.readFile(src, 'utf8'))
-
-const template = full.pages[Object.keys(full.pages)[0]]
-if (!template?.gridSize) throw new Error('could not read gridSize from an existing page')
-
-/**
- * Card layout: a small icon badged into the top-right corner, the label along the top, and
- * the reading filling the rest.
- *
- * The first version stacked icon / label / value in three full-width bands, which left the
- * label only 22% of the key — 26px on a 120px key, against 45.6px everywhere else on the
- * deck. Text lost because the icon was taking a full band it did not need. Cornering the
- * icon buys that height back: the label now renders at 40.8px and the reading at 67px, which
- * is larger than anything else on the deck — correct, since the number is the point.
- *
- * fontsize is set well above what the band can fit and fontsizeAllowShrink does the rest, so
- * each line grows to fill its band rather than being pinned to a guessed size.
- */
-const layers = ({ image, label, valueText, bg }) => [
-	{ id: 'canvas', name: 'Canvas', usage: 'auto', type: 'canvas', decoration: v('default'), showStatusIcons: v('default') },
-	{
-		id: 'box0', name: 'Background', usage: 'auto', type: 'box',
-		enabled: v(true), opacity: v(100), x: v(0), y: v(0), width: v(100), height: v(100), rotation: v(0),
-		color: v(bg), borderWidth: v(0), borderColor: v(0), borderPosition: v('inside'),
-	},
-	{
-		id: 'image0', name: 'Icon', usage: 'auto', type: 'image',
-		enabled: v(true), opacity: v(100), x: v(70), y: v(3), width: v(28), height: v(26), rotation: v(0),
-		base64Image: v(`$(image:${image})`),
-	},
-	{
-		id: 'text0', name: 'Label', usage: 'auto', type: 'text',
-		enabled: v(true), opacity: v(100), x: v(3), y: v(4), width: v(64), height: v(34), rotation: v(0),
-		text: v(label), color: v(0x9aa4b2), halign: v('left'), valign: v('center'),
-		fontsize: v(100), fontsizeAllowShrink: v(true), font: v('companion-sans'), outlineColor: v(0xff000000),
-	},
-	...(valueText
-		? [{
-				id: 'text1', name: 'Value', usage: 'auto', type: 'text',
-				enabled: v(true), opacity: v(100), x: v(2), y: v(40), width: v(96), height: v(56), rotation: v(0),
-				text: v(valueText), color: v(0xffffff), halign: v('center'), valign: v('center'),
-				fontsize: v(100), fontsizeAllowShrink: v(true), font: v('companion-sans'), outlineColor: v(0xff000000),
-			}]
-		: []),
-]
-
-/** Colour the whole key from the reading, so a problem is visible without reading the number. */
-function thresholdFeedback(expression, colour) {
-	return {
-		id: id('fb'),
-		definitionId: 'check_expression',
-		connectionId: 'internal',
-		options: { expression: expr(expression) },
-		type: 'feedback',
-		isInverted: v(false),
-		styleOverrides: [
-			{ overrideId: id('ovr'), elementId: 'box0', elementProperty: 'color', override: v(colour) },
-		],
-		children: {},
-	}
-}
-
-const metricButton = (m) => {
-	// `{v}` stands in for the variable so a threshold reads as a rule rather than plumbing.
-	// It must be a placeholder that cannot occur in the rule text: substituting a bare letter
-	// would rewrite the "n" inside the throttle rule's "n/a" string and corrupt the compare.
-	const ref = `$(internal:custom_${m.variable})`
-	const fill = (rule) => rule.replaceAll('{v}', ref)
-
-	// Later feedbacks win, so the worse state is listed last.
-	const feedbacks = []
-	if (m.warn) feedbacks.push(thresholdFeedback(fill(m.warn), WARN_AMBER))
-	if (m.bad) feedbacks.push(thresholdFeedback(fill(m.bad), BAD_RED))
-
-	return {
-		type: 'button-layered',
-		style: { layers: layers({ image: m.image, label: m.label, valueText: `${ref}${m.suffix}`, bg: CARD_BG }) },
-		options: { stepProgression: 'auto', stepExpression: '', rotaryActions: false, canModifyStyleInApis: false, notes: '' },
-		feedbacks,
-		steps: { 0: { action_sets: { down: [], up: [] }, options: { runWhileHeld: [] } } },
-	}
-}
-
-/** The Home key matches the one on every other page rather than the metric card layout. */
-const homeLayers = () => [
-	{ id: 'canvas', name: 'Canvas', usage: 'auto', type: 'canvas', decoration: v('default'), showStatusIcons: v('default') },
-	{
-		id: 'box0', name: 'Background', usage: 'auto', type: 'box',
-		enabled: v(true), opacity: v(100), x: v(0), y: v(0), width: v(100), height: v(100), rotation: v(0),
-		color: v(NAV_BG), borderWidth: v(0), borderColor: v(0), borderPosition: v('inside'),
-	},
-	{
-		id: 'image0', name: 'Icon', usage: 'auto', type: 'image',
-		enabled: v(true), opacity: v(100), x: v(0), y: v(2), width: v(100), height: v(56), rotation: v(0),
-		base64Image: v('$(image:home)'),
-	},
-	{
-		id: 'text0', name: 'Label', usage: 'auto', type: 'text',
-		enabled: v(true), opacity: v(100), x: v(0), y: v(60), width: v(100), height: v(38), rotation: v(0),
-		text: v('Home'), color: v(0xffffff), halign: v('center'), valign: v('center'),
-		fontsize: v(70), fontsizeAllowShrink: v(true), font: v('companion-sans'), outlineColor: v(0xff000000),
-	},
-]
-
-const homeButton = () => ({
-	type: 'button-layered',
-	style: { layers: homeLayers() },
-	options: { stepProgression: 'auto', stepExpression: '', rotaryActions: false, canModifyStyleInApis: false, notes: '' },
-	feedbacks: [],
-	steps: {
-		0: {
-			action_sets: {
-				down: [{
-					id: id('act'), definitionId: 'set_page', connectionId: 'internal',
-					options: { surfaceId: v('self'), page: v(HOME) }, upgradeIndex: null, type: 'action',
-				}],
-				up: [],
-			},
-			options: { runWhileHeld: [] },
-		},
-	},
+/** An internal expression feedback that repaints a key when `expression` is true. */
+const lit = (id, expression, bg, icon) => ({
+	id,
+	type: 'feedback',
+	definitionId: 'check_expression',
+	connectionId: 'internal',
+	options: { expression: expr(expression) },
+	isInverted: v(false),
+	styleOverrides: [
+		{ overrideId: `${id}-bg`, elementId: 'box0', elementProperty: 'color', override: v(bg) },
+		...(icon
+			? [
+					{
+						overrideId: `${id}-icon`,
+						elementId: 'image0',
+						elementProperty: 'base64Image',
+						override: v(`$(image:${icon})`),
+					},
+				]
+			: []),
+	],
 })
 
-// ------------------------------------------------------------------ the page
-
-const page = { name: 'System', gridSize: structuredClone(template.gridSize), controls: {} }
-const cells = []
-for (let row = 0; row < 2; row++) for (let col = 0; col < 4; col++) cells.push([String(row), String(col)])
-
-page.controls['0'] = { 0: homeButton() }
-for (const [i, m] of METRICS.entries()) {
-	const [row, col] = cells[i + 1]
-	page.controls[row] ??= {}
-	page.controls[row][col] = metricButton(m)
-	console.log(`  ${row}/${col}  ${m.label.padEnd(9)} $(internal:custom_${m.variable})`)
-}
-
-// ------------------------------------------------------------- the poll trigger
-
-/**
- * One trigger running every command in sequence.
- *
- * 30 seconds rather than the 10 the power polls use: these values move slowly, and each
- * command is a process spawn on a Pi that is also driving the deck.
- */
-const pollTrigger = {
-	type: 'trigger',
-	options: {
-		name: 'Poll system stats',
-		enabled: true,
-		sortOrder: 99,
-		relativeDelay: false,
+/** A tile: icon over a name over a live value, matching the rest of the deck. */
+const tile = ({ icon, name, value, valueIsExpression = false, feedbacks = [] }) => ({
+	type: 'button-layered',
+	style: {
+		layers: [
+			{
+				id: 'canvas', name: 'Canvas', usage: 'auto', type: 'canvas',
+				decoration: v('default'), showStatusIcons: v('default'),
+			},
+			{
+				id: 'box0', name: 'Background', usage: 'auto', type: 'box',
+				enabled: v(true), opacity: v(100),
+				x: v(0), y: v(0), width: v(100), height: v(100), rotation: v(0),
+				color: v(BG), borderWidth: v(0), borderColor: v(0), borderPosition: v('inside'),
+			},
+			{
+				id: 'image0', name: 'Image', usage: 'auto', type: 'image',
+				enabled: v(true), opacity: v(100),
+				x: v(0), y: v(2), width: v(100), height: v(40), rotation: v(0),
+				base64Image: v(`$(image:${icon})`),
+				halign: v('center'), valign: v('center'), fillMode: v('fit'),
+			},
+			{
+				id: 'text0', name: 'Name', usage: 'auto', type: 'text',
+				enabled: v(true), opacity: v(100),
+				x: v(0), y: v(42), width: v(100), height: v(30), rotation: v(0),
+				text: v(name), color: v(0xffffff),
+				halign: v('center'), valign: v('center'),
+				fontsize: v(80), fontsizeAllowShrink: v(true), font: v('companion-sans'),
+				outlineColor: v(0xff000000),
+			},
+			{
+				id: 'text1', name: 'Value', usage: 'auto', type: 'text',
+				enabled: v(true), opacity: v(100),
+				x: v(0), y: v(70), width: v(100), height: v(28), rotation: v(0),
+				text: valueIsExpression ? expr(value) : v(value), color: v(0xbcd8e6),
+				halign: v('center'), valign: v('center'),
+				fontsize: v(80), fontsizeAllowShrink: v(true), font: v('companion-sans'),
+				outlineColor: v(0xff000000),
+			},
+		],
 	},
-	events: [{ id: id('evt'), type: 'interval', enabled: true, options: { seconds: 30 } }],
-	condition: [],
+	options: {
+		stepProgression: 'auto', stepExpression: '', rotaryActions: false,
+		canModifyStyleInApis: false, notes: '',
+	},
+	feedbacks,
+	steps: { 0: { action_sets: { down: [], up: [] }, options: { runWhileHeld: [] } } },
 	localVariables: [],
-	actions: METRICS.map((m) => ({
-		id: id('act'),
-		definitionId: 'exec',
-		connectionId: 'internal',
-		options: {
-			path: v(m.cmd),
-			cwd: v(''),
-			timeout: v(5000),
-			targetVariable: v(m.variable),
-		},
-		type: 'action',
-		children: {},
-	})),
-}
+})
 
-/**
- * The custom variables the trigger writes into.
- *
- * These must exist before the trigger runs. `exec`'s targetVariable calls custom.setValue,
- * which writes to an EXISTING variable — unlike the custom_variable_set_value action it has
- * no "create if missing" option. Without this the trigger fires happily, every command runs,
- * and every value is silently dropped: the first deploy did exactly that.
- *
- * persistCurrentValue is false because these are live readings; restoring yesterday's CPU
- * temperature across a restart would be worse than showing nothing.
- */
-const customVariables = structuredClone(full.custom_variables ?? {})
-let sortOrder = Math.max(0, ...Object.values(customVariables).map((c) => c.sortOrder ?? 0))
-for (const m of METRICS) {
-	customVariables[m.variable] = {
-		description: `${m.label} on the Companion host (polled every 30s)`,
-		defaultValue: '',
-		persistCurrentValue: false,
-		sortOrder: ++sortOrder,
+const full = JSON.parse(await fs.readFile(src, 'utf8'))
+const pageNumbers = Object.fromEntries(Object.entries(full.pages).map(([n, p]) => [p.name, Number(n)]))
+assertNavCoverage(Object.values(full.pages).map((p) => p.name), COLUMNS)
+
+for (const name of Object.keys(COMMANDS)) {
+	if (!(name in (full.custom_variables ?? {}))) {
+		throw new Error(`custom variable "${name}" does not exist on this rig — create it in Variables > Custom first`)
 	}
 }
 
-const triggers = structuredClone(full.triggers ?? {})
-// Replace any previous copy rather than accumulating duplicates on a re-run.
-for (const [tid, t] of Object.entries(triggers)) {
-	if (t?.options?.name === pollTrigger.options.name) delete triggers[tid]
+const number = pageNumbers.System
+const original = full.pages[number]
+
+const layerOf = (c, type) => (c?.style?.layers ?? []).find((l) => l.type === type)
+
+/** Index existing tiles by the name on them, so they can be moved without being rebuilt. */
+const existing = {}
+for (const cells of Object.values(original.controls ?? {})) {
+	for (const control of Object.values(cells)) {
+		const name = (layerOf(control, 'text')?.text?.value ?? '').replace(/\s+/g, ' ').trim()
+		if (name && name !== 'Home') existing[name] = structuredClone(control)
+	}
 }
-triggers[`trigger-system-poll`] = pollTrigger
 
-await fs.mkdir(outdir, { recursive: true })
+/** Move an existing tile onto the deck's shared geometry, optionally rewriting its value line. */
+function carried(name, value) {
+	const control = existing[name]
+	if (!control) throw new Error(`no existing "${name}" tile to carry across — found: ${Object.keys(existing).join(', ')}`)
 
+	const image = layerOf(control, 'image')
+	if (image) {
+		image.y = v(2)
+		image.height = v(40)
+	}
+	const texts = (control.style?.layers ?? []).filter((l) => l.type === 'text')
+	const bands = [
+		{ y: 42, height: 30 },
+		{ y: 70, height: 28 },
+	]
+	for (const [i, text] of texts.entries()) {
+		if (!bands[i]) break
+		text.y = v(bands[i].y)
+		text.height = v(bands[i].height)
+		text.fontsize = v(80)
+		text.fontsizeAllowShrink = v(true)
+	}
+	if (value !== undefined && texts[1]) texts[1].text = v(value)
+	return control
+}
+
+const page = structuredClone(original)
+page.gridSize = { ...GRID_SIZE }
+page.controls = {}
+
+const ROW1 = [
+	carried('CPU Temp'),
+	carried('CPU Load'),
+	carried('Memory'),
+	carried('Disk', '$(internal:custom_sys_disk)% · $(internal:custom_sys_disk_free)G'),
+	carried('Power'),
+]
+
+const ROW2 = [
+	carried('Internet'),
+	tile({ icon: 'network', name: 'Address', value: '$(internal:custom_sys_ip)' }),
+	carried('Uptime'),
+	tile({
+		icon: 'uptime',
+		name: 'Companion',
+		/*
+		 * `internal:uptime` is Companion's own uptime in SECONDS. Hours is the right resolution
+		 * for the question this answers — "has it restarted recently?" — and `round` is one of
+		 * the expression functions this rig is known to have, where `floor` is not.
+		 */
+		value: 'concat(round($(internal:uptime) / 3600), "h · ", $(internal:version))',
+		valueIsExpression: true,
+	}),
+	tile({
+		icon: 'storage-ok',
+		name: 'Storage',
+		value: '$(internal:custom_sys_rw)',
+		feedbacks: [
+			lit('sys-rw-bad', '$(internal:custom_sys_rw) == "READ-ONLY"', BAD_BG, 'storage-locked'),
+			lit('sys-rw-unknown', '$(internal:custom_sys_rw) == "n/a"', WARN_BG, null),
+		],
+	}),
+]
+
+page.controls[1] = Object.fromEntries(ROW1.map((c, i) => [SPREAD[i], c]))
+page.controls[2] = Object.fromEntries(ROW2.map((c, i) => [SPREAD[i], c]))
+page.controls[0] = navRow('System', pageNumbers)
+
+/* Extend the existing poller rather than adding a second: one trigger, one interval, one place to look. */
+const poller = Object.entries(full.triggers ?? {}).find(([, t]) => /system stats/i.test(t.options?.name ?? ''))
+if (!poller) throw new Error('no "Poll system stats" trigger to extend')
+const [pollerId, pollerTrigger] = poller
+
+const triggers = structuredClone(full.triggers)
+const target = triggers[pollerId]
+const already = new Set((target.actions ?? []).map((a) => a.options?.targetVariable?.value))
+const added = []
+for (const [variable, command] of Object.entries(COMMANDS)) {
+	if (already.has(variable)) continue
+	target.actions.push({
+		id: `sys-poll-${variable}`,
+		definitionId: 'exec',
+		connectionId: 'internal',
+		options: { path: v(command), cwd: v(''), timeout: v(5000), targetVariable: v(variable) },
+		type: 'action',
+		children: {},
+	})
+	added.push(variable)
+}
+
+console.log(`  row 1  ${ROW1.map((c) => layerOf(c, 'text').text.value).join(' · ')}`)
+console.log(`  row 2  ${ROW2.map((c) => layerOf(c, 'text').text.value).join(' · ')}`)
+console.log(`  spread across columns ${SPREAD.join(', ')}`)
+console.log(`  poller "${pollerTrigger.options.name}": ${target.actions.length} readings, ${added.length} added${added.length ? ` (${added.join(', ')})` : ''}`)
+
+await fs.mkdir(outDir, { recursive: true })
+const file = path.join(outDir, `page-${number}-system.companionconfig`)
 await fs.writeFile(
-	path.join(outdir, `page-${SYS}-system.companionconfig`),
+	file,
 	JSON.stringify({
-		version: full.version, type: 'page', companionBuild: full.companionBuild,
-		page, instances: full.instances,
+		version: full.version,
+		type: 'page',
+		companionBuild: full.companionBuild,
+		page,
+		instances: full.instances,
 		connectionCollections: full.connectionCollections ?? [],
-		oldPageNumber: Number(SYS),
+		oldPageNumber: Number(number),
 	})
 )
 
-await fs.writeFile(
-	path.join(outdir, `triggers.companionconfig`),
-	JSON.stringify({
-		version: full.version, type: 'full', companionBuild: full.companionBuild,
-		triggers, custom_variables: customVariables, instances: full.instances,
-		connectionCollections: full.connectionCollections ?? [],
-		triggerCollections: full.triggerCollections ?? [],
-	})
-)
-
-console.log(`\ncommands (all read-only):`)
-for (const m of METRICS) console.log(`  ${m.variable.padEnd(14)} ${m.cmd}`)
-console.log(`\nwrote page ${SYS}, ${Object.keys(triggers).length} triggers and ${Object.keys(customVariables).length} custom variables -> ${outdir}`)
+/* The trigger change cannot ride in a page file, so it is written for a separate import. */
+await fs.writeFile(path.join(outDir, 'triggers.json'), JSON.stringify(triggers))
+console.log(`\nwrote ${path.basename(file)} and triggers.json`)

@@ -42,7 +42,7 @@ export default {
 	},
 
 	ftb: {
-		paths: [{ circle: [60, 60, 30] }, { d: 'M30 60 A30 30 0 0 0 90 60 Z', fill: true }],
+		paths: [{ circle: [60, 60, 38] }, { d: 'M22 60 A38 38 0 0 0 98 60 Z', fill: true }],
 	},
 
 	dsk: {
@@ -81,5 +81,20 @@ export default {
 
 	still: {
 		paths: [{ rect: [20, 30, 80, 60, 8] }, 'M32 76 L50 56 L64 72 L76 62 L90 76'],
+	},
+
+	/**
+	 * A sun: the one symbol for brightness that needs no caption.
+	 *
+	 * The rays are two elements rather than eight so the glyph stays inside the six-element
+	 * budget, and they stop short of the viewBox edge — a ray that runs to the border reads as
+	 * a crop rather than a ray once the key is downscaled to 112px.
+	 */
+	brightness: {
+		paths: [
+			{ circle: [60, 60, 22] },
+			'M60 18 V31 M60 89 V102 M18 60 H31 M89 60 H102',
+			'M31 31 L40 40 M89 31 L80 40 M31 89 L40 80 M89 89 L80 80',
+		],
 	},
 }

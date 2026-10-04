@@ -36,6 +36,8 @@ export const COLORS = {
 	present: '#FB923C',
 	route: '#A78BFA',
 	audio: '#38BDF8',
+	/** The PTZ camera. Pink is the one hue no other system on the deck uses. */
+	camera: '#F472B6',
 	neutral: '#E9E9EE',
 	idle: '#6B7280',
 	/**

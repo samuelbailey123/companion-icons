@@ -48,4 +48,22 @@ export default {
 	clock: {
 		paths: [{ circle: [60, 60, 36] }, 'M60 34 V60 L80 72'],
 	},
+
+	/**
+	 * The network the Pi is on: three hosts on a bus, down to the box they share.
+	 *
+	 * Distinct from `route`, which means routing VIDEO between destinations. This one is about
+	 * the machine having an address at all, and the two sit two keys apart on the System page.
+	 */
+	network: {
+		paths: [
+			{ rect: [22, 30, 22, 22, 4] },
+			{ rect: [49, 30, 22, 22, 4] },
+			{ rect: [76, 30, 22, 22, 4] },
+			// Drops, bus and stem as one path: the library caps a glyph at six elements, and
+			// they are one continuous piece of wiring anyway.
+			'M33 52 V62 H87 V52 M60 62 V74',
+			{ rect: [42, 74, 36, 22, 4] },
+		],
+	},
 }

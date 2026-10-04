@@ -49,6 +49,21 @@ export function contrastVariant(background) {
 }
 
 /**
+ * WCAG contrast ratio between two colours, 1..21.
+ *
+ * Accepts either form `luminance` does — Companion's 24-bit integer or a hex string — so a
+ * button's background can be compared with a palette colour without converting first.
+ *
+ * @param {number|string} a
+ * @param {number|string} b
+ * @returns {number}
+ */
+export function contrastRatio(a, b) {
+	const [lighter, darker] = [luminance(a), luminance(b)].sort((p, q) => q - p)
+	return (lighter + 0.05) / (darker + 0.05)
+}
+
+/**
  * Every background colour a control's feedbacks can impose, with the feedback that does it.
  *
  * @param {object} control
