@@ -224,6 +224,22 @@ const camera = [
 	icon('focus-manual', 'focus-auto', 'idle', 'camera', 'Manual focus'),
 	icon('ptz-auto', 'ptz-auto', 'camera', 'camera', 'Auto focus and exposure'),
 	icon('ptz-auto-on', 'ptz-auto', 'on', 'camera', 'Auto focus and exposure both engaged'),
+	// The setup page's knobs and keys. Gain reuses the audio gain arrow and Match the two
+	// overlapping frames of the downstream key, both in the camera hue, so a second drawing of
+	// the same idea does not creep into the set.
+	icon('shutter', 'shutter', 'camera', 'camera', 'Shutter speed'),
+	icon('iris', 'iris', 'camera', 'camera', 'Iris'),
+	icon('ptz-gain', 'gain', 'camera', 'camera', 'Gain'),
+	icon('exp-comp', 'exp-comp', 'camera', 'camera', 'Exposure compensation'),
+	icon('sharpness', 'sharpness', 'camera', 'camera', 'Sharpness'),
+	icon('wdr', 'wdr', 'camera', 'camera', 'Wide dynamic range (highlight knee)'),
+	icon('nr', 'nr', 'camera', 'camera', 'Noise reduction'),
+	icon('white-card', 'white-card', 'camera', 'camera', 'One-push white balance off a white card'),
+	icon('ptz-match', 'dsk', 'camera', 'camera', 'Match this camera to the other one'),
+	icon('ptz-look', 'still', 'camera', 'camera', 'The saved picture settings: save them, or put them back'),
+	icon('who-left', 'who-left', 'camera', 'camera', 'Track the person on the left of the frame'),
+	icon('who-middle', 'who-middle', 'camera', 'camera', 'Track the person in the middle of the frame'),
+	icon('who-right', 'who-right', 'camera', 'camera', 'Track the person on the right of the frame'),
 	icon('speed', 'speed', 'camera', 'camera', 'Drive speed'),
 	icon('preset', 'preset', 'camera', 'camera', 'Camera preset'),
 	icon('preset-save', 'preset-save', 'camera', 'camera', 'Save a preset'),

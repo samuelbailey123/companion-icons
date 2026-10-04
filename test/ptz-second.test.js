@@ -146,6 +146,23 @@ describe('where the cameras sit in the deck', () => {
 	})
 })
 
+describe('the mirror check with a Match key', () => {
+	it('treats the other camera as identity: two setup pages that name different partners still mirror', async () => {
+		const { buildSetupPage } = await import('../src/ptz/page.js')
+		const { assertMirrored, renameVariables } = await import('../src/ptz/second.js')
+		const one = buildSetupPage('c1', '10.0.0.1', { run: 10, setup: 11 }, { host: '10.0.0.2', atem: 1 })
+		const two = renameVariables(buildSetupPage('c2', '10.0.0.2', { run: 12, setup: 13 }, { host: '10.0.0.1', atem: 3 }))
+		const options = {
+			connOne: 'c1', connTwo: 'c2', hostOne: '10.0.0.1', hostTwo: '10.0.0.2',
+			pagesOne: { run: 10, setup: 11 }, pagesTwo: { run: 12, setup: 13 },
+			otherOne: { host: '10.0.0.2', atem: 1 }, otherTwo: { host: '10.0.0.1', atem: 3 }, name: 'setup',
+		}
+		expect(() => assertMirrored(one, two, options)).not.toThrow()
+		// Without the partner normalised, the Match keys differ and the check says so.
+		expect(() => assertMirrored(one, two, { ...options, otherOne: undefined, otherTwo: undefined })).toThrow(/not a mirror/)
+	})
+})
+
 describe('the chooser', () => {
 	const cameras = [
 		{ atem: 1, runPage: 10, setupPage: 11, stateVar: 'ptz2_state', presetVar: 'ptz2_last' },

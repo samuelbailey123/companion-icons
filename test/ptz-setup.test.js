@@ -3,6 +3,7 @@ import { SETTINGS, cycleKey, framingKey, trackKey } from '../src/ptz/tracking.js
 import { BODY, SCRIPT, SCRIPT_PATH, TRACK, track, trackingTrigger, webExec } from '../src/ptz/web.js'
 import { buildSetupKeys } from '../src/ptz/setup.js'
 import { autoKey, backlightKey, exposureKey, menuKey, powerKey, whiteBalanceKey } from '../src/ptz/image.js'
+import { lookKey, saveLookKey } from '../src/ptz/picture.js'
 import { SUB_PAGES, assertNavCoverage, folderFor } from '../src/navrow.js'
 import { COLUMNS } from '../src/layout.js'
 import { ICONS } from '../src/variants.js'
@@ -34,6 +35,8 @@ describe('the web API bridge', () => {
 
 	it('ships a Python script that takes no credentials on its command line', () => {
 		expect(SCRIPT).toContain('.ptz_web')
+		expect(SCRIPT).toContain('verb == "select"')
+		expect(SCRIPT).toContain('"stSelect": {"bEnable": 1, "x": int(argv[3]), "y": int(argv[4])}')
 		expect(SCRIPT).not.toMatch(/password=|--user/)
 		for (const field of ['tracking', 'body', 'mode', 'speed', 'sensitivity', 'placement', 'headroom', 'lost']) {
 			expect(SCRIPT).toContain(`"${field}"`)
@@ -87,14 +90,29 @@ describe('tracking keys', () => {
 describe('the setup page', () => {
 	const rows = buildSetupKeys('conn', HOST, { run: 9 })
 
-	it('carries picture, power, tracking, the six settings and Auto, with a way back', () => {
+	it('carries picture, power, tracking, the six settings, Auto, WDR, NR, 1-push and the look, with a way back', () => {
 		expect(Object.keys(rows[1])).toHaveLength(9)
 		expect(Object.keys(rows[2])).toHaveLength(6)
-		expect(Object.keys(rows[3])).toEqual(['0'])
+		expect(Object.keys(rows[3])).toEqual(['0', '1', '2', '3', '5', '6'])
 		expect(rows[3][0]).toEqual(autoKey('conn'))
+		expect(rows[3][1].style.layers[3].text.value).toContain('WDR')
+		expect(rows[3][2].style.layers[3].text.value).toContain('NR')
+		expect(rows[3][3].style.layers[3].text.value).toBe('1-push WB')
+		expect(rows[3][5]).toEqual(saveLookKey(HOST))
+		expect(rows[3][5].steps[0].action_sets.down[0].options.path.value).toContain('look save')
+		expect(rows[3][6]).toEqual(lookKey(HOST, 'setup-look'))
+		expect(rows[3][6].feedbacks[0].id).toBe('setup-look-set')
 		expect(rows[1][8].steps[0].action_sets.down[0].options.page.value).toBe('9')
 		expect(rows[1][4].feedbacks[0].id).toBe('setup-track-on')
 		expect(rows[1][5].feedbacks[0].id).toBe('setup-frame-close-sel')
+	})
+
+	it('adds Match only when it is told about the other camera', () => {
+		const paired = buildSetupKeys('conn', HOST, { run: 9 }, { host: '10.0.0.8', atem: 1 })
+		expect(Object.keys(paired[3])).toEqual(['0', '1', '2', '3', '4', '5', '6'])
+		expect(paired[3][4].style.layers[3].text.value).toBe('Match ◂ CAM 1')
+		expect(paired[3][4].steps[0].action_sets.down[0].options.path.value).toContain('10.0.0.8')
+		expect(rows[3][4]).toBeUndefined()
 	})
 
 	it('uses ids that do not collide with the run page', () => {
