@@ -31,12 +31,13 @@ export { SETUP_NAME }
  * @param {string} conn   the ptzoptics-visca connection id
  * @param {string} host   camera address
  * @param {{setup: number|string}} pages
+ * @param {Record<number, string>} [names]  preset number → shot name, shown on the preset keys
  */
-export function buildPage(conn, host, pages) {
+export function buildPage(conn, host, pages, names = {}) {
 	const { strips, knobs } = buildKnobs(conn)
 	return {
 		name: PAGE_NAME,
-		controls: { ...buildKeys(conn, host, pages), [ROWS.strip]: strips, [ROWS.knob]: knobs },
+		controls: { ...buildKeys(conn, host, pages, names), [ROWS.strip]: strips, [ROWS.knob]: knobs },
 		gridSize: { ...GRID_SIZE },
 	}
 }

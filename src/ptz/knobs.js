@@ -43,7 +43,7 @@ export const KNOBS = { pan: 0, tilt: 2, zoom: 3, focus: 5, speed: 6, preset: 8 }
 const DERIVED_SPEED = `max(1, min(7, round(${cv(V.SPEED)} * 7 / 24)))`
 
 /** The actions that keep the derived speeds in step with the main one. */
-const deriveSpeeds = (prefix) => [
+export const deriveSpeeds = (prefix) => [
 	setVar(`${prefix}-ts`, V.TILT_SPEED, `min(20, ${cv(V.SPEED)})`, true),
 	setVar(`${prefix}-zs`, V.ZOOM_SPEED, DERIVED_SPEED, true),
 	setVar(`${prefix}-fs`, V.FOCUS_SPEED, DERIVED_SPEED, true),
