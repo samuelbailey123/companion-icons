@@ -33,24 +33,6 @@ export const TRACK = 'ptz_track'
 export const ATEM_INPUT = 'ptz_atem_input'
 
 /**
- * When each knob last clicked, in milliseconds (`unixNow()`), so a click can tell whether it was
- * the last of a turn: only the last one stops the camera (see `knobs.js`).
- */
-export const PAN_AT = 'ptz_pan_at'
-export const TILT_AT = 'ptz_tilt_at'
-export const ZOOM_AT = 'ptz_zoom_at'
-export const FOCUS_AT = 'ptz_focus_at'
-/**
- * The direction pan and tilt are being driven in, as the camera's own direction byte: 1 or 2
- * while driving, 3 while stopped. Pan and tilt travel in ONE VISCA command, so a pan click has
- * to say what tilt is doing as well, and these are where it reads that from.
- */
-export const PAN_DIR = 'ptz_pan_dir'
-export const TILT_DIR = 'ptz_tilt_dir'
-/** The direction byte for "this axis is stopped". */
-export const STOPPED = 3
-
-/**
  * The setup page's two dials: values the knob has to know to step, because the camera has no
  * up/down command for them. Gain is 0..15; the white balance dial is in kelvin, 2400..7100 in
  * hundreds. Both are operator state and persist; both are also kept in step with the camera by
@@ -116,16 +98,6 @@ export function definitions() {
 		[MATCH]: live('PTZ result of the last Match press as JSON from ptz_web.py: online, from, copied, left'),
 		[LOOK]: persistent('PTZ saved look as JSON from ptz_web.py look: online, saved, applied, left, and its wb, ae, shutter, iris, gain, sharp', ''),
 		[STATE]: live(`PTZ camera state as JSON, polled every second: ${FIELDS.join(', ')}`),
-		/*
-		 * Knob state starts from rest on every boot. The directions default to "stopped", never
-		 * blank: a blank fills its half of the pan/tilt command with 00, which the camera rejects.
-		 */
-		[PAN_AT]: { description: 'PTZ time of the last Pan knob click, in ms', defaultValue: '0', persistCurrentValue: false },
-		[TILT_AT]: { description: 'PTZ time of the last Tilt knob click, in ms', defaultValue: '0', persistCurrentValue: false },
-		[ZOOM_AT]: { description: 'PTZ time of the last Zoom knob click, in ms', defaultValue: '0', persistCurrentValue: false },
-		[FOCUS_AT]: { description: 'PTZ time of the last Focus knob click, in ms', defaultValue: '0', persistCurrentValue: false },
-		[PAN_DIR]: { description: 'PTZ pan direction the knob is driving: 1 left, 2 right, 3 stopped', defaultValue: String(STOPPED), persistCurrentValue: false },
-		[TILT_DIR]: { description: 'PTZ tilt direction the knob is driving: 1 up, 2 down, 3 stopped', defaultValue: String(STOPPED), persistCurrentValue: false },
 	}
 }
 

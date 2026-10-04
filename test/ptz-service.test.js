@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CENTRE, HALVES, SERMON, WORSHIP, armedOf, buildServicePages } from '../src/ptz/service.js'
 import { LOOK, SERVICE_LOOK, buildHubPage } from '../src/ptz/hub.js'
-import { HOLD_MS } from '../src/ptz/knobs.js'
+import { DRIVE_MS } from '../src/ptz/knobs.js'
 import { KNOB_COLS, KNOB_ROW, STRIP_ROW } from '../src/layout.js'
 import { folderFor } from '../src/navrow.js'
 import { COLORS, MIN_CONTRAST } from '../src/palette.js'
@@ -78,8 +78,8 @@ describe('the shared pages', () => {
 			expect(Object.keys(page.controls[STRIP_ROW]).map(Number)).toEqual(KNOB_COLS)
 			expect(KNOB_COLS.map((c) => label(page.controls[KNOB_ROW][c]))).toEqual(['Pan', 'Tilt', 'Zoom', 'Pan', 'Tilt', 'Zoom'])
 			for (const c of KNOB_COLS) expect(page.controls[KNOB_ROW][c].options.rotaryActions).toBe(true)
-			// The knobs are the run page's: they stop on the last detent, not on every one.
-			expect(json(page.controls[KNOB_ROW][0])).toContain(`"time":{"value":"${HOLD_MS}"`)
+			// The knobs are the run page's own: drive, wait, stop on every detent.
+			expect(json(page.controls[KNOB_ROW][0])).toContain(`"time":{"value":"${DRIVE_MS}"`)
 		}
 	})
 
