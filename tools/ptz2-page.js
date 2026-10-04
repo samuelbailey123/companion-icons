@@ -1,5 +1,6 @@
 /**
- * Emit the PTZ pages: a chooser, and a run and setup page for each of the two cameras.
+ * Emit the PTZ pages: a chooser, a run and setup page for each of the two cameras, and the
+ * Worship and Sermon pages that carry both cameras at once (`src/ptz/service.js`).
  *
  * Usage: node tools/ptz2-page.js <live-full.json> <outdir>
  *
@@ -11,8 +12,8 @@
  * the build fails.
  *
  * THE FOLDER ROW LANDS ON A CHOOSER. Nine columns for nine pages, and the row was already full,
- * so the four PTZ pages are sub-pages of one column. Pressing PTZ shows both cameras side by
- * side with their tally and state; pressing one drives it. Because the row is on every page and
+ * so the six PTZ pages are sub-pages of one column. Pressing PTZ shows both cameras side by
+ * side with their tally and state, and Worship and Sermon between them; pressing one opens it. Because the row is on every page and
  * always points back here, the camera pages need no back key — which is why row 1 column 8 is
  * still preset 6 rather than a navigation control.
  *
@@ -31,6 +32,7 @@ import { TRIGGER_ID, pollTrigger } from '../src/ptz/poller.js'
 import { mergeDefinitions } from '../src/ptz/variables.js'
 import { TRIGGER_ID as TRACK_TRIGGER_ID, trackingTrigger } from '../src/ptz/web.js'
 import { assertMirrored, definitions2, renameVariables } from '../src/ptz/second.js'
+import { SERMON, WORSHIP, buildServicePages } from '../src/ptz/service.js'
 
 /**
  * The cameras, in the order they appear on the chooser — ascending by ATEM input, matching the
@@ -87,33 +89,36 @@ for (const cam of Object.values(CAMERAS)) {
 }
 
 /*
- * The chooser takes the slot the PTZ page already has; the camera pages follow it contiguously.
- *
- * Pages left behind by an earlier layout are dropped BEFORE the new ones are numbered, so the
- * numbering closes up rather than leaving holes where the old pages were. Companion inserts
- * pages up to the highest number in a bundle, and a gap is a blank page on the deck.
+ * EVERY PAGE KEEPS ITS NUMBER; A NEW ONE GOES ON THE END. A page this tool owns is rebuilt in the
+ * slot it already has, and a page it adds goes after the last, which is where `import-page … new`
+ * puts it. Until 2026-10-04 the tool dropped its pages and renumbered them after the highest
+ * survivor. That was harmless while they were the last pages; once Tracks landed after them (page
+ * 14), a rerun would have moved the cameras to 15-18 and left 10-13 blank, because Companion
+ * inserts pages up to the highest number in a bundle and a gap is a blank page on the deck.
  */
-const hubNumber = Object.entries(full.pages).find(([, p]) => p.name === HUB_NAME)?.[0]
+const numberOf = (name) => Object.entries(full.pages).find(([, p]) => p.name === name)?.[0]
+const hubNumber = numberOf(HUB_NAME)
 if (!hubNumber) throw new Error(`no page named "${HUB_NAME}" on this rig`)
-/*
- * Every page this tool owns is dropped and rebuilt, including the ones it produced last run.
- * Listing only the legacy names was a bug: a second run kept the previous CAM pages and added a
- * duplicate set after them, so the deck grew four pages every time.
- */
-const OWNED = [
-	'PTZ Setup', 'PTZ 2', 'PTZ 2 Setup',
-	...[CAMERAS.first, CAMERAS.second].flatMap((c) => [runName(c.atem), setupName(c.atem)]),
-]
-const surviving = Object.fromEntries(
-	Object.entries(full.pages).filter(([, p]) => p.name === HUB_NAME || !OWNED.includes(p.name))
-)
-const highest = Math.max(...Object.keys(surviving).map(Number))
-let next = Math.max(highest, Number(hubNumber)) + 1
+const LEGACY = ['PTZ Setup', 'PTZ 2', 'PTZ 2 Setup'].filter(numberOf)
+if (LEGACY.length) throw new Error(`the rig still has the single-camera pages (${LEGACY.join(', ')}); they would leave holes`)
+const numbers = Object.keys(full.pages).map(Number)
+if (Math.max(...numbers) !== numbers.length) {
+	throw new Error(`pages are not numbered 1..${numbers.length}; a new page would not land after the last`)
+}
+let next = numbers.length + 1
+const added = []
+const slot = (name) => {
+	const existing = numberOf(name)
+	if (existing) return existing
+	added.push(name)
+	return String(next++)
+}
 for (const cam of [CAMERAS.second, CAMERAS.first]) {
-	cam.runPage = String(next++)
-	cam.setupPage = String(next++)
+	cam.runPage = slot(runName(cam.atem))
+	cam.setupPage = slot(setupName(cam.atem))
 	cam.numbers = { run: cam.runPage, setup: cam.setupPage }
 }
+const service = { worship: slot(WORSHIP), sermon: slot(SERMON) }
 
 /* Each camera's pages, from the same builders. The second camera's variables are then renamed. */
 const built = {}
@@ -148,8 +153,12 @@ for (const [which, cam] of Object.entries(CAMERAS)) {
 	built[which].setup.name = setupName(cam.atem)
 }
 
-const pages = structuredClone(surviving)
-pages[hubNumber] = {
+/* A rebuilt page keeps the id of the page it replaces, so the rig sees the same page. */
+const pages = structuredClone(full.pages)
+const put = (n, page) => {
+	pages[n] = { ...page, gridSize: { ...GRID_SIZE }, ...(full.pages[n]?.id ? { id: full.pages[n].id } : {}) }
+}
+put(hubNumber, {
 	name: HUB_NAME,
 	controls: buildHubPage(
 		[CAMERAS.second, CAMERAS.first].map((cam) => ({
@@ -158,13 +167,20 @@ pages[hubNumber] = {
 			setupPage: cam.setupPage,
 			stateVar: cam.vars.state,
 			presetVar: cam.vars.preset,
-		}))
+		})),
+		service
 	),
-	gridSize: { ...GRID_SIZE },
-}
+})
 for (const [which, cam] of Object.entries(CAMERAS)) {
-	pages[cam.runPage] = { ...built[which].run, gridSize: { ...GRID_SIZE } }
-	pages[cam.setupPage] = { ...built[which].setup, gridSize: { ...GRID_SIZE } }
+	put(cam.runPage, built[which].run)
+	put(cam.setupPage, built[which].setup)
+}
+/* Both cameras on each shared page: CAM 1 (camera two, the ptz2_* variables) on the left. */
+const shared = buildServicePages({ left: { ...CAMERAS.second, second: true }, right: CAMERAS.first }, service)
+put(service.worship, shared.worship)
+put(service.sermon, shared.sermon)
+if (Object.keys(pages).length !== Math.max(...Object.keys(pages).map(Number))) {
+	throw new Error(`the bundle's pages are not numbered 1..${Object.keys(pages).length}; that would leave a blank page`)
 }
 /* Row 0 everywhere: a new page name means every page's folder row is rebuilt. */
 const pageNumbers = Object.fromEntries(Object.entries(pages).map(([n, p]) => [p.name, Number(n)]))
@@ -225,9 +241,38 @@ await fs.writeFile(
 	})
 )
 
+/*
+ * ONE BUNDLE PER PTZ PAGE, for `import-page`. A page import replaces that page and nothing else,
+ * so changing the camera pages need not reset the other pages. New pages go in with `new`, in page
+ * order, so each lands on the number this build gave it and the chooser's keys point at it.
+ */
+const slug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+const owned = [hubNumber, ...[CAMERAS.second, CAMERAS.first].flatMap((c) => [c.runPage, c.setupPage]), service.worship, service.sermon]
+const pageFiles = []
+for (const n of owned.sort((a, b) => a - b)) {
+	const file = path.join(outDir, `page-${n}-${slug(pages[n].name)}.companionconfig`)
+	await fs.writeFile(
+		file,
+		JSON.stringify({
+			version: full.version,
+			type: 'page',
+			companionBuild: full.companionBuild,
+			page: pages[n],
+			instances: full.instances,
+			connectionCollections: full.connectionCollections ?? [],
+			oldPageNumber: Number(n),
+		})
+	)
+	pageFiles.push({ n, file, isNew: added.includes(pages[n].name) })
+}
+
 console.log(`  chooser: page ${hubNumber} "${HUB_NAME}"`)
 for (const cam of [CAMERAS.second, CAMERAS.first]) {
 	console.log(`  CAM ${cam.atem}: ${cam.label} (${cam.host})  run ${cam.runPage}, setup ${cam.setupPage}`)
 }
+console.log(`  shared: ${WORSHIP} ${service.worship}, ${SERMON} ${service.sermon}${added.length ? `  (new: ${added.join(', ')})` : ''}`)
 console.log(`  ${Object.keys(pages).length} pages, ${Object.keys(custom_variables).length} variables, ${Object.keys(triggers).length} triggers`)
-console.log(`\nwrote ${path.basename(libraryFile)}, ${path.basename(pagesFile)}`)
+console.log(`\nwrote ${path.basename(libraryFile)}, ${path.basename(pagesFile)} and ${pageFiles.length} page bundles`)
+console.log('\npage by page — the variables first, then each page, new ones with `new` in this order:')
+console.log(`  node tools/rig.js create-vars ${pagesFile}`)
+for (const { n, file, isNew } of pageFiles) console.log(`  node tools/rig.js import-page ${file} ${isNew ? 'new' : n}`)

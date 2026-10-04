@@ -95,7 +95,7 @@ const presetFixed = (id, conn, definitionId, n) =>
 	})
 
 /** Overrides that turn a key solid red with ink glyph and caption while Save is armed. */
-const armedLook = (prefix, caption, icon) => [
+export const armedLook = (prefix, caption, icon) => [
 	override(`${prefix}-bg`, 'box0', 'color', BG.armed),
 	override(`${prefix}-text`, 'text0', 'text', caption),
 	override(`${prefix}-label`, 'text0', 'color', INK),
@@ -108,7 +108,7 @@ const armedLook = (prefix, caption, icon) => [
  * Writes the same variable the Speed knob turns, then re-derives the tilt, zoom and focus
  * speeds exactly as the knob does, so a press and a turn are interchangeable.
  */
-const speedKey = () =>
+export const speedKey = () =>
 	key({
 		style: { icon: 'speed', label: `concat('Speed ', ${cv(V.SPEED)})`, bg: BG.key, labelIsExpression: true },
 		notes: `Steps the drive speed ${SPEED_STOPS.join(' → ')} → ${SPEED_STOPS[0]} for pan, tilt, zoom and focus. The Speed knob still fine-tunes it.`,
@@ -139,7 +139,7 @@ const CAMERA = `concat('CAM ', ${cv(V.ATEM_INPUT)})`
  *
  * The stop function is unchanged; the icon still says stop and the caption is the state.
  */
-const stopKey = (conn) =>
+export const stopKey = (conn) =>
 	key({
 		style: { icon: 'stop', label: CAMERA, bg: BG.key, labelIsExpression: true },
 		notes:
@@ -188,14 +188,18 @@ const stopKey = (conn) =>
  */
 export const presetCaption = (n, name) => (name ? `${n} (${name})` : String(n))
 
-const presetKey = (n, conn, host, name) =>
+/**
+ * A preset key. `accent` borders it while it is the last preset sent: the page's pink here, the
+ * camera's own colour on the shared pages (`service.js`).
+ */
+export const presetKey = (n, conn, host, name, accent = ACCENT) =>
 	key({
 		style: { icon: 'preset', label: presetCaption(n, name), bg: BG.key },
 		notes: `Recall preset ${n}${name ? ` (${name})` : ''}, then put the saved look back. With Save armed, saves the current shot as preset ${n} instead.`,
 		feedbacks: [
 			when(`p${n}-last`, `${cv(V.LAST_PRESET)} == ${n}`, [
 				override(`p${n}-last-bw`, 'box0', 'borderWidth', 6),
-				override(`p${n}-last-bc`, 'box0', 'borderColor', ACCENT),
+				override(`p${n}-last-bc`, 'box0', 'borderColor', accent),
 			]),
 			when(`p${n}-armed`, `${cv(V.ARMED)} == 1`, armedLook(`p${n}-armed`, `SAVE ${n}`, 'preset-save')),
 		],
@@ -241,7 +245,7 @@ const zoomKey = (name, conn, icon, bytes, label) =>
 		},
 	})
 
-const autofocusKey = (conn) =>
+export const autofocusKey = (conn) =>
 	key({
 		style: { icon: 'focus-manual', label: `concat('AF ', ${field('focus')})`, bg: BG.key, labelIsExpression: true },
 		notes: 'Toggles autofocus. Green while the camera is in auto focus.',
@@ -264,7 +268,7 @@ const autofocusKey = (conn) =>
 		},
 	})
 
-const onePushKey = (conn) =>
+export const onePushKey = (conn) =>
 	key({
 		style: { icon: 'focus', label: '1-Push', bg: BG.key },
 		notes: 'One-push autofocus: the camera focuses once on what it sees now, then holds.',
