@@ -44,5 +44,9 @@ this — see `Services/_tools/02-grade-join.sh` on the media drive.
 
 ## TODO(sam)
 
+Attempted on 2026-08-28 and not answerable: the SQ7 was powered down, and in any case
+Companion's SQ module publishes DCA and matrix levels but nothing about output routing or
+insert processing. Both of these need the desk itself.
+
 - [ ] Which SQ7 output feeds the recorder, and at what level
 - [ ] Is there a limiter on that path already?
