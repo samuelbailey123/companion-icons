@@ -1,5 +1,6 @@
 /**
- * Start the backing tracks at 10:00 Central every Sunday.
+ * Start the backing tracks at 10:00 Central every Sunday, and fade them out so they are silent at
+ * 10:30.
  *
  * Usage: node tools/pp1-tracks-trigger.js <live-full.json> <outdir>
  *   first time: node tools/rig.js add-trigger <outdir>/triggers.companionconfig <id it prints>
@@ -17,9 +18,15 @@
  * the Pi's clock (see tools/sunday-power-trigger.js). SUNDAY ONLY (`days: [0]`): tracks starting
  * themselves on a Tuesday would play into an empty room, or a rehearsal.
  *
- * The bundle carries every trigger the rig has, untouched, plus this one, so either import path
- * works. `add-trigger` adds this one alone and leaves the others running, which matters on a
- * Sunday morning with the countdown armed; the full import is the only way to replace it.
+ * FADE SO IT IS SILENT AT 10:30, NOT FROM 10:30. Asked for on 2026-10-04: the music ends as the
+ * countdown reaches zero. `fade` walks the volume down over four seconds and then pauses, so it
+ * starts at 10:29:56. It puts the slider back after pausing, so next Sunday's 10:00 play is not
+ * silent. A paused player is left alone, so a fade after someone already stopped the tracks does
+ * nothing.
+ *
+ * The bundle carries every trigger the rig has, untouched, plus these, so either import path
+ * works. `add-trigger` adds a new one alone and leaves the others running, which matters on a
+ * Sunday morning with the countdown armed; the full import is the only way to replace one.
  */
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -31,11 +38,21 @@ if (!src || !outDir) {
 	process.exit(1)
 }
 
-/** When it fires. `days` is 0=Sunday .. 6=Saturday. */
-const TIME = '10:00:00'
+/**
+ * What fires, and when. `days` is 0=Sunday .. 6=Saturday. The fade's timeout covers its four-second
+ * walk, the settle before the slider goes back, and the SSH hop.
+ */
 const DAYS = [0]
-
-const TRIGGER_NAME = 'Sunday tracks'
+const SCHEDULE = [
+	{
+		name: 'Sunday tracks', time: '10:00:00', verb: 'play', timeout: 8000,
+		notes: 'Starts the tracks in Chrome on the PP1 iMac with "chrome_tracks.sh play", which never pauses a player that is already going.',
+	},
+	{
+		name: 'Sunday tracks fade', time: '10:29:56', verb: 'fade', timeout: 15000,
+		notes: 'Fades the tracks out over four seconds and pauses them, so they are silent at 10:30 as the countdown ends; puts the volume slider back for next time.',
+	},
+]
 
 const v = (value) => ({ value, isExpression: false })
 
@@ -46,43 +63,43 @@ let seq = 0
 const id = (prefix) => `pp1-tracks-trigger-${prefix}-${(seq++).toString(36)}`
 
 const existing = full.triggers ?? {}
-const mine = Object.entries(existing).find(([, t]) => t.options?.name === TRIGGER_NAME)
-if (mine) console.log(`  replacing the existing "${TRIGGER_NAME}" trigger (${mine[0]})`)
-
-const triggers = Object.fromEntries(Object.entries(existing).filter(([tid]) => tid !== mine?.[0]))
-const sortOrder = Math.max(-1, ...Object.values(existing).map((t) => t.options?.sortOrder ?? 0)) + 1
-const triggerId = mine?.[0] ?? id('self')
-const command = `${SCRIPT_PATH} play`
-
-triggers[triggerId] = {
-	type: 'trigger',
-	options: {
-		name: TRIGGER_NAME,
-		enabled: true,
-		sortOrder: mine?.[1]?.options?.sortOrder ?? sortOrder,
-		notes:
-			`Starts the tracks in Chrome on the PP1 iMac at ${TIME} on Sunday with "chrome_tracks.sh play", ` +
-			`which never pauses a player that is already going. Rebuild with tools/pp1-tracks-trigger.js.`,
-	},
-	actions: [
-		{
-			id: id('exec'),
-			definitionId: 'exec',
-			connectionId: 'internal',
-			options: { path: v(command), cwd: v(''), timeout: v(8000), targetVariable: v(VARIABLE) },
-			upgradeIndex: null,
-			type: 'action',
-			children: {},
-		},
-	],
-	condition: [],
-	events: [{ id: id('event'), type: 'timeofday', enabled: true, options: { time: TIME, days: [...DAYS] } }],
-	localVariables: [],
-}
-
+const triggers = { ...existing }
+let sortOrder = Math.max(-1, ...Object.values(existing).map((t) => t.options?.sortOrder ?? 0))
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-console.log(`  "${TRIGGER_NAME}" (${triggerId}) at ${TIME} on ${DAYS.map((d) => DAY_NAMES[d]).join(', ')}`)
-console.log(`    ${command} -> custom:${VARIABLE}`)
+const added = []
+
+for (const { name, time, verb, timeout, notes } of SCHEDULE) {
+	const mine = Object.entries(existing).find(([, t]) => t.options?.name === name)
+	if (mine) console.log(`  replacing the existing "${name}" trigger (${mine[0]})`)
+	const triggerId = mine?.[0] ?? id(`${verb}-self`)
+	if (!mine) added.push(triggerId)
+	const command = `${SCRIPT_PATH} ${verb}`
+	triggers[triggerId] = {
+		type: 'trigger',
+		options: {
+			name,
+			enabled: true,
+			sortOrder: mine?.[1]?.options?.sortOrder ?? ++sortOrder,
+			notes: `${notes} At ${time} on Sunday. Rebuild with tools/pp1-tracks-trigger.js.`,
+		},
+		actions: [
+			{
+				id: id('exec'),
+				definitionId: 'exec',
+				connectionId: 'internal',
+				options: { path: v(command), cwd: v(''), timeout: v(timeout), targetVariable: v(VARIABLE) },
+				upgradeIndex: null,
+				type: 'action',
+				children: {},
+			},
+		],
+		condition: [],
+		events: [{ id: id('event'), type: 'timeofday', enabled: true, options: { time, days: [...DAYS] } }],
+		localVariables: [],
+	}
+	console.log(`  "${name}" (${triggerId}) at ${time} on ${DAYS.map((d) => DAY_NAMES[d]).join(', ')}`)
+	console.log(`    ${command} -> custom:${VARIABLE}`)
+}
 console.log(`  ${Object.keys(triggers).length} triggers in the bundle (${Object.keys(existing).length} were on the rig)`)
 
 await fs.mkdir(outDir, { recursive: true })
@@ -101,4 +118,6 @@ await fs.writeFile(
 		connectionCollections: full.connectionCollections ?? [],
 	})
 )
-console.log(`\nwrote ${path.basename(file)} — ${mine ? `replace with: node tools/rig.js import ${file} triggers` : `add with: node tools/rig.js add-trigger ${file} ${triggerId}`}`)
+console.log(`\nwrote ${path.basename(file)}`)
+for (const triggerId of added) console.log(`  add with: node tools/rig.js add-trigger ${file} ${triggerId}`)
+console.log(`  or replace them all with: node tools/rig.js import ${file} triggers`)
