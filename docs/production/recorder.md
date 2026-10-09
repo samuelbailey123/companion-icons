@@ -15,6 +15,33 @@ should live on it for that reason: it is media and scratch, not storage. Documen
 lives in git; the render pipeline lives at `Services/_tools/` on the drive alongside the
 media it operates on.
 
+## Which disk
+
+Read off the switcher on 2026-10-09, during an event, so by looking only.
+
+| Disk | Id | Free | Working set |
+|---|---|---|---|
+| `Hard Drive` — the USB drive above | 301 | 116 h | first |
+| `Internal` — the HD8's own SSD | 1 | 62 h | second |
+
+The switcher records to the **first** disk of its working set and spills to the second. That
+evening the Hard Drive was first and the recording went to it. **The reported fault is the
+plug-in:** a drive plugged in afterwards is said to come back second, so the service lands on
+Internal and the drive goes to the edit desk empty. Nobody has yet watched a plug-in happen.
+
+- Companion's `bmd-atem` 4.4.0 publishes the first disk's name as `$(atem:record_disk_volume)`.
+  `tools/record-disk.js` puts it on the Record keys while idle, with an amber INTERNAL warning.
+- The module's only disk action is `recordSwitchDisk`, a toggle. Whether it does anything on an
+  idle switcher is untested, so nothing switches the disk automatically yet.
+
+### TODO(sam) — two minutes, off-air
+
+- [ ] Unplug and replug the drive with the switcher idle: which disk is first afterwards, and
+      does the drive keep id 301?
+- [ ] With Internal first and nothing recording, fire Switch disk: does the Hard Drive become first?
+- [ ] Then make starting a recording switch disk first — the Record keys, the Countdown key and
+      the Sunday countdown trigger.
+
 ## What it produced
 
 2026-08-23: 1080p59.94 container, H.264 **Main** profile, yuv420p, bt709 limited range,
