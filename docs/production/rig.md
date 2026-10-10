@@ -34,7 +34,7 @@ camera's pair behind that.
 |---|---|---|---|
 | 1 | Home | nothing — status only | Projectors, PA, PROGRAM, PREVIEW, Stream, Record, three ATEM macros. **No longer carries mic batteries, packs, internet or CPU temp** — those moved to System or went away with the Mics page. The deck resumes on its last page, so this is where you land after a restart |
 | 2 | Power | Projectors, PA | One state-aware toggle per system; direction is worked out from polled state, not a step counter |
-| 3 | PP1 | ProPresenter | Speaker and Worship are duration presets on one shared timer — 45 min and 25 min, not two timers |
+| 3 | PP1 | ProPresenter | Speaker and Worship are duration presets on one shared timer — 45 min and 25 min, not two timers. **Freeze Slide** at r1c8 (on the rig since 2026-10-10, `tools/pp1-freeze.js`) fires ProPresenter's "Freeze" macro: Slide Destination, Stage Only, so clicks stop reaching the audience screens and what is up stays up. **All Screens** at r2c7 releases it. It holds every audience output, the stream's words overlay included. ProPresenter's API cannot give a macro its actions, so the macro was made by hand |
 | 4 | MA2 | grandMA2 lighting | Executors 101–109 across row 1, Go Next / Go Back / BLACKOUT below, four encoders on row 5 |
 | 5 | ATEM | Television Studio HD8 | Program bus over preview bus, CUT and AUTO at column 8. The eight bus keys are inputs 1–7 plus Media Player 1 — **input 8, the PTZ, has no key on either bus** |
 | 6 | SQ7 | Allen & Heath SQ7 | DCA 1–8 with level and mute state, Mute DCAs key. Stream / Foyer / MAIN readouts on the touchstrip |
