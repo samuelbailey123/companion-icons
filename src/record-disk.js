@@ -18,9 +18,11 @@
  * on the rig, and the value line already says where the recording goes. A recording still turns
  * the key red, because that feedback comes later in the list and wins the background.
  *
- * WHAT THIS DOES NOT DO. It does not switch the disk. The module's only disk action is "Switch
- * disk", a toggle whose effect on an idle switcher has not been tested on this rig, and a
- * recording is the wrong place to find out. Until that is proven off-air this is a warning.
+ * WHAT THIS DOES NOT DO. It does not switch the disk, and must not. The module's only disk action
+ * is "Switch disk", which on the idle switcher moves the Active disk to the other slot and leaves
+ * the slot order alone (tested 2026-10-10): a "switch if Internal" here would flip back on the next
+ * press, and `record_disk_volume` reports the first slot, not the Active disk. The Service Health
+ * board keeps the drive first and Active; see docs/production/recorder.md.
  *
  * WHICH KEYS. Every key carrying the module's `recordStartStop` toggle — the Record keys on Home
  * and ATEM as of 2026-10-09 — wherever they sit. The Countdown key starts a recording too, but its

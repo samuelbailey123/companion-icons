@@ -17,38 +17,40 @@ media it operates on.
 
 ## Which disk
 
-Read off the switcher on 2026-10-09.
+Read off the switcher on 2026-10-09 and tested on it, idle, on 2026-10-10.
 
 | Disk | Id | Free |
 |---|---|---|
-| `Hard Drive` — the USB drive above | 301 | 116 h |
+| `Hard Drive` — the USB drive above | 301 | 115 h |
 | `Internal` — the HD8's own SSD | 1 | 62 h |
 
-The switcher records to the **first** disk of its working set, or the second when the first slot
-is empty.
+**What records is the disk the switcher flags Active.** That is usually the first working-set
+slot, but not always, and three things move it:
 
-- **Drive in:** Hard Drive first, Internal second. The 2026-10-09 evening event recorded to the
-  drive. Sam reports that plugging the drive in puts it straight into the first slot.
-- **Drive out:** the first slot is empty and Internal is second, so a recording goes to the
-  switcher's SSD. That is the "records to internal" fault: it is what the switcher does whenever
-  the drive is not in at the moment Record is pressed.
+| What happens | Slots | Active |
+|---|---|---|
+| **Power reset** with the drive in | Internal, then the drive | Internal |
+| Drive unplugged | empty, then Internal | Internal |
+| Drive plugged into a running switcher | the drive, then Internal (Sam, 2026-10-09) | the drive |
+| Switch Disk (the module's `recordSwitchDisk`), idle | unchanged | moves to the other slot |
+| Setting the slot order | as set | stays on the slot position it was on |
 
-So nothing switches disks automatically; the drive being in is what matters, and both screens say
-so before anyone presses Record:
+The rig power-cycles every Sunday morning, so left alone **every Sunday starts with Internal
+recording**. That was the "records to internal" fault.
 
-- The Record keys (Home r2c3, ATEM r3c1, `tools/record-disk.js`) name the disk while idle and turn
-  amber when it is not the drive, the value line reading `Internal` or `NO DRIVE`. On the rig since
-  2026-10-09.
-- The Service Health board treats Internal as no recording drive (Decima-Labs/service-health#3).
+**The fix is in the Service Health board** (Decima-Labs/service-health, `driveCommand` in
+`src/atem.ts`), not on the deck. It already holds a session to the switcher; while the switcher is
+idle and a formatted drive is present it makes the drive the first slot and then the Active disk,
+checking the state after each step. Proven on the switcher on 2026-10-10: with the power-reset
+order set by hand, the drive was back first and Active within 20 ms. It cannot be done from
+Companion: `bmd-atem` 4.4.0 has only the Switch Disk toggle and reports only the first slot's
+name, as `$(atem:record_disk_volume)`, so a deck-side "switch if Internal" would toggle back on
+the next press and its own readout could name the drive while Internal records.
 
-`bmd-atem` 4.4.0 publishes only the first slot's name, as `$(atem:record_disk_volume)`; it is blank
-while that slot is empty. Its only disk action is `recordSwitchDisk`, a toggle, which nothing uses.
-
-### TODO(sam)
-
-- [ ] Watch one plug-in with the switcher on: the drive should land in the first slot and the
-      Record keys go back to grey reading `Hard Drive`. Not yet seen by anything but Sam; the
-      switcher was powered off before it could be watched.
+What the deck shows (`tools/record-disk.js`, on the rig since 2026-10-09): the Record keys on Home
+r2c3 and ATEM r3c1 name the first slot while idle and turn amber when it is `Internal` or there is
+`NO DRIVE`. The board keeps the first slot and the Active disk the same, so the key reads true; if
+the board is down after a power reset the key is amber, which is also true.
 
 ## What it produced
 
