@@ -15,6 +15,43 @@ should live on it for that reason: it is media and scratch, not storage. Documen
 lives in git; the render pipeline lives at `Services/_tools/` on the drive alongside the
 media it operates on.
 
+## Which disk
+
+Read off the switcher on 2026-10-09 and tested on it, idle, on 2026-10-10.
+
+| Disk | Id | Free |
+|---|---|---|
+| `Hard Drive` — the USB drive above | 301 | 115 h |
+| `Internal` — the HD8's own SSD | 1 | 62 h |
+
+**What records is the disk the switcher flags Active.** That is usually the first working-set
+slot, but not always, and three things move it:
+
+| What happens | Slots | Active |
+|---|---|---|
+| **Power reset** with the drive in | Internal, then the drive | Internal |
+| Drive unplugged | empty, then Internal | Internal |
+| Drive plugged into a running switcher | the drive, then Internal (Sam, 2026-10-09) | the drive |
+| Switch Disk (the module's `recordSwitchDisk`), idle | unchanged | moves to the other slot |
+| Setting the slot order | as set | stays on the slot position it was on |
+
+The rig power-cycles every Sunday morning, so left alone **every Sunday starts with Internal
+recording**. That was the "records to internal" fault.
+
+**The fix is in the Service Health board** (Decima-Labs/service-health, `driveCommand` in
+`src/atem.ts`), not on the deck. It already holds a session to the switcher; while the switcher is
+idle and a formatted drive is present it makes the drive the first slot and then the Active disk,
+checking the state after each step. Proven on the switcher on 2026-10-10: with the power-reset
+order set by hand, the drive was back first and Active within 20 ms. It cannot be done from
+Companion: `bmd-atem` 4.4.0 has only the Switch Disk toggle and reports only the first slot's
+name, as `$(atem:record_disk_volume)`, so a deck-side "switch if Internal" would toggle back on
+the next press and its own readout could name the drive while Internal records.
+
+What the deck shows (`tools/record-disk.js`, on the rig since 2026-10-09): the Record keys on Home
+r2c3 and ATEM r3c1 name the first slot while idle and turn amber when it is `Internal` or there is
+`NO DRIVE`. The board keeps the first slot and the Active disk the same, so the key reads true; if
+the board is down after a power reset the key is amber, which is also true.
+
 ## What it produced
 
 2026-08-23: 1080p59.94 container, H.264 **Main** profile, yuv420p, bt709 limited range,
