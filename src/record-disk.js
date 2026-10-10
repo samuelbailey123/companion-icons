@@ -10,9 +10,13 @@
  * `00:00` while idle, which says nothing; it now shows where the recording will go.
  *
  * WHAT THE KEY SHOWS. Idle: the volume name of the first working-set disk, which the bmd-atem
- * module publishes as `record_disk_volume`. Recording: the running time, as before. While that
- * disk is Internal the caption reads INTERNAL on amber; a recording still turns the key red,
- * because that feedback comes later in the list and wins the background.
+ * module publishes as `record_disk_volume`. Recording: the running time, as before. The key turns
+ * amber while that disk is Internal, and also while the first slot is empty — read off the
+ * switcher on 2026-10-09: with the drive unplugged the first slot holds no disk, the variable is
+ * blank, and the switcher records to Internal in the second slot. The value line then says NO
+ * DRIVE. The caption stays "Record": an INTERNAL override wrapped to "INTERN/AL" in its narrow band
+ * on the rig, and the value line already says where the recording goes. A recording still turns
+ * the key red, because that feedback comes later in the list and wins the background.
  *
  * WHAT THIS DOES NOT DO. It does not switch the disk. The module's only disk action is "Switch
  * disk", a toggle whose effect on an idle switcher has not been tested on this rig, and a
@@ -34,7 +38,6 @@ export const MARK = 'record-disk'
 export const INTERNAL = 'Internal'
 /** The rig's "look at this" amber, the same one an armed Stream key wears. */
 export const AMBER = 0xa16207
-export const WARNING_CAPTION = 'INTERNAL'
 
 const v = (value) => ({ value, isExpression: false })
 const expr = (value) => ({ value, isExpression: true })
@@ -60,9 +63,27 @@ export function isRecordKey(control, connectionId) {
 	)
 }
 
+export const NO_DRIVE = 'NO DRIVE'
+
+/**
+ * True for a warning this file wrote. Companion gives every feedback a new id on import but keeps
+ * the override ids, so a warning already on the rig is recognised by those and replaced, not doubled.
+ */
+export function isOurFeedback(feedback) {
+	return (
+		String(feedback?.id ?? '').startsWith(`${MARK}:`) ||
+		(feedback?.styleOverrides ?? []).some((o) => String(o?.overrideId ?? '').startsWith(`${MARK}:`))
+	)
+}
+
 /** What the value line reads: the running time while recording, the destination while idle. */
 export const valueExpression = (label) =>
-	`$(${label}:record_active) ? $(${label}:record_duration_hm) : $(${label}:record_disk_volume)`
+	`$(${label}:record_active) ? $(${label}:record_duration_hm) : ` +
+	`($(${label}:record_disk_volume) == "" ? "${NO_DRIVE}" : $(${label}:record_disk_volume))`
+
+/** True while the next recording would not go to the drive: Internal is first, or the first slot is empty. */
+export const warningExpression = (label) =>
+	`$(${label}:record_disk_volume) == "${INTERNAL}" || $(${label}:record_disk_volume) == ""`
 
 /**
  * Return a copy of a Record key that shows the recording disk and warns on Internal.
@@ -74,10 +95,9 @@ export function showDisk(control, { label }) {
 	const key = structuredClone(control)
 	const texts = (key.style?.layers ?? []).filter((l) => l.type === 'text')
 	const value = texts.find((l) => String(l.text?.value ?? '').includes(`$(${label}:record_duration_hm)`))
-	const caption = texts.find((l) => l !== value)
 	const box = (key.style?.layers ?? []).find((l) => l.type === 'box')
-	if (!value || !caption || !box) {
-		throw new Error('a Record key needs a background, a caption and a record_duration_hm line; this one was not touched')
+	if (!value || !box) {
+		throw new Error('a Record key needs a background and a record_duration_hm line; this one was not touched')
 	}
 	value.text = expr(valueExpression(label))
 
@@ -86,19 +106,18 @@ export function showDisk(control, { label }) {
 		id: `${MARK}:internal`,
 		connectionId: 'internal',
 		definitionId: 'check_expression',
-		options: { expression: expr(`$(${label}:record_disk_volume) == "${INTERNAL}"`) },
+		options: { expression: expr(warningExpression(label)) },
 		isInverted: v(false),
 		upgradeIndex: -1,
 		styleOverrides: [
 			{ overrideId: `${MARK}:box`, elementId: box.id, elementProperty: 'color', override: v(AMBER) },
-			{ overrideId: `${MARK}:caption`, elementId: caption.id, elementProperty: 'text', override: v(WARNING_CAPTION) },
 		],
 		children: {},
 	}
 	// First in the list, so the module's own recording feedback still paints the key red over it.
-	key.feedbacks = [warning, ...(key.feedbacks ?? []).filter((f) => f.id !== warning.id)]
+	key.feedbacks = [warning, ...(key.feedbacks ?? []).filter((f) => !isOurFeedback(f))]
 
-	const note = `${MARK}: idle, the value line names the disk the recording will go to, and the key warns while it is ${INTERNAL}. Built by tools/record-disk.js.`
+	const note = `${MARK}: idle, the value line names the disk the recording will go to, and the key warns while it is ${INTERNAL} or there is no drive. Built by tools/record-disk.js.`
 	const notes = key.options?.notes ?? ''
 	if (!notes.includes(`${MARK}:`)) key.options = { ...key.options, notes: notes ? `${notes}\n${note}` : note }
 	return key

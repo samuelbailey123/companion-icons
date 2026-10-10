@@ -4,12 +4,14 @@ import {
 	INTERNAL,
 	MARK,
 	MODULE_ID,
-	WARNING_CAPTION,
+	NO_DRIVE,
 	buildRecordDiskPages,
 	findAtemConnection,
+	isOurFeedback,
 	isRecordKey,
 	showDisk,
 	valueExpression,
+	warningExpression,
 } from '../src/record-disk.js'
 import { contrastRatio } from '../src/wiring.js'
 
@@ -105,7 +107,9 @@ describe('showDisk', () => {
 
 	it('reads the running time while recording and the destination disk while idle', () => {
 		expect(textOf(key, 'text1')).toEqual({ value: valueExpression('atem'), isExpression: true })
-		expect(valueExpression('atem')).toBe('$(atem:record_active) ? $(atem:record_duration_hm) : $(atem:record_disk_volume)')
+		expect(valueExpression('atem')).toBe(
+			`$(atem:record_active) ? $(atem:record_duration_hm) : ($(atem:record_disk_volume) == "" ? "${NO_DRIVE}" : $(atem:record_disk_volume))`
+		)
 	})
 
 	it('publishes under whatever the connection is called', () => {
@@ -114,17 +118,20 @@ describe('showDisk', () => {
 		expect(textOf(showDisk(renamed, { label: 'switcher' }), 'text1').value).toContain('$(switcher:record_disk_volume)')
 	})
 
-	it('warns on Internal: amber background, caption replaced', () => {
+	it('warns when Internal is first and when the first slot is empty', () => {
+		expect(warningExpression('atem')).toBe(`$(atem:record_disk_volume) == "${INTERNAL}" || $(atem:record_disk_volume) == ""`)
+	})
+
+	it('warns by turning the key amber, leaving the caption alone', () => {
 		const [warning] = key.feedbacks
 		expect(warning).toMatchObject({
 			id: `${MARK}:internal`,
 			connectionId: 'internal',
 			definitionId: 'check_expression',
-			options: { expression: { value: `$(atem:record_disk_volume) == "${INTERNAL}"`, isExpression: true } },
+			options: { expression: { value: warningExpression('atem'), isExpression: true } },
 		})
 		expect(warning.styleOverrides).toEqual([
 			{ overrideId: `${MARK}:box`, elementId: 'box0', elementProperty: 'color', override: v(AMBER) },
-			{ overrideId: `${MARK}:caption`, elementId: 'text0', elementProperty: 'text', override: v(WARNING_CAPTION) },
 		])
 		expect(contrastRatio('#ffffff', `#${AMBER.toString(16).padStart(6, '0')}`)).toBeGreaterThanOrEqual(4.5)
 	})
@@ -154,6 +161,23 @@ describe('showDisk', () => {
 		expect(JSON.stringify(showDisk(key, ATEM))).toBe(JSON.stringify(key))
 	})
 
+	it('replaces its warnings after Companion re-ids them on import, however many there are', () => {
+		const imported = structuredClone(key)
+		imported.feedbacks[0].id = 'r6L5NMkKRvKmAz-wr6USd'
+		const older = { ...structuredClone(key.feedbacks[0]), id: 'WkdKBumVkG9Jvd6kFFw1q' }
+		older.styleOverrides.push({ overrideId: `${MARK}:caption`, elementId: 'text0', elementProperty: 'text', override: v('INTERNAL') })
+		imported.feedbacks.splice(1, 0, older)
+		expect(showDisk(imported, ATEM).feedbacks.map((f) => f.id)).toEqual([`${MARK}:internal`, 'rec'])
+	})
+
+	it('recognises its own feedback by id or override, and nothing else', () => {
+		expect(isOurFeedback({ id: `${MARK}:internal` })).toBe(true)
+		expect(isOurFeedback({ id: 'x', styleOverrides: [{ overrideId: 'ovr-8' }, { overrideId: `${MARK}:box` }] })).toBe(true)
+		expect(isOurFeedback({ id: 'rec', styleOverrides: [{ overrideId: 'ovr-8' }, {}, null] })).toBe(false)
+		expect(isOurFeedback({})).toBe(false)
+		expect(isOurFeedback(undefined)).toBe(false)
+	})
+
 	it('adds the warning to a key with no feedbacks at all', () => {
 		const bare = recordKey()
 		delete bare.feedbacks
@@ -164,9 +188,6 @@ describe('showDisk', () => {
 		const noValue = recordKey()
 		noValue.style.layers[4].text = v('REC')
 		expect(() => showDisk(noValue, ATEM)).toThrow(/record_duration_hm line/)
-		const noCaption = recordKey()
-		noCaption.style.layers.splice(3, 1)
-		expect(() => showDisk(noCaption, ATEM)).toThrow(/not touched/)
 		const noBox = recordKey()
 		noBox.style.layers.splice(1, 1)
 		expect(() => showDisk(noBox, ATEM)).toThrow(/not touched/)

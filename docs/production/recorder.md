@@ -17,30 +17,37 @@ media it operates on.
 
 ## Which disk
 
-Read off the switcher on 2026-10-09, during an event, so by looking only.
+Read off the switcher on 2026-10-09.
 
-| Disk | Id | Free | Working set |
-|---|---|---|---|
-| `Hard Drive` — the USB drive above | 301 | 116 h | first |
-| `Internal` — the HD8's own SSD | 1 | 62 h | second |
+| Disk | Id | Free |
+|---|---|---|
+| `Hard Drive` — the USB drive above | 301 | 116 h |
+| `Internal` — the HD8's own SSD | 1 | 62 h |
 
-The switcher records to the **first** disk of its working set and spills to the second. That
-evening the Hard Drive was first and the recording went to it. **The reported fault is the
-plug-in:** a drive plugged in afterwards is said to come back second, so the service lands on
-Internal and the drive goes to the edit desk empty. Nobody has yet watched a plug-in happen.
+The switcher records to the **first** disk of its working set, or the second when the first slot
+is empty.
 
-- Companion's `bmd-atem` 4.4.0 publishes the first disk's name as `$(atem:record_disk_volume)`.
-  `tools/record-disk.js` puts it on the Record keys while idle, with an amber INTERNAL warning.
-- The module's only disk action is `recordSwitchDisk`, a toggle. Whether it does anything on an
-  idle switcher is untested, so nothing switches the disk automatically yet.
+- **Drive in:** Hard Drive first, Internal second. The 2026-10-09 evening event recorded to the
+  drive. Sam reports that plugging the drive in puts it straight into the first slot.
+- **Drive out:** the first slot is empty and Internal is second, so a recording goes to the
+  switcher's SSD. That is the "records to internal" fault: it is what the switcher does whenever
+  the drive is not in at the moment Record is pressed.
 
-### TODO(sam) — two minutes, off-air
+So nothing switches disks automatically; the drive being in is what matters, and both screens say
+so before anyone presses Record:
 
-- [ ] Unplug and replug the drive with the switcher idle: which disk is first afterwards, and
-      does the drive keep id 301?
-- [ ] With Internal first and nothing recording, fire Switch disk: does the Hard Drive become first?
-- [ ] Then make starting a recording switch disk first — the Record keys, the Countdown key and
-      the Sunday countdown trigger.
+- The Record keys (Home r2c3, ATEM r3c1, `tools/record-disk.js`) name the disk while idle and turn
+  amber with INTERNAL or NO DRIVE when it is not the drive. On the rig since 2026-10-09.
+- The Service Health board treats Internal as no recording drive (Decima-Labs/service-health#3).
+
+`bmd-atem` 4.4.0 publishes only the first slot's name, as `$(atem:record_disk_volume)`; it is blank
+while that slot is empty. Its only disk action is `recordSwitchDisk`, a toggle, which nothing uses.
+
+### TODO(sam)
+
+- [ ] Watch one plug-in with the switcher on: the drive should land in the first slot and the
+      Record keys go back to grey reading `Hard Drive`. Not yet seen by anything but Sam; the
+      switcher was powered off before it could be watched.
 
 ## What it produced
 
