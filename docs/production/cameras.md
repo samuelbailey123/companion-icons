@@ -183,6 +183,40 @@ The second PTZ went in on 2026-08-28. What it needed, in order, for next time:
   modes pump visibly and lift noise while they do it. A flatter gamma is the right lever on a
   PTZ; a true knee is a static-camera control.
 
+## The look, as saved on 2026-10-10
+
+Each PTZ has a saved **look**: its whole picture block, kept on the Pi as
+`ptz_look_<address>.json` beside `ptz_web.py`. The Look key puts it back, and every preset key
+re-applies it straight after a recall. **The look is whatever was saved last, per camera; it is
+not a shared standard.**
+
+Sam declared both cameras right on 2026-10-10, after the stage lighting was adjusted, and both
+looks were saved from the cameras as they stood (09:31). The looks they replaced, from
+2026-09-10, are kept on the Pi in `~/ptz-look-backup-20261010/`.
+
+| Setting | CAM 1 (10.23.0.196) | CAM 3 (10.23.0.181) | Changed from the September look |
+|---|---|---|---|
+| Exposure mode | Auto | Auto | |
+| White balance | 4700K fixed | 4700K fixed | |
+| Red / blue gain | 40 / 57 | 50 / 50 | |
+| Analogue gain | 0 | 1 | |
+| DRC | 0 | 0 | CAM 3 was 8 |
+| Gamma | 2 | 2 | both were 1 |
+| Contrast | 50 | 40 | CAM 1 was 40 |
+| Luminance | 0 | 50 | CAM 1 was 50 |
+| Saturation, hue, sharpness | 30, 4, 0 | 30, 4, 0 | |
+| Noise reduction 2D / 3D | 0 / 0 | 0 / 0 | |
+
+The two cameras are deliberately not identical: they differ in colour gains, gain, contrast and
+luminance. Do not Match one to the other without Sam asking for it.
+
+Exposure is on Auto in both looks, so brightness still follows the light; the look fixes the
+colour and the image settings. The older sections below describe the Manual / 1/125 / F5.6 /
+4600K standard of 2026-08-28, which the looks have not held since September.
+
+**Presets still carry the September picture** until each is re-saved (see the next section). A
+recall shows that older picture for the moment before the deck re-applies the look.
+
 ## A preset carries its exposure with it
 
 **This is the one that silently undoes everything else.** On these cameras a preset stores
