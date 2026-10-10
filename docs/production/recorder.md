@@ -37,7 +37,8 @@ So nothing switches disks automatically; the drive being in is what matters, and
 so before anyone presses Record:
 
 - The Record keys (Home r2c3, ATEM r3c1, `tools/record-disk.js`) name the disk while idle and turn
-  amber with INTERNAL or NO DRIVE when it is not the drive. On the rig since 2026-10-09.
+  amber when it is not the drive, the value line reading `Internal` or `NO DRIVE`. On the rig since
+  2026-10-09.
 - The Service Health board treats Internal as no recording drive (Decima-Labs/service-health#3).
 
 `bmd-atem` 4.4.0 publishes only the first slot's name, as `$(atem:record_disk_volume)`; it is blank
