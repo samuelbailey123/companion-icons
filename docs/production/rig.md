@@ -59,19 +59,23 @@ slot that held preset 6, which was unnamed and saved at preset 5's identical pos
 There is **no Mics page any more.** The four Shure connections still run, but nothing on
 the deck reads them.
 
-## Planning Center LIVE
+## Planning Center
 
-Added 2026-10-06. Planning Center's LIVE view is the one timeline every team watches, but it
-only moves when the controller presses Next, and nobody did — so the deck does it now.
+**Nothing on the deck drives or shows Planning Center any more.** The NEXT / PREV step keys on
+Worship and Sermon and the four readouts on Home row 3 were added on 2026-10-06 and taken off on
+2026-10-10 (Sam: "take it off the stream deck"). Their builder is in git history at `bf094f0`
+(`src/pco-live.js`).
+
+Planning Center now lives on the Service Health board's Services page
+(http://10.23.0.242:8080/services, Decima-Labs/service-health): the current item, the whole order
+of service with Planning Center's times, notes and teams.
 
 | | |
 |---|---|
-| Connection | `pco` — Bitfocus `planningcenter-serviceslive` v2.7.0, polling every 3 s, pinned to service type **919088** (Sunday Service) |
-| Keys | **NEXT** r2c4 and **PREV** r3c3 on both Worship and Sermon, with the current item and time left at r3c5; Home row 3 is read-only: now, time left, next, ends at. Built by `tools/pco-live-pages.js` from `src/pco-live.js`; the keys carry a `pco-live:` note and a rerun replaces only them |
-| How NEXT works | The module's "Next Item of Next Plan in Selected Service Type" action looks up the service type's next future plan and **takes control** before stepping, so there is no Take Control key and nothing to re-point each week |
-| Overrun | The module's `item_overrun` feedback turns the NOW readouts red and NEXT amber |
-| Credential | Sam's Personal Access Token "pco-lint (read-only plan linter)", shared with the `pco-lint` report (Decima-Labs/pco-lint). It lives in `~/.config/pco/lint.env` on Sam's Mac and in that repo's secrets; **like every connection here it is readable in Companion's export and log by anyone on the AV LAN** (fault 6 below). Revoke it at api.planningcenteronline.com/personal_access_tokens if the Pi is ever compromised |
-| Unverified | Whether PCO's `filter=future` still returns Sunday's plan after its 10:30 start. If it means "sort_date after now", NEXT would target the following week's plan once the service has begun. Check on the first Sunday: the Home readouts should keep naming the current plan's items past 10:30 |
+| Connection | `pco` — Bitfocus `planningcenter-serviceslive` v2.7.0, polling every 3 s, pinned to service type **919088** (Sunday Service). **Kept:** the board reads its variables for the current item and time left |
+| Advancing LIVE | With the step keys gone, LIVE moves only when someone advances it in Planning Center itself |
+| Credential | Sam's Personal Access Token "pco-lint (read-only plan linter)", shared with the `pco-lint` report (Decima-Labs/pco-lint). It lives in `~/.config/pco/lint.env` on Sam's Mac, in that repo's secrets, in this Companion connection, and since 2026-10-10 in `~/.config/service-health/pco.env` on the Pi (0600) for the board. **Like every connection here it is readable in Companion's export and log by anyone on the AV LAN** (fault 6 below). Revoke it at api.planningcenteronline.com/personal_access_tokens if the Pi is ever compromised |
+| Planning Center's own settings | Two things found on 2026-10-10 that are fixes there, not here: the organisation's time zone is `America/Guatemala` (no daylight saving, so absolute times are an hour late for half the year), and "Prayer Works" is marked as part of the service, which puts Worship at 11:00 in Planning Center's times |
 
 ## Devices
 
