@@ -23,8 +23,9 @@
  * Green is the only state that needs evidence — an AND over the device being present and every
  * crosspoint subscribed — so a dead module, a renamed device or an unknown channel can never read
  * as fine. Feedbacks apply in order and later ones win, so the list runs red, amber, green.
- * Sources the desk only sometimes has (the tracks MacBook, two laptops) rest at "Not here" in
- * slate rather than red: their absence is a fact about the week, not a fault.
+ * Sources the desk does not need over Dante (the tracks MacBook and two laptops that come and go,
+ * and the BGV+Host receiver, which reaches the desk over XLR) rest in slate with their `away`
+ * caption, "Not here" unless they say otherwise: their absence is not a fault.
  *
  * PRESENCE IS THE MODULE'S DEVICE LIST. `$(dante:devices)` holds the names the module has heard
  * from within its timeout (15 s on this rig: a 5 s sweep, three missed answers). Hardware keeps
@@ -69,17 +70,18 @@ const run = (tx, rx, count) => Array.from({ length: count }, (_, i) => [tx + i, 
  * The sources, left to right as they sit on row 1.
  *
  * `routes` are [source channel, SQ7 input] pairs. `required` sources go red when missing; the
- * rest go to "Not here". Names on the key come from what the receivers hold, as on the old Mics
+ * rest go to their `away` caption, "Not here" by default. Names on the key come from what the receivers hold, as on the old Mics
  * page, not from Dante's device names.
  */
 export const SOURCES = [
 	{ key: 'leads', name: 'Leads', device: 'ULXD4Q-LEADS-1-4', icon: 'mic-off', required: true, routes: run(1, 1, 4) },
 	{ key: 'bgv', name: 'BGV 1-4', device: 'ULXD4Q-BGV-1-4', icon: 'mic-off', required: true, routes: run(1, 5, 4) },
 	/*
-	 * On 2026-10-11 this receiver answered on its control port (10.23.0.253) and named itself
-	 * this, but its Dante interface was not on the network, so SQ7 inputs 9-12 were unresolved.
+	 * This receiver's Dante interface is not on the network: it reaches the desk over its XLR
+	 * outputs (Sam, 2026-10-11), and the SQ7's Dante subscriptions on inputs 9-12 are left over.
+	 * Kept on the page so that if it is ever cabled for Dante it lights up like the others.
 	 */
-	{ key: 'host', name: 'BGV+Host', device: 'ULXD4Q-BGV-5-6-HOST-1-2', icon: 'mic-off', required: true, routes: run(1, 9, 4) },
+	{ key: 'host', name: 'BGV+Host', device: 'ULXD4Q-BGV-5-6-HOST-1-2', icon: 'mic-off', required: false, away: 'On XLR', routes: run(1, 9, 4) },
 	{ key: 'lav', name: 'Lav 1-2', device: 'ULXD4D-LAV-1-2', icon: 'mic-off', required: true, routes: run(1, 13, 2) },
 	{ key: 'tracks', name: 'Tracks', device: 'TCBs-MacBook-Pro-Tracks', icon: 'playlist', required: false, routes: run(1, 15, 8) },
 	/* ProPresenter's audio, on two pairs of inputs. */
@@ -166,16 +168,17 @@ export function sourceKey(connectionId, source) {
 	const id = `${MARK}-${source.key}`
 	const caption = (line) => `${source.name}\n${line}`
 	const inputs = inputsText(source.routes)
+	const away = source.away ?? 'Not here'
 	// One run per line on the key: "SQ 23-24, 45-46" on one line breaks at a hyphen on the deck.
 	const landing = inputs.replaceAll(', ', '\n')
 	return key({
 		style: { icon: source.icon, label: caption(landing), bg: BG.rest },
-		notes: `${MARK}: ${source.device} into ${DESK} (${inputs}). Read-only. Green: on the network and every route subscribed. Amber: on the network, a route down. ${source.required ? 'Red: not on the network.' : 'Slate "Not here": not on the network, which is normal for this one.'}`,
+		notes: `${MARK}: ${source.device} into ${DESK} (${inputs}). Read-only. Green: on the network and every route subscribed. Amber: on the network, a route down. ${source.required ? 'Red: not on the network.' : `Slate "${away}": not on the network, which is normal for this one.`}`,
 		feedbacks: [
 			when(
 				`${id}-absent`,
 				`!${online(source.device)}`,
-				restyle(`${id}-absent`, source.required ? BG.bad : BG.rest, caption(source.required ? 'Offline' : 'Not here'))
+				restyle(`${id}-absent`, source.required ? BG.bad : BG.rest, caption(source.required ? 'Offline' : away))
 			),
 			when(`${id}-present`, online(source.device), restyle(`${id}-present`, BG.warn, caption('Not routed'))),
 			allOf(`${id}-routed`, routedConditions(connectionId, source), restyle(`${id}-routed`, BG.good, caption(landing))),
@@ -193,7 +196,7 @@ export function normalKey(connectionId) {
 	const id = `${MARK}-normal`
 	return key({
 		style: { icon: 'route', label: 'Routing', bg: BG.rest },
-		notes: `${MARK}: green when every required source is on the network with all its routes into ${DESK} subscribed; red otherwise. The laptops (${SOURCES.filter((s) => !s.required).map((s) => s.name).join(', ')}) are not counted. Read-only.`,
+		notes: `${MARK}: green when every required source is on the network with all its routes into ${DESK} subscribed; red otherwise. Sources the desk does not need over Dante (${SOURCES.filter((s) => !s.required).map((s) => s.name).join(', ')}) are not counted. Read-only.`,
 		feedbacks: [
 			allOf(`${id}-broken`, requiredConditions(connectionId, `${id}-broken`), restyle(`${id}-broken`, BG.bad, 'Routing\nNot normal'), true),
 			allOf(`${id}-ok`, requiredConditions(connectionId, `${id}-ok`), restyle(`${id}-ok`, BG.good, 'Routing\nNormal')),

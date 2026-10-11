@@ -89,8 +89,8 @@ describe('the patch the desk asks for', () => {
 		expect(byName('Josue').routes).toEqual([[1, 42], [2, 43], [3, 44], [6, 47], [7, 48], [8, 49]])
 	})
 
-	it('treats only the laptops as optional', () => {
-		expect(SOURCES.filter((s) => !s.required).map((s) => s.name)).toEqual(['Tracks', 'Devan', 'Josue'])
+	it('treats the laptops and the XLR-fed receiver as optional', () => {
+		expect(SOURCES.filter((s) => !s.required).map((s) => s.name)).toEqual(['BGV+Host', 'Tracks', 'Devan', 'Josue'])
 	})
 
 	it('names channels the way Dante does here', () => {
@@ -154,8 +154,16 @@ describe('a source key', () => {
 
 	it('says "Not here" in slate for a laptop that is away', () => {
 		expect(overridesOf(tracks.feedbacks[0])).toEqual({ color: BG.rest, text: 'Tracks\nNot here' })
-		expect(tracks.options.notes).toContain('normal for this one')
+		expect(tracks.options.notes).toContain('Slate "Not here": not on the network, which is normal for this one')
 		expect(leads.options.notes).toContain('Red: not on the network')
+	})
+
+	it('shows the BGV+Host receiver as on XLR, not as a fault, while its Dante side is away', () => {
+		const host = sourceKey(CONN, byName('BGV+Host'))
+		expect(overridesOf(host.feedbacks[0])).toEqual({ color: BG.rest, text: 'BGV+Host\nOn XLR' })
+		expect(host.options.notes).toContain('Slate "On XLR"')
+		// If it is ever cabled for Dante, it lights up like any other source.
+		expect(overridesOf(host.feedbacks[2])).toEqual({ color: BG.good, text: 'BGV+Host\nSQ 9-12' })
 	})
 
 	it('cannot be pressed into doing anything', () => {
