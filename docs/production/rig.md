@@ -77,6 +77,44 @@ of service with Planning Center's times, notes and teams.
 | Credential | Sam's Personal Access Token "pco-lint (read-only plan linter)", shared with the `pco-lint` report (Decima-Labs/pco-lint). It lives in `~/.config/pco/lint.env` on Sam's Mac, in that repo's secrets, in this Companion connection, and since 2026-10-10 in `~/.config/service-health/pco.env` on the Pi (0600) for the board. **Like every connection here it is readable in Companion's export and log by anyone on the AV LAN** (fault 6 below). Revoke it at api.planningcenteronline.com/personal_access_tokens if the Pi is ever compromised |
 | Planning Center's own settings | Two things found on 2026-10-10 that are fixes there, not here: the organisation's time zone is `America/Guatemala` (no daylight saving, so absolute times are an hour late for half the year), and "Prayer Works" is marked as part of the service, which puts Worship at 11:00 in Planning Center's times |
 
+## Dante
+
+**Page 17, Dante**, a sub-page of SQ7, opened by the **Dante** key at SQ7 r2c8 (on the rig since
+2026-10-11, `tools/dante-page.js`, logic in `src/dante.js`). It reports and changes nothing: no
+key on it has an action beyond the folder row.
+
+| | |
+|---|---|
+| Connection | `dante` — Bitfocus `audinate-dantecontroller` **1.1.2**, bound to the Pi's 10.23.0.242, 5 s sweep, a device dropped after 15 s unheard. The module can make and clear routes; nothing on the deck asks it to |
+| Row 1 | One key per source into the SQ7: Leads, BGV 1-4, BGV+Host, Lav 1-2, Tracks, PP1, Devan, Josue, then **Routing**. Green = on the network with every route subscribed; amber = on the network, a route down; red = a source the desk needs is missing. The three laptops show "Not here" in slate when away. Routing is green only when every required route is up, and the SQ7's Dante key goes red with it |
+| Row 2 | Each device's sample rate and Dante latency under its source; the SQ7's own card at r2c8 |
+| r3c0 | Sample rate: red if any device present is not at 48 kHz |
+| Not shown | The PTP clock leader — module 1.1.2 cannot read it. On 2026-10-11 the SQ7 card led and the rest followed |
+
+**The routes are the desk's own subscriptions**, read off the network on 2026-10-11, not a
+design. Repatch in Dante Controller and `SOURCES` in `src/dante.js` has to follow, or the page
+reports the new patch as broken.
+
+| Dante device | Address | Into SQ7 |
+|---|---|---|
+| `AllenHth-0e0184` — SQ7 Dante card, 64×64, clock leader | 10.23.0.70 | — |
+| `ULXD4Q-LEADS-1-4` | 10.23.0.14 | 1-4 |
+| `ULXD4Q-BGV-1-4` | 10.23.0.107 | 5-8 |
+| `ULXD4Q-BGV-5-6-HOST-1-2` | **not on the network** | 9-12, unresolved |
+| `ULXD4D-LAV-1-2` | 10.23.0.143 | 13-14 |
+| `TCBs-MacBook-Pro-Tracks` — Dante Virtual Soundcard | 10.23.0.230 | 15-22 |
+| `iMac-PP1` — Dante Virtual Soundcard | 10.23.0.204 | 23-24 and 45-46 |
+| `Devans-Mac-mini`, `Josues-MacBook-Pro` | away on 2026-10-11 | 33-41 and 51-64; 42-44 and 47-49 |
+
+The receivers' Dante interfaces have their own addresses, separate from the :2202 control
+addresses in Devices below. **The BGV+Host receiver's Dante side is missing**: on 2026-10-11 its
+control port answered at 10.23.0.253 and named its Dante interface `ULXD4Q-BGV-5-6-HOST-1-2`, but
+no device of that name was on the network, so SQ7 inputs 9-12 had nothing on them over Dante.
+TODO(sam): its Dante port's cable, or whether those four channels reach the desk another way.
+
+Dante Controller will not see these devices over WiFiman or any routed VPN: it finds them by
+multicast. Off site, use this page through Companion's web UI, or remote into a Mac on the LAN.
+
 ## Devices
 
 Read off the live Companion on 2026-08-28 and confirmed against each device on the LAN.

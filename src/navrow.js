@@ -175,6 +175,8 @@ export const SUB_PAGES = {
 	'PTZ Setup': 'PTZ',
 	// The backing tracks' transport and volume, opened from PP1's Tracks key (tools/pp1-tracks.js).
 	Tracks: 'PP1',
+	// Dante routing and device health, read-only, opened from SQ7's Dante key (tools/dante-page.js).
+	Dante: 'SQ7',
 }
 
 /** The folder-row page a page belongs to: itself, or its parent for a sub-page. */
