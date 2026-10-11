@@ -185,6 +185,10 @@ The second PTZ went in on 2026-08-28. What it needed, in order, for next time:
 
 ## The look, as saved on 2026-10-10
 
+**Re-saved 2026-10-11 11:03, mid-service:** Sam corrected both cameras live, raising luminance
+from 0 to 80 and lowering the gain limit from 4 to 0, and both looks were saved from the
+cameras as they stood. The two cameras are identical. The table below predates that.
+
 Each PTZ has a saved **look**: its whole picture block, kept on the Pi as
 `ptz_look_<address>.json` beside `ptz_web.py`. The Look key puts it back, and every preset key
 re-applies it straight after a recall. **The look is whatever was saved last, per camera; it is
@@ -252,6 +256,12 @@ back on auto exposure and zone All. Backups of the test look and the camera as i
 wall grid it hides; if the wall is tried again, stop down part way, never wide open.
 
 ## A preset carries its exposure with it
+
+**Since 2026-10-11 the deck works round this.** Every recall from a preset key or the dial is
+`ptz_web.py <host> recall <n>`: it reads the picture, recalls, and puts that picture back at once
+and again when the camera stops moving, so a preset is a shot and nothing else. Proven on both
+cameras from the real keys that afternoon. What follows still applies to a recall made anywhere
+else (the camera's web page, its IR remote), and to what a preset holds.
 
 **This is the one that silently undoes everything else.** On these cameras a preset stores
 the exposure and white balance settings alongside the pan, tilt and zoom. Recall a preset
