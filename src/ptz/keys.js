@@ -20,13 +20,16 @@
  * frame — close the block on row 3, so everything about tracking is one glance
  * (`tracking.js`).
  *
- * A RECALL PUTS THE LOOK BACK BY ITSELF. On these cameras a preset carries the picture settings
- * it was saved with, colour included, so recalling one drags the colour back to whenever that
- * preset was last saved. Every recall from the deck — the six keys and the dial — therefore
- * re-applies the saved look straight after the recall command (the operator's choice,
- * 2026-09-10, over re-saving the presets): about a second of the old colour while the web API
- * answers, then the picture the operator declared right. The Look key under the presets is the
- * manual version, for a recall made from anywhere else (`picture.js`).
+ * A RECALL MOVES THE CAMERA AND NOTHING ELSE. On these cameras a preset carries the picture
+ * settings it was saved with, colour included, so a plain recall drags the picture back to
+ * whenever that preset was last saved. From 2026-09-10 the deck re-applied the saved look after
+ * every recall instead, which undid any live adjustment the moment a preset was pressed; on
+ * 2026-10-11 the operator fixed both cameras' brightness mid-service and nearly gave up presets
+ * over it. So every recall from the deck — the six keys and the dial — is now `ptz_web.py recall`
+ * (`web.js`): it reads the picture, recalls, and puts that same picture back at once and again
+ * when the camera stops moving. A preset is a shot, not a look, and saving one never needs the
+ * picture adjusting first. The Look key under the presets still puts the saved look back when
+ * that is what is wanted (`picture.js`).
  *
  * PRESETS SIT UNDER THE THUMB. The left block used to be an eight-way arrow pad that drove
  * while held. The operator never used it — pan and tilt live on the encoders — and on
@@ -58,7 +61,7 @@ import { BG, INK, LABEL, key } from './controls.js'
 import { autoKey, menuKey } from './image.js'
 import { deriveSpeeds } from './knobs.js'
 import { lookKey } from './picture.js'
-import { lookExec } from './web.js'
+import { recallExec } from './web.js'
 import { framingKey, targetKey, trackKey } from './tracking.js'
 import * as V from './variables.js'
 
@@ -195,7 +198,7 @@ export const presetCaption = (n, name) => (name ? `${n} (${name})` : String(n))
 export const presetKey = (n, conn, host, name, accent = ACCENT) =>
 	key({
 		style: { icon: 'preset', label: presetCaption(n, name), bg: BG.key },
-		notes: `Recall preset ${n}${name ? ` (${name})` : ''}, then put the saved look back. With Save armed, saves the current shot as preset ${n} instead.`,
+		notes: `Go to preset ${n}${name ? ` (${name})` : ''}, keeping the picture as it is. With Save armed, saves the current shot as preset ${n} instead.`,
 		feedbacks: [
 			when(`p${n}-last`, `${cv(V.LAST_PRESET)} == ${n}`, [
 				override(`p${n}-last-bw`, 'box0', 'borderWidth', 6),
@@ -209,7 +212,7 @@ export const presetKey = (n, conn, host, name, accent = ACCENT) =>
 					`p${n}-if`,
 					[armed(`p${n}-cond`)],
 					[presetFixed(`p${n}-save`, conn, 'setPreset', n), setVar(`p${n}-disarm`, V.ARMED, '0'), setVar(`p${n}-last-s`, V.LAST_PRESET, String(n))],
-					[presetFixed(`p${n}-recall`, conn, 'recallPreset', n), setVar(`p${n}-last-r`, V.LAST_PRESET, String(n)), lookExec(`p${n}-look`, host, 'apply')]
+					[setVar(`p${n}-last-r`, V.LAST_PRESET, String(n)), recallExec(`p${n}-recall`, host, n)]
 				),
 			],
 			up: [],

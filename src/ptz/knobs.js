@@ -32,7 +32,7 @@ import { KNOB_ROW, STRIP_ROW } from '../layout.js'
 import { cv, field, logicIf, raw, setVar, visca, wait, when, override } from './actions.js'
 import { BG, INK, knob, strip } from './controls.js'
 import * as V from './variables.js'
-import { lookExec } from './web.js'
+import { recallExec } from './web.js'
 
 /** Milliseconds the camera keeps driving after a detent before the stop lands. */
 export const DRIVE_MS = 150
@@ -228,7 +228,7 @@ export function buildKnobs(conn, host) {
 	})
 	knobs[KNOBS.preset] = knob({
 		style: { icon: 'preset', label: 'Preset', bg: BG.knob },
-		notes: 'Turn to choose a preset 1-254, press to recall it and put the saved look back. With Save armed, press saves the current shot to it instead.',
+		notes: 'Turn to choose a preset 1-254, press to go to it, keeping the picture as it is. With Save armed, press saves the current shot to it instead.',
 		actionSets: {
 			down: [
 				logicIf(
@@ -240,9 +240,8 @@ export function buildKnobs(conn, host) {
 						setVar('preset-press-last-s', V.LAST_PRESET, cv(V.PRESET), true),
 					],
 					[
-						presetFromDial('preset-press-recall', conn, 'recallPreset'),
 						setVar('preset-press-last-r', V.LAST_PRESET, cv(V.PRESET), true),
-						lookExec('preset-press-look', host, 'apply'),
+						recallExec('preset-press-recall', host, cv(V.PRESET)),
 					]
 				),
 			],

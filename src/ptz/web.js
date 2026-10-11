@@ -41,6 +41,8 @@ export const CREDENTIALS_FILE = '.ptz_web'
 export const TRACK = 'ptz_track'
 /** Where a Match press keeps its result: the tracking variable must not be overwritten by it. */
 export const MATCH = 'ptz_match'
+/** Where a preset recall keeps its result, for the same reason. */
+export const RECALL = 'ptz_recall'
 
 /** Seconds between tracking polls. Each is a login plus a read, so not every second. */
 export const INTERVAL_SECONDS = 5
@@ -76,6 +78,13 @@ export const lookExec = (id, host, verb) => exec(id, `python3 ${SCRIPT_PATH} ${h
  */
 export const matchExec = (id, host, other) => exec(id, `python3 ${SCRIPT_PATH} ${host} match ${other}`, MATCH, 20000)
 
+/**
+ * Go to a preset and keep the picture as it is: a read, the VISCA recall, the picture put back
+ * at once and again when the camera stops moving. Up to twelve seconds of waiting for it to
+ * settle, so twenty allowed. `preset` may be a variable reference, which the exec path fills in.
+ */
+export const recallExec = (id, host, preset) => exec(id, `python3 ${SCRIPT_PATH} ${host} recall ${preset}`, RECALL, 20000)
+
 export const SCRIPT = `#!/usr/bin/env python3
 """Read or change a FoMaKo PTZ camera's AI-tracking settings through its web API.
 
@@ -89,9 +98,10 @@ Usage:
   ptz_web.py <host> look save                    keep the picture settings as they are now
   ptz_web.py <host> look apply                   put the kept picture settings back
   ptz_web.py <host> look get                     what is kept, without touching the camera
+  ptz_web.py <host> recall <n>                   go to preset n and keep the picture as it is
 
 Prints one line of JSON summarising the tracking block afterwards, always, so the value is
-safe to show on a key; 'match' and 'look' print their own one-line summaries instead.
+safe to show on a key; 'match', 'look' and 'recall' print their own one-line summaries instead.
 Credentials are read from the file .ptz_web beside this script, as user:pass, never taken on
 the command line. The look lives in ptz_look_<host>.json beside this script, with the
 previous one kept as .prev.json.
@@ -99,12 +109,15 @@ previous one kept as .prev.json.
 import http.cookiejar
 import json
 import os
+import socket
 import sys
 import time
 import urllib.parse
 import urllib.request
 
 TIMEOUT = 3
+VISCA_PORT = 5678
+SETTLE_SECONDS = 12
 BODY = {"close": 1, "half": 0, "full": 2, "custom": 3}
 BODY_NAME = {1: "Close-up", 0: "Half body", 2: "Full body", 3: "Custom"}
 MODE = {0: "Real-time", 1: "Area", 2: "Stage", 3: "Scene"}
@@ -218,6 +231,46 @@ def match(opener, host, other):
     return {"online": "OK", "from": other, "copied": applied, "left": left}
 
 
+def visca(host, command):
+    """Send one VISCA command over IP and return the camera's first reply."""
+    with socket.create_connection((host, VISCA_PORT), timeout=TIMEOUT) as s:
+        s.sendall(bytes.fromhex(command))
+        reply = b""
+        while not reply.endswith(bytes([0xFF])):
+            chunk = s.recv(64)
+            if not chunk:
+                break
+            reply += chunk
+        return reply
+
+
+def recall(host, n):
+    """Go to preset n and keep the picture the camera had before.
+
+    A preset on these cameras carries the picture settings it was saved with, so the ones read
+    just before the recall are put back as soon as it is sent, and again once the camera stops
+    moving in case it lays the preset's own on arrival. If the picture cannot be read the
+    camera still goes to the preset.
+    """
+    try:
+        opener = session(host)
+        held = video_params(opener, host)
+    except Exception:  # noqa: BLE001 - the shot matters more than the picture
+        opener = held = None
+    visca(host, "8101043F02%02XFF" % n)
+    if held is None:
+        return {"online": "OK", "preset": n, "kept": "--", "left": "--"}
+    applied, left = apply_params(opener, host, held)
+    last, same, started = None, 0, time.time()
+    while same < 2 and time.time() - started < SETTLE_SECONDS:
+        time.sleep(0.5)
+        here = (visca(host, "81090612FF"), visca(host, "81090447FF"))
+        same = same + 1 if here == last else 0
+        last = here
+    more, left = apply_params(opener, host, held)
+    return {"online": "OK", "preset": n, "kept": applied + more, "left": left}
+
+
 WB = ${pyDict(WB_LABELS)}
 AE = ${pyDict(AE_MODES)}
 SHUTTER = ${pyDict(SHUTTER)}
@@ -278,6 +331,9 @@ def summary(block):
 
 def main(argv):
     host, verb = argv[1], argv[2]
+    if verb == "recall":
+        sys.stdout.write(json.dumps(recall(host, int(argv[3]))))
+        return
     opener = session(host)
     if verb == "match":
         sys.stdout.write(json.dumps(match(opener, host, argv[3])))
@@ -310,6 +366,8 @@ if __name__ == "__main__":
     except Exception:  # noqa: BLE001 - the deck needs JSON, not a traceback
         if len(sys.argv) > 2 and sys.argv[2] == "match":
             sys.stdout.write(json.dumps({"online": "DOWN", "from": sys.argv[3] if len(sys.argv) > 3 else "--", "copied": "--", "left": "--"}))
+        elif len(sys.argv) > 2 and sys.argv[2] == "recall":
+            sys.stdout.write(json.dumps({"online": "DOWN", "preset": sys.argv[3] if len(sys.argv) > 3 else "--", "kept": "--", "left": "--"}))
         elif len(sys.argv) > 2 and sys.argv[2] == "look":
             sys.stdout.write(json.dumps({"online": "DOWN", "saved": "--", "applied": "--", "left": "--", "wb": "--", "ae": "--",
                                          "shutter": "--", "iris": "--", "gain": "--", "sharp": "--"}))
