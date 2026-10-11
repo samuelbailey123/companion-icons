@@ -145,8 +145,8 @@ describe('the shared pages', () => {
 			expect(branch.children.condition[0].options.expression.value).toBe(`$(internal:custom_${own}) == 1`)
 			const disarmed = branch.children.actions.filter((a) => a.definitionId === 'custom_variable_set_value' && a.options.value.value === '0')
 			expect(disarmed.map((a) => a.options.name.value)).toEqual([own, other])
-			// Recall is untouched: it puts the shot back and nothing else.
-			expect(branch.children.else_actions.map((a) => a.definitionId)).toContain('recallPreset')
+			// Recall is untouched by arming: it goes to the shot and keeps the picture.
+			expect(branch.children.else_actions.at(-1).options.path.value).toMatch(/ptz_web\.py \S+ recall \d+$/)
 		}
 	})
 

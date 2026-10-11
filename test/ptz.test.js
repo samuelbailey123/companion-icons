@@ -203,8 +203,10 @@ describe('the knobs', () => {
 		expect(branch.definitionId).toBe('logic_if')
 		expect(branch.children.condition[0].options.expression.value).toBe(`${cv('ptz_armed')} == 1`)
 		expect(branch.children.actions.map((a) => a.definitionId)).toEqual(['setPreset', 'custom_variable_set_value', 'custom_variable_set_value'])
-		expect(branch.children.else_actions.map((a) => a.definitionId)).toEqual(['recallPreset', 'custom_variable_set_value', 'exec'])
-		expect(branch.children.else_actions[2].options.path.value).toBe(`python3 /home/samuelbailey/Desktop/AV_Power_scripts/ptz_web.py ${HOST} look apply`)
+		// A recall goes through ptz_web.py so the picture stays as it is; the dial's number is filled in by Companion.
+		expect(branch.children.else_actions.map((a) => a.definitionId)).toEqual(['custom_variable_set_value', 'exec'])
+		expect(branch.children.else_actions[1].options.path.value).toBe(`python3 /home/samuelbailey/Desktop/AV_Power_scripts/ptz_web.py ${HOST} recall ${cv('ptz_preset')}`)
+		expect(branch.children.else_actions[1].options.targetVariable.value).toBe('ptz_recall')
 		expect(branch.children.actions[0].options.presetAsText.value).toBe(cv('ptz_preset'))
 		expect(branch.children.actions[0].options.isText.value).toBe(true)
 	})
@@ -313,10 +315,10 @@ describe('the keys', () => {
 			const branch = k.steps[0].action_sets.down[0]
 			expect(branch.children.actions[0].definitionId).toBe('setPreset')
 			expect(branch.children.actions[0].options.presetAsNumber.value).toBe(n)
-			expect(branch.children.else_actions[0].definitionId).toBe('recallPreset')
-			expect(branch.children.else_actions[0].options.presetAsNumber.value).toBe(n)
-			// A recall puts the saved look back by itself; a save does not touch it.
-			expect(branch.children.else_actions.at(-1).options.path.value).toBe(`python3 /home/samuelbailey/Desktop/AV_Power_scripts/ptz_web.py ${HOST} look apply`)
+			// A recall moves the camera and keeps the picture; a save does not touch the picture either.
+			expect(branch.children.else_actions.map((a) => a.definitionId)).toEqual(['custom_variable_set_value', 'exec'])
+			expect(branch.children.else_actions[1].options.path.value).toBe(`python3 /home/samuelbailey/Desktop/AV_Power_scripts/ptz_web.py ${HOST} recall ${n}`)
+			expect(branch.children.else_actions[1].options.targetVariable.value).toBe('ptz_recall')
 			expect(branch.children.actions.some((a) => a.definitionId === 'exec')).toBe(false)
 			expect(k.feedbacks.map((f) => f.options.expression.value)).toEqual([`${cv('ptz_last')} == ${n}`, `${cv('ptz_armed')} == 1`])
 		}
