@@ -196,7 +196,8 @@ looks were saved from the cameras as they stood (09:31). The looks they replaced
 
 | Setting | CAM 1 (10.23.0.196) | CAM 3 (10.23.0.181) | Changed from the September look |
 |---|---|---|---|
-| Exposure mode | Auto | Auto | |
+| Exposure mode | Auto | **Iris priority**, iris fully open (F1.8) | CAM 3 changed 19:14, see below |
+| Autofocus zone | All | **Center** | CAM 3 changed 19:14, see below |
 | White balance | 4700K fixed | 4700K fixed | |
 | Red / blue gain | 40 / 57 | 50 / 50 | |
 | Analogue gain | 0 | 1 | |
@@ -207,15 +208,48 @@ looks were saved from the cameras as they stood (09:31). The looks they replaced
 | Saturation, hue, sharpness | 30, 4, 0 | 30, 4, 0 | |
 | Noise reduction 2D / 3D | 0 / 0 | 0 / 0 | |
 
-The two cameras are deliberately not identical: they differ in colour gains, gain, contrast and
-luminance. Do not Match one to the other without Sam asking for it.
+**Since 2026-10-11 09:42 the two cameras are identical:** Sam asked for CAM 3 to match CAM 1, so
+CAM 3 now carries CAM 1's column above (auto exposure, autofocus zone All, CAM 1's colour gains,
+gain, contrast and luminance). The CAM 3 column is what it held before. Match again only when Sam
+asks.
 
-Exposure is on Auto in both looks, so brightness still follows the light; the look fixes the
-colour and the image settings. The older sections below describe the Manual / 1/125 / F5.6 /
-4600K standard of 2026-08-28, which the looks have not held since September.
+Brightness still follows the light on both cameras; the look fixes the colour and the image
+settings. The older sections below describe the Manual / 1/125 / F5.6 / 4600K standard of
+2026-08-28, which the looks have not held since September.
 
-**Presets still carry the September picture** until each is re-saved (see the next section). A
-recall shows that older picture for the moment before the deck re-applies the look.
+**Presets:** CAM 3's six presets were re-saved at 19:15 and recall the look above by
+themselves, positions unchanged. **CAM 1's presets still carry the September picture**; a
+recall shows it for the moment before the deck re-applies the look.
+
+### CAM 3's wall-blur test (2026-10-10 evening)
+
+The 2026-10-04 sermon close-up was focused on the **LED wall**, not the speaker: every LED
+crisp, his hair and the water-bottle label soft. Autofocus on zone **All** picks the
+highest-contrast thing in frame, and that is the wall. Auto exposure also closes the iris
+against the bright wall, which deepens focus and darkens faces.
+
+So CAM 3 now differs from CAM 1 in two settings, to compare on Sunday:
+
+- **Iris priority with the iris fully open.** Shutter and gain still follow the light, so wide
+  shots do not blow out, but the lens stays as wide as it goes and the wall as soft as it can be.
+- **Autofocus zone Center.** Focus comes from the middle of the frame, where the framed
+  speaker is, not from the wall around him.
+
+Expected: the grid on the sermon close-up mostly gone on CAM 3, still there on CAM 1. If it
+works, copy both settings to CAM 1 and re-save its presets. To undo: put the 09:31 look back
+(`ptz_look_10.23.0.181.prev.json`, also in `~/ptz-look-backup-20261010-evening/`) and
+re-save the presets. The deck's Exp and Auto keys change the exposure mode, so a press on
+either undoes the iris priority until the next preset recall.
+
+**Ended 2026-10-11, the wrong way round.** Before the service CAM 3's close shots glowed: at F1.8
+this lens halates around anything bright, and the thin focus landed on the wall behind the
+people, not on them (the wall's edge crisp, faces and white clothes soft with a halo; CAM 1 crisp
+on the same people). Sam: "just put it back make it match cam 1". At 09:42 CAM 3 was matched
+to CAM 1 (`ptz_web.py 10.23.0.181 match 10.23.0.196`) and its look re-saved; at 10:05 all six
+presets were re-saved with it (recall, `look apply`, save), and a bare recall of preset 1 came
+back on auto exposure and zone All. Backups of the test look and the camera as it stood are in
+`~/ptz-look-backup-20261011-cam3/` on the Pi. **Lesson:** a fully open iris costs more than the
+wall grid it hides; if the wall is tried again, stop down part way, never wide open.
 
 ## A preset carries its exposure with it
 
@@ -255,6 +289,11 @@ wall, on static content:
 Inside the band it measures 10–25× the clean level, and it is unmistakable on screen. The
 bands differ between the two cameras because they sit at different distances and angles to
 the wall — **each camera has its own band, and a new camera needs its own sweep.**
+
+**"Clean" here means no rainbow, not no lines.** The sweep measured colour only. The wall's
+plain LED grid, in brightness, shows at nearly every zoom: on the 2026-10-04 recording it was
+clearly visible on about half the service, worst on the sermon close-up (about 4 px per LED).
+Zoom does not remove that; blurring the wall does — see CAM 3's wall-blur test above.
 
 **Zoom is the only lever that works.** Tested and found to do nothing:
 

@@ -127,7 +127,7 @@ Read off the live Companion on 2026-08-28 and confirmed against each device on t
 | grandMA2 | Lighting | **10.23.0.101** for the console login; OSC out to :8000 and feedback in on :9000 |
 | Shure ULXD4Q × 3 + ULXD4D × 1 | Wireless, **14** channels — not 16 | `10.23.0.20` "BGV 1-4" (Q), `10.23.0.23` "Lead 1-4" (Q), `10.23.0.253` "BGV+Host" (Q), `10.23.0.214` "Preach" — **a ULXD4D, two channels only**, Lav 1 and Lav 2. All on :2202 |
 | ProPresenter | Presentation | **10.23.0.111**:1100. A follower is configured at 10.23.0.11 but `control_follower` is off, and nothing is listening there |
-| NovaStar VX6S | LED wall processor | **10.23.0.19**:5200 |
+| NovaStar VX6S | LED wall processor | **10.23.0.23**:5200 (was .19 until August 2026) |
 | FoMaKo UV602 PTZ — **CAM 3** | Camera, VISCA over IP, ATEM input 3 | **10.23.0.181**:5678, with an unauthenticated HTTP API on :80 that `ptz_web.py` drives |
 | FoMaKo UV602 PTZ — **CAM 1** | Camera, added 2026-08-28, ATEM input 1 | **10.23.0.196**:5678, same API |
 | Static camera — **CAM 2** | Fixed, unmanned, ATEM input 2 | TODO(sam) — make and model. Not on the network; goes SDI into the switcher |
