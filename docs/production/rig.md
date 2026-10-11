@@ -87,7 +87,7 @@ when the patch is not normal. On the rig since 2026-10-11, `tools/dante-page.js`
 | | |
 |---|---|
 | Connection | `dante` — Bitfocus `audinate-dantecontroller` **1.1.2**, bound to the Pi's 10.23.0.242, 5 s sweep, a device dropped after 15 s unheard. The module can make and clear routes; nothing on the deck asks it to |
-| Row 1 | One key per source into the SQ7: Leads, BGV 1-4, BGV+Host, Lav 1-2, Tracks, PP1, Devan, Josue, then **Routing**. Green = on the network with every route subscribed; amber = on the network, a route down; red = a source the desk needs is missing. The three laptops show "Not here" in slate when away. Routing is green only when every required route is up, and the SQ7's Dante key goes red with it |
+| Row 1 | One key per source into the SQ7: Leads, BGV 1-4, BGV+Host, Lav 1-2, Tracks, PP1, Devan, Josue, then **Routing**. Green = on the network with every route subscribed; amber = on the network, a route down; red = a source the desk needs is missing. The three laptops show "Not here" in slate when away, and BGV+Host shows "On XLR" (below). Routing is green only when every required route is up, and the SQ7's Dante key goes red with it |
 | Row 2 | Each device's sample rate and Dante latency under its source; the SQ7's own card at r2c8 |
 | r3c0 | Sample rate: red if any device present is not at 48 kHz |
 | Not shown | The PTP clock leader — module 1.1.2 cannot read it. On 2026-10-11 the SQ7 card led and the rest followed |
@@ -101,17 +101,18 @@ reports the new patch as broken.
 | `AllenHth-0e0184` — SQ7 Dante card, 64×64, clock leader | 10.23.0.70 | — |
 | `ULXD4Q-LEADS-1-4` | 10.23.0.14 | 1-4 |
 | `ULXD4Q-BGV-1-4` | 10.23.0.107 | 5-8 |
-| `ULXD4Q-BGV-5-6-HOST-1-2` | **not on the network** | 9-12, unresolved |
+| `ULXD4Q-BGV-5-6-HOST-1-2` | not on the network — feeds the desk over XLR | 9-12 subscribed but unused |
 | `ULXD4D-LAV-1-2` | 10.23.0.143 | 13-14 |
 | `TCBs-MacBook-Pro-Tracks` — Dante Virtual Soundcard | 10.23.0.230 | 15-22 |
 | `iMac-PP1` — Dante Virtual Soundcard | 10.23.0.204 | 23-24 and 45-46 |
 | `Devans-Mac-mini`, `Josues-MacBook-Pro` | away on 2026-10-11 | 33-41 and 51-64; 42-44 and 47-49 |
 
 The receivers' Dante interfaces have their own addresses, separate from the :2202 control
-addresses in Devices below. **The BGV+Host receiver's Dante side is missing**: on 2026-10-11 its
-control port answered at 10.23.0.253 and named its Dante interface `ULXD4Q-BGV-5-6-HOST-1-2`, but
-no device of that name was on the network, so SQ7 inputs 9-12 had nothing on them over Dante.
-TODO(sam): its Dante port's cable, or whether those four channels reach the desk another way.
+addresses in Devices below. **The BGV+Host receiver is not on Dante, by design**: it reaches the
+desk over its XLR outputs (Sam, 2026-10-11). Its control port answers at 10.23.0.253 and names a
+Dante interface `ULXD4Q-BGV-5-6-HOST-1-2` that is not cabled, and the SQ7 still holds Dante
+subscriptions on inputs 9-12 to it, left over and harmless. The page shows it "On XLR" in slate and
+leaves it out of the Routing check; if it is ever cabled for Dante it lights up like the others.
 
 Dante Controller will not see these devices over WiFiman or any routed VPN: it finds them by
 multicast. Off site, use this page through Companion's web UI, or remote into a Mac on the LAN.
