@@ -208,8 +208,10 @@ looks were saved from the cameras as they stood (09:31). The looks they replaced
 | Saturation, hue, sharpness | 30, 4, 0 | 30, 4, 0 | |
 | Noise reduction 2D / 3D | 0 / 0 | 0 / 0 | |
 
-The two cameras are deliberately not identical: they differ in colour gains, gain, contrast and
-luminance. Do not Match one to the other without Sam asking for it.
+**Since 2026-10-11 09:42 the two cameras are identical:** Sam asked for CAM 3 to match CAM 1, so
+CAM 3 now carries CAM 1's column above (auto exposure, autofocus zone All, CAM 1's colour gains,
+gain, contrast and luminance). The CAM 3 column is what it held before. Match again only when Sam
+asks.
 
 Brightness still follows the light on both cameras; the look fixes the colour and the image
 settings. The older sections below describe the Manual / 1/125 / F5.6 / 4600K standard of
@@ -238,6 +240,16 @@ works, copy both settings to CAM 1 and re-save its presets. To undo: put the 09:
 (`ptz_look_10.23.0.181.prev.json`, also in `~/ptz-look-backup-20261010-evening/`) and
 re-save the presets. The deck's Exp and Auto keys change the exposure mode, so a press on
 either undoes the iris priority until the next preset recall.
+
+**Ended 2026-10-11, the wrong way round.** Before the service CAM 3's close shots glowed: at F1.8
+this lens halates around anything bright, and the thin focus landed on the wall behind the
+people, not on them (the wall's edge crisp, faces and white clothes soft with a halo; CAM 1 crisp
+on the same people). Sam: "just put it back make it match cam 1". At 09:42 CAM 3 was matched
+to CAM 1 (`ptz_web.py 10.23.0.181 match 10.23.0.196`) and its look re-saved; at 10:05 all six
+presets were re-saved with it (recall, `look apply`, save), and a bare recall of preset 1 came
+back on auto exposure and zone All. Backups of the test look and the camera as it stood are in
+`~/ptz-look-backup-20261011-cam3/` on the Pi. **Lesson:** a fully open iris costs more than the
+wall grid it hides; if the wall is tried again, stop down part way, never wide open.
 
 ## A preset carries its exposure with it
 
