@@ -132,7 +132,7 @@ Read off the live Companion on 2026-08-28 and confirmed against each device on t
 | NovaStar VX6S | LED wall processor | **10.23.0.23**:5200 (was .19 until August 2026) |
 | FoMaKo UV602 PTZ — **CAM 3** | Camera, VISCA over IP, ATEM input 3 | **10.23.0.181**:5678, with an unauthenticated HTTP API on :80 that `ptz_web.py` drives |
 | FoMaKo UV602 PTZ — **CAM 1** | Camera, added 2026-08-28, ATEM input 1 | **10.23.0.196**:5678, same API |
-| Static camera — **CAM 2** | Fixed, unmanned, ATEM input 2 | TODO(sam) — make and model. Not on the network; goes SDI into the switcher |
+| JVC GY-HM600 static — **CAM 2** | Fixed, unmanned, ATEM input 2 | Not on the network: it has no network option at all, and its only remote input is LANC. Goes HD-SDI into the switcher |
 | Raspberry Pi | Companion host | 10.23.0.242 |
 
 **Addresses drift.** Every one of these except the Pi had moved at least once by

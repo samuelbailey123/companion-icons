@@ -7,7 +7,7 @@ static camera.
 | ATEM input | Camera | Address |
 |---|---|---|
 | 1 | **CAM 1** — FoMaKo UV602 PTZ | 10.23.0.196 |
-| 2 | CAM 2 — fixed static, unmanned | not on the network |
+| 2 | CAM 2 — JVC GY-HM600, fixed static, unmanned | not on the network |
 | 3 | **CAM 3** — FoMaKo UV602 PTZ | 10.23.0.181 |
 
 **They are FoMaKo UV602s** (OEM product name `K30NS`), not PTZOptics. An earlier version of
@@ -124,9 +124,17 @@ CAM 1 also had four things simply wrong, which are fixed: it was outputting **4K
 into a 1080p59.94 switcher, running **50Hz anti-flicker** in a 60Hz country, had
 **auto slow-shutter on**, and carried **noise reduction at 8/8** against CAM 3's 2/4.
 
-**The remaining static camera is still unknown.** It is not on the network — it goes SDI
-straight into the switcher — so nothing about it can be read remotely. White balance
-measured stable across the 23rd, so AWB at least appears locked.
+**The remaining static camera is a JVC GY-HM600**, identified on 2026-10-11 from a photo:
+three 1/3" CMOS sensors, a 23× Fujinon lens, and no network option at all (no USB HOST
+port, no Network menu), so not the 650 or 660 that share its body. It goes SDI straight
+into the switcher, so nothing about it can be read or set remotely; its only remote input
+is the 2.5mm LANC jack. White balance measured stable across the 23rd, so AWB at least
+appears locked.
+
+**It cannot output 1080p59.94.** Its SDI is HD-SDI (1.5 Gb/s), and 1080p59.94 needs
+3G-SDI. Sam believes it is set to 59.94, which over HD-SDI means 1080i59.94 (or 720p59.94)
+converted by the switcher. Confirm in its menu that it is not a 30p mode: that would double
+frames exactly as CAM 1's 4KP30 did.
 
 ## Exposure targets
 
@@ -342,6 +350,8 @@ Everything left needs hands on the equipment; none of it is on the network.
 
 - [ ] **Why does the preaching lighting state put nothing on a face?** See the exposure
       section — this is the biggest open image-quality question on the rig.
-- [ ] Make and model of the remaining static camera on ATEM input 2
+- [x] Make and model of the remaining static camera on ATEM input 2 — JVC GY-HM600
+- [ ] Its output format, read off its menu: 1080i59.94 is the best it can send, and a
+      30p mode would double frames
 - [ ] Are iris, gain and white balance manual or auto on that static camera?
 - [ ] Its shutter speed, which should read 1/125 at 59.94
