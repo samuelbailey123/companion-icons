@@ -1,11 +1,12 @@
 /**
- * The Dante page, a read-only SQ7 sub-page, and the SQ7 key that opens it.
+ * The Dante page, a read-only SQ7 sub-page, and the SQ7 and Home keys that open it.
  *
  * Usage: node tools/dante-page.js <live-full.json> <outdir>
  *   then: node tools/rig.js import-page <outdir>/page-dante.companionconfig <n>|new
  *         node tools/rig.js import-page <outdir>/page-<sq7>-sq7.companionconfig <sq7>
+ *         node tools/rig.js import-page <outdir>/page-<home>-home.companionconfig <home>
  *
- * Import the Dante page first: the SQ7 key points at the number it will land on. Each page goes in
+ * Import the Dante page first: the keys point at the number it will land on. Each page goes in
  * through `import-page`, which resets that page alone, so no other page on the deck is touched.
  *
  * The `dante` connection (Bitfocus audinate-dantecontroller) must already be on the rig: a page
@@ -13,7 +14,7 @@
  */
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { ENTRY_CELL, FOLDER_NAME, PARENT, buildConfig } from '../src/dante.js'
+import { ENTRY_CELL, FOLDER_NAME, HOME, HOME_CELL, PARENT, buildConfig } from '../src/dante.js'
 
 const [, , src, outDir] = process.argv
 if (!src || !outDir) {
@@ -22,7 +23,7 @@ if (!src || !outDir) {
 }
 
 const full = JSON.parse(await fs.readFile(src, 'utf8'))
-const { sq7, parent, number, existing, page, connectionId } = buildConfig(full)
+const { sq7, parent, home, homePage, number, existing, page, connectionId } = buildConfig(full)
 
 const bundle = (p, n) =>
 	JSON.stringify({
@@ -38,11 +39,15 @@ const bundle = (p, n) =>
 await fs.mkdir(outDir, { recursive: true })
 const parentFile = path.join(outDir, `page-${sq7}-sq7.companionconfig`)
 const danteFile = path.join(outDir, 'page-dante.companionconfig')
+const homeFile = path.join(outDir, `page-${home}-home.companionconfig`)
 await fs.writeFile(parentFile, bundle(parent, sq7))
+await fs.writeFile(homeFile, bundle(homePage, home))
 await fs.writeFile(danteFile, bundle(page, number))
 
 console.log(`  connection ${connectionId}`)
 console.log(`  page ${number} "${FOLDER_NAME}" (${existing ? 'replacing' : 'new'})`)
 console.log(`  page ${sq7} "${PARENT}": Dante key at ${ENTRY_CELL.row}/${ENTRY_CELL.col} -> opens page ${number}`)
 console.log(`  1. node tools/rig.js import-page ${danteFile} ${existing ? number : 'new'}`)
+console.log(`  page ${home} "${HOME}": Dante folder at ${HOME_CELL.row}/${HOME_CELL.col} -> opens page ${number}`)
 console.log(`  2. node tools/rig.js import-page ${parentFile} ${sq7}`)
+console.log(`  3. node tools/rig.js import-page ${homeFile} ${home}`)

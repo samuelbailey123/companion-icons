@@ -49,6 +49,13 @@ export const FOLDER_NAME = 'Dante'
 export const PARENT = 'SQ7'
 /** The Dante key on SQ7: under Mute DCAs, in a row the SQ7 page leaves empty. */
 export const ENTRY_CELL = { row: 2, col: 8 }
+/**
+ * And a Dante folder on Home (Sam, 2026-10-11), beside Projectors and PA: the things that must be
+ * right before a service starts. Columns 0-3, so the Stream Deck + shows it as well as the XL and
+ * the iPad deck.
+ */
+export const HOME = 'Home'
+export const HOME_CELL = { row: 1, col: 2 }
 
 /** The SQ7's Dante card, by its Dante name: the one receiver every route below lands on. */
 export const DESK = 'AllenHth-0e0184'
@@ -244,11 +251,13 @@ export function rateKey() {
 	})
 }
 
-/** The SQ7 key that opens this page, red whenever the patch is not normal. */
-export function entryKey(connectionId, dantePage) {
-	const id = `${MARK}-entry`
+/**
+ * A key that opens this page, red whenever the patch is not normal. It wears a folder icon because
+ * it opens a folder (the lesson of PP1's Tracks key, which nobody knew was one).
+ */
+export function entryKey(connectionId, dantePage, id = `${MARK}-entry`) {
 	return key({
-		style: { icon: 'network', label: FOLDER_NAME, bg: BG.rest },
+		style: { icon: 'folder-audio', label: FOLDER_NAME, bg: BG.rest },
 		notes: `${MARK}: opens the Dante page (page ${dantePage}). Red when a source the desk needs is not reaching it.`,
 		feedbacks: [allOf(`${id}-broken`, requiredConditions(connectionId, id), [override(`${id}-broken-bg`, 'box0', 'color', BG.bad)], true)],
 		actionSets: {
@@ -293,17 +302,30 @@ export function findDanteConnection(full) {
 /** Is this control one this file wrote? */
 export const isOurs = (control) => String(control?.options?.notes ?? '').startsWith(`${MARK}:`)
 
+/** A copy of the page named `name` with `control` at `cell`, refusing a cell holding someone else's key. */
+function withKey(full, number, name, cell, control) {
+	const page = structuredClone(full.pages[number])
+	page.controls ??= {}
+	page.controls[cell.row] ??= {}
+	const there = page.controls[cell.row][cell.col]
+	if (there && !isOurs(there)) throw new Error(`${name} ${cell.row}/${cell.col} already holds a different key`)
+	page.controls[cell.row][cell.col] = control
+	return page
+}
+
 /**
- * Both pages from a live export.
+ * All three pages from a live export: the Dante page, and SQ7 and Home each with a key opening it.
  *
  * The Dante page keeps its number and id if the rig has one, and is otherwise the page after the
- * last, which is where `import-page … new` puts it. The SQ7 key refuses a cell holding anything
- * but an earlier Dante key.
+ * last, which is where `import-page … new` puts it. Each key refuses a cell holding anything but
+ * an earlier Dante key.
  */
 export function buildConfig(full) {
 	const numberOf = (name) => Object.entries(full.pages).find(([, p]) => p.name === name)?.[0]
 	const sq7 = numberOf(PARENT)
 	if (!sq7) throw new Error(`no page named "${PARENT}" on this rig`)
+	const home = numberOf(HOME)
+	if (!home) throw new Error(`no page named "${HOME}" on this rig`)
 
 	const numbers = Object.keys(full.pages).map(Number)
 	if (Math.max(...numbers) !== numbers.length) {
@@ -313,16 +335,12 @@ export function buildConfig(full) {
 	const number = existing ?? String(numbers.length + 1)
 	const connectionId = findDanteConnection(full)
 
-	const parent = structuredClone(full.pages[sq7])
-	parent.controls ??= {}
-	parent.controls[ENTRY_CELL.row] ??= {}
-	const there = parent.controls[ENTRY_CELL.row][ENTRY_CELL.col]
-	if (there && !isOurs(there)) throw new Error(`${PARENT} ${ENTRY_CELL.row}/${ENTRY_CELL.col} already holds a different key`)
-	parent.controls[ENTRY_CELL.row][ENTRY_CELL.col] = entryKey(connectionId, number)
+	const parent = withKey(full, sq7, PARENT, ENTRY_CELL, entryKey(connectionId, number))
+	const homePage = withKey(full, home, HOME, HOME_CELL, entryKey(connectionId, number, `${MARK}-home`))
 
 	const pageNumbers = Object.fromEntries(Object.entries(full.pages).map(([n, p]) => [p.name, Number(n)]))
 	const page = buildDantePage(connectionId, pageNumbers)
 	if (existing) page.id = full.pages[existing].id
 
-	return { sq7, parent, number, existing: Boolean(existing), page, connectionId }
+	return { sq7, parent, home, homePage, number, existing: Boolean(existing), page, connectionId }
 }
