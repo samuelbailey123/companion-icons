@@ -79,9 +79,10 @@ of service with Planning Center's times, notes and teams.
 
 ## Dante
 
-**Page 17, Dante**, a sub-page of SQ7, opened by the **Dante** key at SQ7 r2c8 (on the rig since
-2026-10-11, `tools/dante-page.js`, logic in `src/dante.js`). It reports and changes nothing: no
-key on it has an action beyond the folder row.
+**Page 17, Dante**, a sub-page of SQ7, opened by the **Dante** folder at Home r1c2 (beside
+Projectors and PA, so the Stream Deck + and the iPad deck show it too) and at SQ7 r2c8. Both go red
+when the patch is not normal. On the rig since 2026-10-11, `tools/dante-page.js`, logic in
+`src/dante.js`. It reports and changes nothing: no key on it has an action beyond the folder row.
 
 | | |
 |---|---|

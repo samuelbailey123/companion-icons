@@ -4,6 +4,8 @@ import {
 	DESK,
 	ENTRY_CELL,
 	FOLDER_NAME,
+	HOME,
+	HOME_CELL,
 	LABEL,
 	MARK,
 	MODULE_ID,
@@ -54,9 +56,11 @@ const overridesOf = (feedback) =>
 
 /** A small rig: the nine folder-row pages, SQ7 (page 6) with a DCA key, and the Dante connection. */
 const SQ = '6'
-function rig({ withConnection = true, withDante = false, cell } = {}) {
+function rig({ withConnection = true, withDante = false, cell, homeCell } = {}) {
 	const pages = Object.fromEntries(NAV_ORDER.map((name, i) => [String(i + 1), { id: `p${i + 1}`, name, controls: {} }]))
 	pages[SQ].controls = { 1: { 0: { options: { notes: 'Toggle mute on DCA 1' } } } }
+	pages[1].controls = { 1: { 0: { options: { notes: 'Projectors' } }, 1: { options: { notes: 'PA' } } } }
+	if (homeCell) pages[1].controls[HOME_CELL.row][HOME_CELL.col] = homeCell
 	if (withDante) pages[10] = { id: 'p10-dante', name: FOLDER_NAME, controls: {} }
 	if (cell) pages[SQ].controls[ENTRY_CELL.row] = { [ENTRY_CELL.col]: cell }
 	return {
@@ -277,7 +281,27 @@ describe('building from a live export', () => {
 	})
 
 	it('refuses a cell holding somebody else\'s key', () => {
-		expect(() => buildConfig(rig({ cell: { options: { notes: 'Toggle mute on DCA 8' } } }))).toThrow(/already holds/)
+		expect(() => buildConfig(rig({ cell: { options: { notes: 'Toggle mute on DCA 8' } } }))).toThrow(/SQ7 2\/8 already holds/)
+		expect(() => buildConfig(rig({ homeCell: { options: { notes: 'Projectors 2' } } }))).toThrow(/Home 1\/2 already holds/)
+	})
+
+	it('puts a Dante folder on Home beside Projectors and PA, inside the Stream Deck +\'s four columns', () => {
+		const { home, homePage } = buildConfig(rig({ homeCell: entryKey(CONN, 10, 'old') }))
+		expect(home).toBe('1')
+		expect(HOME_CELL.col).toBeLessThan(4)
+		const folder = homePage.controls[HOME_CELL.row][HOME_CELL.col]
+		expect(folder.steps[0].action_sets.down[0].options.page).toEqual(v('10'))
+		expect(folder.style.layers.find((l) => l.id === 'image0').base64Image).toEqual(v('$(image:folder-audio)'))
+		expect(folder.feedbacks[0].id).toBe('dante-home-broken')
+		expect(homePage.controls[1][0].options.notes).toBe('Projectors')
+		expect(homePage.controls[1][1].options.notes).toBe('PA')
+	})
+
+	it('refuses without a Home page', () => {
+		const noHome = rig()
+		noHome.pages[1].name = 'Start'
+		expect(() => buildConfig(noHome)).toThrow(/no page named "Home"/)
+		expect(HOME).toBe('Home')
 	})
 
 	it('refuses without the connection, which a page import cannot create', () => {
