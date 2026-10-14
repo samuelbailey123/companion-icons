@@ -30,7 +30,9 @@ nc 10.23.0.31 9990 </dev/null | grep -A1 CONFIGURATION
 **So the switcher is not the frame-doubling fault.** That leaves the cameras, and one of
 them was: the PTZ that went onto input 1 on 2026-08-28 was outputting **4K at 30 fps** into
 this 59.94 chain. It is now `1080P59.94` like the other. The remaining static camera on
-input 2 has never been checked and is the last unverified box in the chain.
+input 2, a JVC GY-HM600, is the last unverified box in the chain. Its HD-SDI cannot carry
+1080p59.94, so the best it can send is 1080i59.94; a 30p mode would double frames. See
+cameras.md.
 
 Evidence it is a single point in the chain rather than one bad camera: at a hard cut in
 the 2026-08-23 recording the duplicate-pair phase ran straight through unbroken, and the
