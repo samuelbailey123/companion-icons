@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { EXECUTOR, MODULE_ID, STEP, VARIABLE, findMa2, isBlackout, knob, ma2Page, strip } from '../src/ma2.js'
+import { EXECUTOR, GO, MODULE_ID, STEP, VARIABLE, findMa2, goKey, isBlackout, knob, ma2Page, strip } from '../src/ma2.js'
 
 /** The live MA2 page (page 4), read off the rig on 2026-10-27 at 16:49. */
 const LIVE = JSON.parse(fs.readFileSync(new URL('./fixtures/ma2-page-20261027.json', import.meta.url)))
@@ -16,9 +16,9 @@ const commands = (actions) => actions.filter((a) => a.connectionId === MA2).map(
 describe('ma2Page', () => {
 	const { number, page, removed } = ma2Page(rig())
 
-	it('leaves the folder row, BLACKOUT, and the Lights strip and knob', () => {
+	it('leaves the folder row, Go Next and Go Back, BLACKOUT, and the Lights strip and knob', () => {
 		expect(number).toBe(4)
-		expect(cells(page).sort()).toEqual([...[...Array(9).keys()].map((c) => `r0c${c}`), 'r3c8', 'r4c0', 'r5c0'].sort())
+		expect(cells(page).sort()).toEqual([...[...Array(9).keys()].map((c) => `r0c${c}`), 'r2c0', 'r3c0', 'r3c8', 'r4c0', 'r5c0'].sort())
 	})
 
 	it('keeps the folder row and BLACKOUT exactly as they were', () => {
@@ -26,9 +26,9 @@ describe('ma2Page', () => {
 		expect(page.controls[3][8]).toEqual(LIVE.controls[3][8])
 	})
 
-	it('removes the old executor keys, Go keys, and the other three knobs and strips', () => {
-		expect(removed).toEqual(expect.arrayContaining(['r1c0', 'r1c8', 'r2c0', 'r3c0', 'r4c2', 'r4c3', 'r4c5', 'r5c2', 'r5c3', 'r5c5']))
-		expect(removed).toHaveLength(9 + 2 + 3 + 3)
+	it('removes the old executor keys and the other three knobs and strips, and replaces the old Go keys', () => {
+		expect(removed).toEqual(expect.arrayContaining(['r1c0', 'r1c8', 'r4c2', 'r4c3', 'r4c5', 'r5c2', 'r5c3', 'r5c5']))
+		expect(removed).toHaveLength(9 + 3 + 3)
 	})
 
 	it('sends nothing to any executor but 5.1', () => {
@@ -66,7 +66,7 @@ describe('ma2Page', () => {
 	it('builds a page whose controls are only rows 0, 3, 4 and 5 when the live page had no rows to drop', () => {
 		const bare = { name: 'MA2', controls: { 3: { 8: LIVE.controls[3][8] } } }
 		const out = ma2Page(rig(bare))
-		expect(cells(out.page).sort()).toEqual(['r3c8', 'r4c0', 'r5c0'])
+		expect(cells(out.page).sort()).toEqual(['r2c0', 'r3c0', 'r3c8', 'r4c0', 'r5c0'])
 		expect(out.removed).toEqual([])
 	})
 })
@@ -97,6 +97,28 @@ describe('knob', () => {
 	it('gives every action an id of its own', () => {
 		const ids = Object.values(sets(k)).flat().map((a) => a.id)
 		expect(new Set(ids).size).toBe(ids.length)
+	})
+})
+
+describe('Go Next and Go Back', () => {
+	const { page } = ma2Page(rig())
+
+	it('name Executor 5.1, so the desk’s selection cannot send them elsewhere', () => {
+		expect(commands(sets(page.controls[2][0]).down)).toEqual(['Go Executor 5.1'])
+		expect(commands(sets(page.controls[3][0]).down)).toEqual(['GoBack Executor 5.1'])
+	})
+
+	it('sit stacked at the left, as before, away from BLACKOUT', () => {
+		expect([GO.next.row, GO.next.col, GO.back.row, GO.back.col]).toEqual([2, 0, 3, 0])
+		expect(page.controls[3][8]).toEqual(LIVE.controls[3][8])
+	})
+
+	it('are labelled, with the icons and colours they had', () => {
+		const label = (k) => k.style.layers.find((l) => l.id === 'text0').text.value
+		const icon = (k) => k.style.layers.find((l) => l.id === 'image0').base64Image.value
+		expect([label(goKey(MA2, 'next')), icon(goKey(MA2, 'next'))]).toEqual(['Go Next', '$(image:slide-next-ink)'])
+		expect([label(goKey(MA2, 'back')), icon(goKey(MA2, 'back'))]).toEqual(['Go Back', '$(image:cue-back)'])
+		expect(goKey(MA2, 'back').options.notes).toMatch(/a cue back/)
 	})
 })
 

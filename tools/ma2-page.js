@@ -1,5 +1,6 @@
 /**
- * MA2: the folder row, BLACKOUT, and one knob for Executor 5.1, the only lighting control.
+ * MA2: the folder row, Go Next and Go Back on Executor 5.1, BLACKOUT, and one knob for Executor 5.1,
+ * the only lighting control.
  *
  * Usage: node tools/ma2-page.js <live-full.json> <outdir>
  *   then: node tools/rig.js import-page <bundle> <pageNumber>
@@ -19,7 +20,7 @@ if (!src || !outDir) {
 const full = JSON.parse(await fs.readFile(src, 'utf8'))
 const { number, page, removed } = ma2Page(full)
 console.log(`  connection ${findMa2(full)}`)
-console.log(`  knob 1: ${NAME}, Executor ${EXECUTOR}`)
+console.log(`  knob 1: ${NAME}, Executor ${EXECUTOR}; Go Next / Go Back on it at r2c0 / r3c0`)
 console.log(`  removed: ${removed.join(' ') || 'nothing'}`)
 
 await fs.mkdir(outDir, { recursive: true })

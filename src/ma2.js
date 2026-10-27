@@ -4,8 +4,14 @@
  * Sam, 2026-10-27: "I just have 1 fader. Fader 1. on fader page 5. it's the only control now it
  * does house lights stage lights everything." So the MA2 page keeps its folder row and BLACKOUT,
  * and gains one knob: the first, which sets Executor 5.1 and shows its level on the touchstrip
- * above it. Everything else on the page goes: the four knobs on Executors 1.1-1.4, the executor
- * keys 101-109 and Go Next / Go Back all drove parts of the show the one fader has replaced.
+ * above it. Everything else on the page goes: the four knobs on Executors 1.1-1.4 and the executor
+ * keys 101-109 drove parts of the show the one fader has replaced.
+ *
+ * GO NEXT AND GO BACK STEP THE ONE FADER. Sam, the same day: "on the light page we want the go
+ * forward and backwards", aimed at Executor 5.1. They used to press the desk's GO+ / GO- keys,
+ * which act on whatever executor the desk has selected; now they name 5.1 (`Go Executor 5.1`,
+ * `GoBack Executor 5.1`), so a selection made on the desk cannot send them somewhere else. They
+ * sit where they always did, stacked at the left, with BLACKOUT at the far end of the row.
  *
  * OPEN LOOP. The grandMA2 module reports nothing back (its one variable is the last Telnet echo),
  * so the strip shows the level the deck last SENT. Move the fader on the console and the strip is
@@ -32,6 +38,12 @@ export const STEP = 5
 export const COLUMN = 0
 /** Prefix of every id this file writes. */
 export const MARK = 'ma2-lights'
+
+/** Go Next over Go Back, at the left of the key rows, as they were before 2026-10-27. */
+export const GO = {
+	next: { row: 2, col: 0, label: 'Go Next', command: `Go Executor ${EXECUTOR}`, icon: 'slide-next-ink', bg: 0x009900 },
+	back: { row: 3, col: 0, label: 'Go Back', command: `GoBack Executor ${EXECUTOR}`, icon: 'cue-back', bg: 0x990000 },
+}
 
 const v = (value) => ({ value, isExpression: false })
 const expr = (value) => ({ value, isExpression: true })
@@ -118,6 +130,33 @@ export function knob(connectionId) {
 	}
 }
 
+/** Go Next or Go Back: one command to the desk, naming Executor 5.1. */
+export function goKey(connectionId, which) {
+	const { label, command, icon, bg } = GO[which]
+	return {
+		type: 'button-layered',
+		style: {
+			layers: [
+				canvas,
+				box('box0', 'Background', 0, 0, v(100), 100, v(bg)),
+				{
+					id: 'image0', name: 'Image', usage: 'auto', type: 'image',
+					enabled: v(true), opacity: v(100), x: v(0), y: v(2), width: v(100), height: v(44), rotation: v(0),
+					base64Image: v(`$(image:${icon})`), halign: v('center'), valign: v('center'), fillMode: v('fit'),
+				},
+				{ ...text('text0', label, 0, 100, 'center', 0xffffff, NAME_SIZE), name: 'Text', y: v(46), height: v(52) },
+			],
+		},
+		options: {
+			stepProgression: 'auto', stepExpression: '', rotaryActions: false, canModifyStyleInApis: false,
+			notes: `${label}: ${command}, a cue ${which === 'next' ? 'forward' : 'back'} on the Lights fader. Built by tools/ma2-page.js.`,
+		},
+		feedbacks: [],
+		steps: { 0: { action_sets: { down: [action(`go-${which}`, connectionId, 'command', { command: v(command) })], up: [] }, options: { runWhileHeld: [] } } },
+		localVariables: [],
+	}
+}
+
 /** The strip segment above it: the name, the level the deck last sent, and a bar of it. */
 export function strip() {
 	const level = `$(internal:custom_${VARIABLE})`
@@ -146,9 +185,11 @@ export function strip() {
 }
 
 /**
- * The MA2 page with only the folder row, BLACKOUT where it sits, and the Lights knob and strip.
+ * The MA2 page: the folder row, BLACKOUT where it sits, Go Next and Go Back, and the Lights knob
+ * and strip.
  *
  * @returns {{ number: number, page: object, removed: string[] }} the page and the cells it emptied
+ *   (a cell it rebuilds is replaced, not counted)
  */
 export function ma2Page(full) {
 	const connectionId = findMa2(full)
@@ -156,6 +197,12 @@ export function ma2Page(full) {
 	if (!found) throw new Error('no MA2 page on this rig')
 	const [number, source] = found
 
+	const built = {
+		[`${STRIP_ROW}/${COLUMN}`]: strip(),
+		[`${KNOB_ROW}/${COLUMN}`]: knob(connectionId),
+		[`${GO.next.row}/${GO.next.col}`]: goKey(connectionId, 'next'),
+		[`${GO.back.row}/${GO.back.col}`]: goKey(connectionId, 'back'),
+	}
 	const page = structuredClone(source)
 	page.controls = { 0: structuredClone(source.controls[0] ?? {}) }
 	const removed = []
@@ -163,17 +210,20 @@ export function ma2Page(full) {
 	for (const [r, cols] of Object.entries(source.controls)) {
 		if (Number(r) === 0) continue
 		for (const [c, control] of Object.entries(cols)) {
+			if (`${r}/${c}` in built) continue
 			if (Number(r) < STRIP_ROW && isBlackout(control, connectionId)) {
 				;(page.controls[r] ??= {})[c] = structuredClone(control)
 				blackout++
-			} else if (!(Number(c) === COLUMN && (Number(r) === STRIP_ROW || Number(r) === KNOB_ROW))) {
+			} else {
 				removed.push(`r${r}c${c}`)
 			}
 		}
 	}
 	if (blackout !== 1) throw new Error(`expected one BLACKOUT key on the MA2 page, found ${blackout}`)
 
-	;(page.controls[STRIP_ROW] ??= {})[COLUMN] = strip()
-	;(page.controls[KNOB_ROW] ??= {})[COLUMN] = knob(connectionId)
+	for (const [cell, control] of Object.entries(built)) {
+		const [r, c] = cell.split('/')
+		;(page.controls[r] ??= {})[c] = control
+	}
 	return { number: Number(number), page, removed }
 }
