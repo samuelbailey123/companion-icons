@@ -10,7 +10,9 @@
  * WHAT CHANGES. The Record keys (Home and ATEM, found by their action, wherever they sit) toggle
  * the HyperDeck. Recording, they go red and show the clip's running time; idle, they show the time
  * left on the card, or go amber with NO CARD when there is none. The PP1 Countdown key, whose
- * actions the Sunday 10:24:57 trigger copies, starts the HyperDeck where it started the switcher.
+ * actions the Sunday 10:24:57 trigger copies, starts the HyperDeck where it started the switcher,
+ * and first puts Program on the recorder's Videohub output (Sam, 2026-10-27: "force Program to
+ * OUT 13"), so a route someone left on that output cannot become the service recording.
  *
  * NO CARD IS READ FROM THE MODULE'S ACTIVE SLOT. With both slots empty `slotId` reads "-" (read
  * off the rig 2026-10-26, cards out). The recorder has no USB disk: it records to SD cards only.
@@ -25,6 +27,10 @@
 
 export const MODULE_ID = 'bmd-hyperdeck'
 export const ATEM_MODULE_ID = 'bmd-atem'
+export const VIDEOHUB_MODULE_ID = 'bmd-videohub'
+/** The Videohub ports, by the labels read off the router on 2026-10-26: IN 4 "Program", OUT 13 "Deck Recorder". */
+export const PROGRAM_INPUT = 4
+export const RECORDER_OUTPUT = 13
 /** Prefix of every id and note this file writes. */
 export const MARK = 'record-hyperdeck'
 export const NO_CARD = 'NO CARD'
@@ -44,6 +50,7 @@ const only = (full, moduleId) => {
 
 export const findHyperdeck = (full) => only(full, MODULE_ID)
 export const findAtem = (full) => only(full, ATEM_MODULE_ID)
+export const findVideohub = (full) => only(full, VIDEOHUB_MODULE_ID)
 
 const actionsOf = (control) =>
 	Object.values(control?.steps ?? {})
@@ -118,13 +125,32 @@ export function recordKey(control, hyperdeck) {
 	return out
 }
 
-/** The Countdown key with its switcher start swapped for the HyperDeck's, and nothing else moved. */
-export function countdownKey(control, atem, hyperdeck) {
+/** Program onto the recorder's output, ignoring locks as every route on this deck does. */
+export const feedRoute = (videohub) => ({
+	...action(`${MARK}:feed`, videohub, 'route'),
+	options: { source: v(PROGRAM_INPUT), destination: v(RECORDER_OUTPUT), ignore_lock: v(true) },
+})
+
+/** That route, recognised by what it does: Companion gives every action a new id on import. */
+const isFeedRoute = (a, videohub) =>
+	a.connectionId === videohub.connectionId &&
+	a.definitionId === 'route' &&
+	a.options?.source?.value === PROGRAM_INPUT &&
+	a.options?.destination?.value === RECORDER_OUTPUT
+
+/**
+ * The Countdown key with its switcher start replaced by the feed route and the HyperDeck's start,
+ * in that order, and nothing else moved.
+ */
+export function countdownKey(control, atem, hyperdeck, videohub) {
 	const out = structuredClone(control)
+	const isStart = (a) => isAtemStart(a, atem) || (a.connectionId === hyperdeck.connectionId && a.definitionId === 'rec')
 	for (const step of Object.values(out.steps ?? {})) {
 		for (const [set, actions] of Object.entries(step.action_sets ?? {})) {
 			if (!Array.isArray(actions)) continue
-			step.action_sets[set] = actions.map((a) => (isAtemStart(a, atem) ? action(`${MARK}:start`, hyperdeck, 'rec') : a))
+			step.action_sets[set] = actions
+				.filter((a) => !isFeedRoute(a, videohub))
+				.flatMap((a) => (isStart(a) ? [feedRoute(videohub), action(`${MARK}:start`, hyperdeck, 'rec')] : [a]))
 		}
 	}
 	return out
@@ -138,6 +164,7 @@ export function countdownKey(control, atem, hyperdeck) {
 export function convertPages(full) {
 	const atem = findAtem(full)
 	const hyperdeck = findHyperdeck(full)
+	const videohub = findVideohub(full)
 	const changed = []
 	let records = 0
 	let countdowns = 0
@@ -151,7 +178,7 @@ export function convertPages(full) {
 					records++
 					cells.push(`${row}/${col} Record`)
 				} else if (isCountdownKey(control, atem, hyperdeck)) {
-					next.controls[row][col] = countdownKey(control, atem, hyperdeck)
+					next.controls[row][col] = countdownKey(control, atem, hyperdeck, videohub)
 					countdowns++
 					cells.push(`${row}/${col} Countdown`)
 				}
@@ -161,5 +188,5 @@ export function convertPages(full) {
 	}
 	if (!records) throw new Error('no Record key found on any page')
 	if (!countdowns) throw new Error('no Countdown key found on any page')
-	return { atem, hyperdeck, changed }
+	return { atem, hyperdeck, videohub, changed }
 }

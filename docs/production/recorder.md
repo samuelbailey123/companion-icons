@@ -19,7 +19,10 @@ Read off the deck over its control port (TCP 9993) on 2026-10-26.
 | Remote | Enabled on the deck's front panel; Companion cannot record without it |
 
 **What starts it.** The Record keys on Home r2c3 and ATEM r3c1 toggle it, the PP1 Countdown key
-starts it, and the Sunday 10:24:57 trigger (which copies the Countdown key) starts it. Nothing on
+starts it, and the Sunday 10:24:57 trigger (which copies the Countdown key) starts it. The
+Countdown key and the trigger first route Videohub IN 4 "Program" to OUT 13 "Deck Recorder" (Sam,
+2026-10-27), so a route left on that output cannot become the recording. The stream stays
+manual, on the guarded Stream key (Sam, same day). Nothing on
 the deck starts the ATEM's recording any more. Built by `tools/record-hyperdeck.js`; the trigger's
 action was swapped on the rig in place, because the trigger copies the key only when it is built.
 
