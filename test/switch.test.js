@@ -70,11 +70,18 @@ describe('the Videohub connection', () => {
 
 describe('the surface', () => {
 	it('finds the deck named Switch', () => {
-		expect(findSurface(rig())).toEqual({ surfaceId: 'streamdeck:sw', name: 'Switch', grid: XL })
+		expect(findSurface(rig())).toEqual({ surfaceId: 'streamdeck:sw', name: 'Switch', type: 'Elgato Stream Deck XL', grid: XL })
+	})
+
+	it('counts only key rows on decks with a touchstrip and knobs', () => {
+		expect(findSurface(rig(), 'streamdeck:main').grid).toEqual(PLUS_XL)
+		const plus = { 'sd:p': { name: 'Switch', type: 'Elgato Stream Deck +', gridSize: { columns: 4, rows: 4 } } }
+		expect(findSurface(rig({ surfaces: plus })).grid).toEqual({ columns: 4, rows: 2 })
+		expect(() => buildConfig(rig({ surfaces: plus }))).toThrow(/do not fit a 4x2 deck/)
 	})
 
 	it('takes an explicit id over the name', () => {
-		expect(findSurface(rig(), 'streamdeck:main').grid).toEqual({ columns: 9, rows: 6 })
+		expect(findSurface(rig(), 'streamdeck:main').surfaceId).toBe('streamdeck:main')
 		expect(findSurface(rig({ surfaces: { 'sd:a': { gridSize: XL } } }), 'sd:a').name).toBe('')
 	})
 
