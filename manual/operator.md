@@ -67,7 +67,8 @@ Work down this list from about 9:30.
 5. **Cameras:** press **PTZ**, check both cameras answer (their pan/tilt/zoom readouts move when
    you nudge). Put each on its first preset.
 6. **Slides:** ProPresenter is on the Sunday Service playlist.
-7. **Lights:** MA2 page, the opening look is ready.
+7. **Lights:** MA2 page, turn the **Lights** knob to the level you want. That one fader runs all
+   the lighting, and setting it once also lines the strip up with the desk.
 8. Go back to the **Home** page and leave the deck there.
 
 The full engineering checklist (camera formats, exposure, audio levels) is in the Reference,
@@ -127,8 +128,13 @@ The Worship page, both cameras side by side:
 
 {{grid:4}}
 
-- Executors 101–109 across the top, **Go Next / Go Back / BLACKOUT** below, four knobs on the
-  bottom row.
+- All the lighting, house and stage, is one fader on the lighting desk: **Fader 1 on fader
+  page 5**. The first knob, **Lights**, is that fader. Turn it to bring the lights up or down,
+  5% a click. The strip above it shows the level.
+- The strip shows the level **the deck last set**. It does not read the desk. If someone moves the
+  fader on the desk, the strip is wrong until the knob is turned again, and that turn starts from
+  the strip's number.
+- **BLACKOUT** turns every light in the building off at once. Press it only if you mean that.
 
 ### Screens (VW page)
 
