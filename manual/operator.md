@@ -22,8 +22,8 @@ All three only work on the **AV network** (the church's production LAN, addresse
   that **six knobs** that turn and press.
 - **Some keys open a sub-page** that has no folder-row key of its own:
   - Home → **Dante** (is every microphone reaching the desk?), also from SQ7
+  - SQ7 → the fader folders **DCA 1-4**, **DCA 5-8**, **Leads**, **BGV**, **Lav** and **FX**
   - PP1 → **Tracks** (walk-in music)
-  - VW → **Videohub** (every router output and input; **Back** returns to VW)
   - PTZ → **CAM 1**, **CAM 3**, their **Setup** pages, and **Worship** / **Sermon** (both cameras
     on one page)
 - **Colours mean the same thing everywhere:** green is on, running or healthy; red is live,
@@ -123,6 +123,11 @@ The Worship page, both cameras side by side:
 
 - DCA 1–8 across the top with their level and mute state. **Mute DCAs** mutes them together.
 - The touchstrip reads the Stream, Foyer and Main levels.
+- The bottom row opens the **fader folders**: **DCA 1-4**, **DCA 5-8**, **Leads** (CH 1–4),
+  **BGV** (CH 5–8), **Lav** (CH 13–14) and **FX** (FX returns 1–4). In each, a knob is one fader:
+  turn it for level, 1 dB a click, and press it to mute or unmute. The strip above shows the
+  desk's own reading and goes red when that fader is muted. Leads, BGV, Lav and FX set the level
+  into Main, what the room hears.
 
 ### Lights (MA2 page)
 
@@ -140,10 +145,15 @@ The Worship page, both cameras side by side:
 
 {{grid:7}}
 
-- Tap a **destination** (a screen) to select it, then a **source** to send there. **Videohub**
-  opens every router port. The knob sets the LED wall's brightness.
-- Routes to router outputs **1–6 change what the switcher sees** (they feed ATEM inputs 1–6), so
-  do not use the Videohub page during a service unless you mean to.
+- VW is the whole video router: every **output** (OUT 1–16) on the top two rows, every **input**
+  (IN 1–16) on the bottom two. Each key shows the router's own name for it, and an output also
+  shows what is feeding it.
+- Tap an **output** to select it (violet), then an **input** to send there at once. The input
+  already feeding the selected output is green. VW has no folder row: **Home**, top right, leaves.
+- Outputs **1–6 feed the switcher's inputs 1–6**, so routing to them changes what the switcher
+  sees. Do not touch them during a service unless you mean to.
+- The touchstrip reads what the projectors, LED wall and back wall show; the knob sets the LED
+  wall's brightness.
 
 ## After the service
 
