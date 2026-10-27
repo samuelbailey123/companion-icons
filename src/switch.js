@@ -34,6 +34,14 @@ export const MARK = 'switch'
 /** How the surface is recognised when no id is given: by the name it carries in Companion. */
 export const SURFACE_NAME = /switch/i
 
+/**
+ * Rows of real keys, for decks whose grid also counts a touchstrip and a row of encoders.
+ *
+ * Companion reports the + XL as 9x6 and the + as 4x4, but only the top four and top two rows
+ * are keys (see src/layout.js). A port laid on the strip or a knob would be a port with no key.
+ */
+export const KEY_ROWS = { 'Elgato Stream Deck + XL': 4, 'Elgato Stream Deck +': 2 }
+
 /** Violet is the routing identity on this deck; inputs sit cooler, as on VW. */
 export const BG = { output: 0x241a42, input: 0x14243a }
 export const SELECTED = 0xa78bfa
@@ -82,7 +90,7 @@ export function findSurface(full, surfaceId) {
 	const [[id, surface]] = matches
 	const { columns, rows } = surface.gridSize ?? {}
 	if (!(columns > 0 && rows > 0)) throw new Error(`surface ${id} has no grid size`)
-	return { surfaceId: id, name: surface.name ?? '', grid: { columns, rows } }
+	return { surfaceId: id, name: surface.name ?? '', type: surface.type ?? '', grid: { columns, rows: KEY_ROWS[surface.type] ?? rows } }
 }
 
 /**
