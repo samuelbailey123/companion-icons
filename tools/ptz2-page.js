@@ -43,11 +43,13 @@ import { SERMON, WORSHIP, buildServicePages } from '../src/ptz/service.js'
  */
 const CAMERAS = {
 	second: {
-		host: '10.23.0.196', atem: 1, vars: { state: 'ptz2_state', preset: 'ptz2_last' },
+		host: '10.23.0.196', atem: 1, vars: { state: 'ptz2_state', preset: 'ptz2_last', atem: 'ptz2_atem_input' },
 		presets: { 1: 'Wide', 2: 'Stage', 3: 'Baptism', 4: 'Keyboard', 5: 'Drums' },
 	},
 	first: {
-		host: '10.23.0.181', atem: 3, vars: { state: 'ptz_state', preset: 'ptz_last' },
+		// Named CAM 3 for its old input. Since 2026-10-26 it is on ATEM input 2; the chooser and the
+		// tally read that from `ptz_atem_input`, so the pages keep their names.
+		host: '10.23.0.181', atem: 3, vars: { state: 'ptz_state', preset: 'ptz_last', atem: 'ptz_atem_input' },
 		presets: { 1: 'Wide', 2: 'Drums', 3: 'Keys', 4: 'Stage', 5: 'Bass' },
 	},
 }
@@ -167,6 +169,7 @@ put(hubNumber, {
 			setupPage: cam.setupPage,
 			stateVar: cam.vars.state,
 			presetVar: cam.vars.preset,
+			atemVar: cam.vars.atem,
 		})),
 		service
 	),

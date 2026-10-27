@@ -38,12 +38,13 @@ camera's pair behind that.
 | 4 | MA2 | grandMA2 lighting | Executors 101–109 across row 1, Go Next / Go Back / BLACKOUT below, four encoders on row 5 |
 | 5 | ATEM | Television Studio HD8 | Program bus over preview bus, CUT and AUTO at column 8. The eight bus keys are inputs 1–7 plus Media Player 1 — **input 8, the PTZ, has no key on either bus** |
 | 6 | SQ7 | Allen & Heath SQ7 | DCA 1–8 with level and mute state, Mute DCAs key. Stream / Foyer / MAIN readouts on the touchstrip |
-| 7 | VW | Blackmagic Videohub + LED wall | Five destinations over four sources: tap a destination to arm, tap a source to route. Two direct routes, four Videohub readouts, and a brightness encoder for the wall |
+| 7 | VW | Blackmagic Videohub + LED wall | Five destinations over four sources: tap a destination to select it, tap a source to route. Two direct routes, four Videohub readouts, a brightness encoder for the wall, and **Videohub** at r1c8, which opens page 18. Repointed to the post-move port numbers on 2026-10-26 (`src/vw.js`) |
 | 8 | System | the Pi itself | CPU temp, load, memory, disk, power, internet, address, uptime, Companion, storage. Fed by an `internal: exec` trigger because Companion publishes no OS-level variables |
 | 9 | PTZ | **CAM 3**, the PTZ on 10.23.0.181 | 48 controls: five presets, a camera-swap key, a nudge cluster, zoom/focus, tracking, and pan/tilt/zoom/focus/speed/preset encoders. Fed by `ptz_state.py` on a **1-second** trigger and `ptz_web.py` on a 5-second one |
 | 10 | PTZ Setup | the same camera | Exposure, white balance, backlight, power, tracking mode and body framing |
 | 11 | PTZ 2 | **CAM 1**, the PTZ on 10.23.0.196 | The same page, built by the same code, bound to the second camera and its own `ptz2_*` variables |
 | 12 | PTZ 2 Setup | the same camera | As page 10, for the second camera |
+| 18 | Videohub | the whole router | Every output (rows 0–1, OUT 1–16) over every input (rows 2–3, IN 1–16), each captioned with the router's own live label; an output key also shows what feeds it. Tap an output to select it (violet), tap an input to route it there at once; the input feeding the selected output is green. **No folder row**: 32 ports need all four rows, so a Back key at r0c8 returns to VW. Since 2026-10-26, `tools/switch-page.js` |
 
 **Both cameras run one page layout.** Pages 11 and 12 are emitted by the same
 `buildPage`/`buildSetupPage` calls as 9 and 10, and the build asserts they are identical
@@ -123,16 +124,16 @@ Read off the live Companion on 2026-08-28 and confirmed against each device on t
 
 | Device | Role | Address |
 |---|---|---|
-| ATEM Television Studio HD8 | Vision mixer, program record | **10.23.0.31**, control on UDP 9910. Also answers the Blackmagic routing protocol on TCP 9990, which is how its identity was confirmed: unique ID `1947523eab1a4015aa81b6a4ae2dfe43`, the same uuid stamped into the recordings. That same port reports its video standard — `1080p59.94` — and its aux routing, and accepts routing changes |
-| Blackmagic Micro Videohub, 16×16 | Routing to projectors and outputs | **10.23.0.21**:9990. Input labels: 1 Program Out, 2 Aux 1, 3 Aux 2, 4 SDI Multiview |
-| Allen & Heath SQ7 | Audio console | **10.23.0.188** |
-| grandMA2 | Lighting | **10.23.0.101** for the console login; OSC out to :8000 and feedback in on :9000 |
+| ATEM Television Studio HD8 | Vision mixer, program record | **10.23.0.34** (2026-10-26), control on UDP 9910. Also answers the Blackmagic routing protocol on TCP 9990, which is how its identity was confirmed: unique ID `1947523eab1a4015aa81b6a4ae2dfe43`, the same uuid stamped into the recordings. That same port reports its video standard — `1080p59.94` — and its aux routing, and accepts routing changes |
+| Blackmagic Micro Videohub, 16×16 | Routing to the screens **and to the switcher's inputs 1–6** | **10.23.0.21**:9990. Re-patched on 2026-10-26: see Video routing below |
+| Allen & Heath SQ7 | Audio console | **10.23.0.191** (2026-10-26) |
+| grandMA2 | Lighting | **10.23.0.99** (2026-10-26) for the console login; OSC out to :8000 and feedback in on :9000 |
 | Shure ULXD4Q × 3 + ULXD4D × 1 | Wireless, **14** channels — not 16 | `10.23.0.20` "BGV 1-4" (Q), `10.23.0.23` "Lead 1-4" (Q), `10.23.0.253` "BGV+Host" (Q), `10.23.0.214` "Preach" — **a ULXD4D, two channels only**, Lav 1 and Lav 2. All on :2202 |
 | ProPresenter | Presentation | **10.23.0.111**:1100. A follower is configured at 10.23.0.11 but `control_follower` is off, and nothing is listening there |
 | NovaStar VX6S | LED wall processor | **10.23.0.23**:5200 (was .19 until August 2026) |
-| FoMaKo UV602 PTZ — **CAM 3** | Camera, VISCA over IP, ATEM input 3 | **10.23.0.181**:5678, with an unauthenticated HTTP API on :80 that `ptz_web.py` drives |
+| FoMaKo UV602 PTZ — **CAM 3** pages, shown as **CAM 2** | Camera, VISCA over IP, **ATEM input 2 since 2026-10-26** (was 3). The chooser, tally and captions read `ptz_atem_input`; the pages keep their CAM 3 names | **10.23.0.181**:5678, with an unauthenticated HTTP API on :80 that `ptz_web.py` drives |
 | FoMaKo UV602 PTZ — **CAM 1** | Camera, added 2026-08-28, ATEM input 1 | **10.23.0.196**:5678, same API |
-| JVC GY-HM600 static — **CAM 2** | Fixed, unmanned, ATEM input 2 | Not on the network: it has no network option at all, and its only remote input is LANC. Goes HD-SDI into the switcher |
+| JVC GY-HM600 static — **CAM 2** | Fixed, unmanned. **Not on the switcher since 2026-10-26**: both camera inputs are the PTZs "for this moment" (Sam) | Not on the network: it has no network option at all, and its only remote input is LANC. Goes HD-SDI into the switcher |
 | Raspberry Pi | Companion host | 10.23.0.242 |
 
 **Addresses drift.** Every one of these except the Pi had moved at least once by
@@ -169,12 +170,13 @@ none of them will fix themselves.
    arm then fire — and Record does not. This is exactly the 7.6 s gap from 2026-08-23: one
    stray press stops the recording. The record *state* indicator did ship, on both keys,
    so the other half of that fix is in.
-2. **Four VW feedbacks never evaluate.** The source row's "this is what is routed to the
-   armed destination" highlight uses
-   `$(videohub:output_$(internal:custom_vh_dest)_input_id) == N` — a `$()` nested inside a
-   variable name, which Companion's expression parser rejects. It logs
-   `Unexpected token (1:44)` four times on every boot. `custom_vh_dest` is also
-   non-persisting, so it is empty after every restart even once the expression parses.
+2. ~~**Four VW feedbacks never evaluate.**~~ **Fixed 2026-10-26.** The source row's
+   highlight built a variable name out of `custom_vh_dest`, which Companion's expression
+   parser rejects. VW and the Videohub page now use the bmd-videohub module's own selected
+   destination (`select_destination`, `route_source`, and the `selected_*` feedbacks), so
+   there is no expression to fail, and both pages share one selection. `vh_dest` is unused.
+   After a Companion restart nothing is selected, and an input press then sends nothing:
+   checked on the rig by watching the router while pressing one.
 3. **The PTZ cannot be cut to from the deck.** It is on ATEM input 8, but the ATEM page's
    program and preview buses carry inputs 1–7 and Media Player 1. With a second PTZ going
    in, that gap gets worse.
@@ -193,17 +195,33 @@ none of them will fix themselves.
    anything in a Companion connection is visible on this LAN, and keep export files
    somewhere that reflects that.
 
-## Video outputs
+## Video routing
 
-| Output | Feeds |
-|---|---|
-| AUX 1 | The LED wall **and** the two projectors either side of it |
-| AUX 2 | The back-wall projector |
+**The rack moved into the back on 2026-10-26 and the Videohub was re-patched.** It now sits in
+front of the switcher as well as behind it: router outputs 1–6 feed ATEM inputs 1–6, so a
+route to OUT 1–6 changes what the switcher sees. The ports, by the labels Sam gave them that
+day (read over :9990):
 
-Both AUXes are therefore in use. **They are not immovable:** the back-wall projector could
-be fed from the VideoHub instead — take the switcher's output into the router and route it
-to that projector — which frees AUX 2. Worth doing only if there is a use case that earns
-it; see the ISO section below.
+| In | Label | Out | Label |
+|---|---|---|---|
+| 1 | Aux 1 (ATEM) | 1–6 | ATEM 1–6 |
+| 2 | Multiview | 7 | Output 7 (unlabelled) |
+| 3 | Aux 2 (ATEM) | 8 | Backwall Projector |
+| 4 | Program | 9, 10 | Mini Screen 1, 2 |
+| 5, 6 | Input 5, 6 (unlabelled) | 11 | Seetec Mono |
+| 7 | Camera 1 | 12 | Output 12 (unlabelled; the off-air test port) |
+| 8 | Camera 2 | 13 | Deck Recorder |
+| 9–13 | Input 9–13 (unlabelled) | 14 | LED Wall |
+| 14 | Words Overlay | 15 | Left Projector |
+| 15, 16 | PP1B, PP1 | 16 | Right Projector |
+
+On the ATEM that makes input 1 "Cam 1", 2 "Cam 2", 3 "PP1", 4 "PP1B", 5 "Words Overlay". The
+Sunday 10:00 pre-service cut moved from input 7 to 3 the same day. On 2026-10-26 the wall and
+both projectors were taking PP1 straight from the router, not from an ATEM aux.
+
+The deck reads these labels live, so renaming a port in Videohub Setup renames its key. VW's
+curated keys are by number (`src/vw.js`), so a re-patch means re-running
+`tools/switch-page.js`, which refuses a VW page it does not recognise.
 
 Credentials do not go in this file. Record **where** they live — a password manager entry
 name — not what they are.

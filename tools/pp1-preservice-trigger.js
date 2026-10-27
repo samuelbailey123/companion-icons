@@ -37,8 +37,12 @@ const START = { name: 'Sunday pre-service', time: '10:00:00' }
 const CHECK = { name: 'Sunday pre-service check', time: '10:00:20' }
 /** What ProPresenter reports while the pre-roll is up: the presentation's own name. */
 const LIVE_VARIABLE = 'propresenter:active_presentation_name'
-/** The switcher input carrying ProPresenter's PP1 output, checked against its live name below. */
-const PP1_INPUT = 7
+/**
+ * The switcher input carrying ProPresenter's PP1 output, checked against its live name below.
+ * Input 3 since the rack moved into the back on 2026-10-26 (it was 7; 7 is now "Camera 7"). The
+ * live trigger's cut was changed in place that day rather than by re-running this tool.
+ */
+const PP1_INPUT = 3
 const PP1_NAME = 'PP1'
 /** Companion, as tools/rig.js reaches it. */
 const RIG = 'http://10.23.0.242:8000'

@@ -289,7 +289,7 @@ export const onePushKey = (conn) =>
 export const navKey = (prefix, look, pageNumber) => {
 	if (Number(pageNumber) === 0 || pageNumber === undefined) throw new Error(`${prefix}: page number ${pageNumber} is not a destination`)
 	return key({
-		style: { icon: look.icon, label: look.label, bg: BG.key },
+		style: { icon: look.icon, label: look.label, bg: BG.key, labelIsExpression: look.labelIsExpression },
 		notes: look.notes,
 		actionSets: {
 			down: [

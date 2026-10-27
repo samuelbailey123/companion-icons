@@ -177,6 +177,9 @@ export const SUB_PAGES = {
 	Tracks: 'PP1',
 	// Dante routing and device health, read-only, opened from SQ7's Dante key (tools/dante-page.js).
 	Dante: 'SQ7',
+	// Every router input and output, opened from VW's Videohub key (src/switch.js). The one
+	// sub-page with no folder row: its 32 ports need all four rows, so it has a Back key instead.
+	Videohub: 'VW',
 }
 
 /** The folder-row page a page belongs to: itself, or its parent for a sub-page. */
