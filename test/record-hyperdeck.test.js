@@ -19,11 +19,13 @@ const LIVE = JSON.parse(fs.readFileSync(new URL('./fixtures/record-keys-20261026
 
 const ATEM = { connectionId: '10AAWntiwEwz4HB_8wNWu', label: 'atem' }
 const HD = { connectionId: 'hd1', label: 'hyperdeck' }
+const VH = { connectionId: 'vh1', label: 'videohub' }
 const PP = 'Q5TvEd5Y-6x598I_1OW3v'
 
 const instances = {
 	[ATEM.connectionId]: { moduleId: 'bmd-atem', label: 'atem' },
 	[HD.connectionId]: { moduleId: 'bmd-hyperdeck', label: 'hyperdeck' },
+	[VH.connectionId]: { moduleId: 'bmd-videohub', label: 'videohub' },
 	[PP]: { moduleId: 'renewedvision-propresenter-api', label: 'propresenter' },
 }
 const rig = (pages) => ({ instances, pages })
@@ -59,7 +61,7 @@ describe('recognising the keys', () => {
 
 	it('knows them again once converted', () => {
 		expect(isRecordKey(recordKey(LIVE.record, HD), ATEM, HD)).toBe(true)
-		expect(isCountdownKey(countdownKey(LIVE.countdown, ATEM, HD), ATEM, HD)).toBe(true)
+		expect(isCountdownKey(countdownKey(LIVE.countdown, ATEM, HD, VH), ATEM, HD)).toBe(true)
 	})
 })
 
@@ -106,11 +108,29 @@ describe('a Record key', () => {
 })
 
 describe('the Countdown key', () => {
-	const key = countdownKey(LIVE.countdown, ATEM, HD)
+	const key = countdownKey(LIVE.countdown, ATEM, HD, VH)
 
-	it('starts the HyperDeck where it started the switcher, and keeps the countdown cue', () => {
-		expect(down(key).map((a) => `${a.definitionId} ${a.connectionId}`)).toEqual([`specificPlaylistOperation ${PP}`, 'rec hd1'])
+	it('puts Program on the recorder, then starts it, where it started the switcher, keeping the cue', () => {
+		expect(down(key).map((a) => `${a.definitionId} ${a.connectionId}`)).toEqual([`specificPlaylistOperation ${PP}`, 'route vh1', 'rec hd1'])
 		expect(down(key)[0]).toEqual(down(LIVE.countdown)[0])
+		expect(down(key)[1].options).toEqual({
+			source: { value: 4, isExpression: false },
+			destination: { value: 13, isExpression: false },
+			ignore_lock: { value: true, isExpression: false },
+		})
+	})
+
+	it('is unchanged when run again, even after Companion renames its actions', () => {
+		const again = structuredClone(key)
+		for (const a of down(again)) a.id = `renamed-${a.definitionId}`
+		const essence = (c) => down(c).map(({ definitionId, connectionId, options }) => ({ definitionId, connectionId, options }))
+		expect(essence(countdownKey(again, ATEM, HD, VH))).toEqual(essence(key))
+	})
+
+	it('keeps a route to some other output', () => {
+		const other = structuredClone(key)
+		down(other)[1].options.destination.value = 9
+		expect(down(countdownKey(other, ATEM, HD, VH)).map((a) => a.definitionId)).toEqual(['specificPlaylistOperation', 'route', 'route', 'rec'])
 	})
 
 	it('changes nothing else about the key', () => {
@@ -119,8 +139,8 @@ describe('the Countdown key', () => {
 	})
 
 	it('leaves a step with no action sets alone', () => {
-		expect(countdownKey({ steps: { 0: {} } }, ATEM, HD)).toEqual({ steps: { 0: {} } })
-		expect(countdownKey({}, ATEM, HD)).toEqual({})
+		expect(countdownKey({ steps: { 0: {} } }, ATEM, HD, VH)).toEqual({ steps: { 0: {} } })
+		expect(countdownKey({}, ATEM, HD, VH)).toEqual({})
 	})
 })
 
@@ -144,7 +164,7 @@ describe('converting the rig', () => {
 	it('passes over keys and pages with nothing in them', () => {
 		expect(isRecordKey({}, ATEM, HD)).toBe(false)
 		expect(isRecordKey({ steps: { 0: {} } }, ATEM, HD)).toBe(false)
-		expect(countdownKey({ steps: { 0: { action_sets: { down: null } } } }, ATEM, HD)).toEqual({ steps: { 0: { action_sets: { down: null } } } })
+		expect(countdownKey({ steps: { 0: { action_sets: { down: null } } } }, ATEM, HD, VH)).toEqual({ steps: { 0: { action_sets: { down: null } } } })
 		const sparse = convertPages(rig({ ...PAGES, 7: { name: 'VW' }, 8: { name: 'System', controls: { 1: null } } }))
 		expect(sparse.changed.map((c) => c.name)).toEqual(['Home', 'PP1', 'ATEM'])
 	})
