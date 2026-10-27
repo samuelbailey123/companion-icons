@@ -44,7 +44,7 @@ camera's pair behind that.
 | 10 | PTZ Setup | the same camera | Exposure, white balance, backlight, power, tracking mode and body framing |
 | 11 | PTZ 2 | **CAM 1**, the PTZ on 10.23.0.196 | The same page, built by the same code, bound to the second camera and its own `ptz2_*` variables |
 | 12 | PTZ 2 Setup | the same camera | As page 10, for the second camera |
-| 18 | Videohub | nothing now | The router page as it was before it became VW (2026-10-26). Nothing opens it since 2026-10-27; its Back key goes to VW. Safe to delete: it is the last page, so no other page renumbers |
+| 18 | Videohub | nothing now | The router page as it was before it became VW (2026-10-26). Nothing opens it since 2026-10-27; its Back key goes to VW. Deleting it renumbers the pages after it (SQ7's fader folders, 19–24, since 2026-10-27), so rebuild those after a delete |
 
 **Both cameras run one page layout.** Pages 11 and 12 are emitted by the same
 `buildPage`/`buildSetupPage` calls as 9 and 10, and the build asserts they are identical
