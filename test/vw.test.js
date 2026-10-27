@@ -136,5 +136,19 @@ describe('refusing a page it does not recognise', () => {
 
 	it('refuses to overwrite something else at the end of row 1', () => {
 		expect(tweak((p) => (p.controls[1][8] = { options: { notes: 'something' } }))).toThrow(/VW 1\/8 is not free/)
+		expect(tweak((p) => (p.controls[1][8] = {}))).toThrow(/VW 1\/8 is not free/)
+	})
+
+	it('refuses keys stripped of their actions, feedback or text', () => {
+		expect(tweak((p) => (p.controls[1][0].steps = {}))).toThrow(/VW 1\/0 is not the Right Projector/)
+		expect(tweak((p) => delete p.controls[3][0].feedbacks)).toThrow(/VW 3\/0 is not lit/)
+		expect(tweak((p) => delete p.controls[4][0].style)).toThrow(/VW 4\/0 is not the output 1 readout/)
+	})
+
+	it('gives a key that had no feedback the highlight with nothing restyled', () => {
+		const page = structuredClone(LIVE)
+		delete page.controls[1][0].feedbacks
+		const [fb] = repointVW(page, VH, '18').controls[1][0].feedbacks
+		expect(fb).toMatchObject({ id: 'fb', definitionId: 'selected_destination', styleOverrides: [] })
 	})
 })
