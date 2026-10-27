@@ -11,14 +11,14 @@ all and needs hands on the equipment.
 
 | | |
 |---|---|
-| Companion | Build `5.0.4+9717-stable-a69c14dec2` on a Raspberry Pi (`internal:hostname` reads `CompanionPi`) |
+| Companion | Build `5.0.7+9763-stable-cec2f88e6f` (2026-10-27) on a Raspberry Pi 5, 8 GB, Debian 13 CompanionPi image (`internal:hostname` reads `CompanionPi`). Runs as user `companion`; settings in `/etc/companion/config.yaml`, which must keep `enableShellCommandSupport: true` |
 | Address | **http://10.23.0.242:8000** on the AV LAN — see Network below. Not reachable off-site |
 | Updates | **Companion updates itself unattended.** On 2026-08-28 it went 5.0.3 → 5.0.4 and restarted on its own; Pi uptime was 40d, so the Pi did not reboot. The same thing landing on a Sunday morning takes the deck down mid-service |
 | Admin API | tRPC over a WebSocket at `/trpc`, **unauthenticated** — anyone on the AV LAN can read the config and the log |
 | Surfaces | Stream Deck + and Stream Deck XL. The XL grid is 9 columns; row 0 is the folder row on every page, row 4 the touchstrip, row 5 the encoders |
-| Config in/out | `node tools/rig.js export <out.json>` reads the live config; `import` pushes selected sections. See the header of that file for why it exists and why it never touches `connections` or `userconfig`. **`tools/rig.js` is not on `main`** — it currently lives only on the `atem-stream-record` branch |
+| Config in/out | `node tools/rig.js export <out.json>` reads the live config; `import` pushes selected sections. See the header of that file for why it exists and why it never touches `connections` or `userconfig`. |
 | Reading it without the tool | The export half is one plain HTTP GET: `curl -s http://10.23.0.242:8000/int/export/full \| gunzip > rig.json`. Useful when you are on the LAN with no checkout |
-| Backup | `tools/rig.js export` **is** the backup. Run it before any change. **The file carries the ProPresenter and grandMA2 passwords in clear text** — treat an export as a credential, not as a document |
+| Backup | `tools/rig.js export` **is** the backup. Run it before any change. **The file carries the ProPresenter and grandMA2 passwords in clear text** — treat an export as a credential, not as a document: keep it in the private Drive folder, never here. The Pi's nightly `companion-backup.timer` (03:17) writes to a USB drive labelled `storage`, which **was not plugged in on 2026-10-27** (fault 7). The Recovery Guide in `manual/` has the restore steps |
 
 `tools/rig.js` talks tRPC over a WebSocket at `/trpc`, the same way Companion's own web UI
 does. The rig address is hardcoded there on purpose so the tool can never be pointed at
@@ -26,25 +26,31 @@ the wrong Companion by a typo.
 
 ## Pages
 
-**Twelve**, in this order, each with the folder row across the top. Read off the live rig on
-2026-08-28 — the Mics page is gone, replaced by PTZ, with PTZ Setup behind it and a second
-camera's pair behind that.
+**Eighteen.** The folder row across the top of every page but Videohub holds nine: Home, Power,
+PP1, MA2, ATEM, SQ7, VW, PTZ, System. The other nine are sub-pages, opened from a key. Read off the
+live rig on 2026-10-27; the Reference in `manual/` draws every one of them, key by key, and is
+regenerated from the rig, so it wins wherever this table has gone stale.
 
-| # | Page | Drives | Notes |
-|---|---|---|---|
-| 1 | Home | nothing — status only | Projectors, PA, PROGRAM, PREVIEW, Stream, Record, three ATEM macros. **No longer carries mic batteries, packs, internet or CPU temp** — those moved to System or went away with the Mics page. The deck resumes on its last page, so this is where you land after a restart |
-| 2 | Power | Projectors, PA | One state-aware toggle per system; direction is worked out from polled state, not a step counter |
-| 3 | PP1 | ProPresenter | Speaker and Worship are duration presets on one shared timer — 45 min and 25 min, not two timers. **Freeze Slide** at r1c8 (on the rig since 2026-10-10, `tools/pp1-freeze.js`) fires ProPresenter's "Freeze" macro: Slide Destination, Stage Only, so clicks stop reaching the audience screens and what is up stays up. **All Screens** at r2c7 releases it. It holds every audience output, the stream's words overlay included. ProPresenter's API cannot give a macro its actions, so the macro was made by hand. **Pre-Service** at r2c3 (since 2026-10-11, `tools/pp1-preservice.js`) fires the pre-roll, the first presentation in the Sunday Service playlist; like Countdown it triggers by playlist index, so re-run the tool if items are added above it |
-| 4 | MA2 | grandMA2 lighting | Executors 101–109 across row 1, Go Next / Go Back / BLACKOUT below, four encoders on row 5 |
-| 5 | ATEM | Television Studio HD8 | Program bus over preview bus, CUT and AUTO at column 8. The eight bus keys are inputs 1–7 plus Media Player 1 — **input 8, the PTZ, has no key on either bus** |
-| 6 | SQ7 | Allen & Heath SQ7 | DCA 1–8 with level and mute state, Mute DCAs key. Stream / Foyer / MAIN readouts on the touchstrip |
-| 7 | VW | Blackmagic Videohub + LED wall | Five destinations over four sources: tap a destination to select it, tap a source to route. Two direct routes, four Videohub readouts, a brightness encoder for the wall, and **Videohub** at r1c8, which opens page 18. Repointed to the post-move port numbers on 2026-10-26 (`src/vw.js`) |
-| 8 | System | the Pi itself | CPU temp, load, memory, disk, power, internet, address, uptime, Companion, storage. Fed by an `internal: exec` trigger because Companion publishes no OS-level variables |
-| 9 | PTZ | **CAM 3**, the PTZ on 10.23.0.181 | 48 controls: five presets, a camera-swap key, a nudge cluster, zoom/focus, tracking, and pan/tilt/zoom/focus/speed/preset encoders. Fed by `ptz_state.py` on a **1-second** trigger and `ptz_web.py` on a 5-second one |
-| 10 | PTZ Setup | the same camera | Exposure, white balance, backlight, power, tracking mode and body framing |
-| 11 | PTZ 2 | **CAM 1**, the PTZ on 10.23.0.196 | The same page, built by the same code, bound to the second camera and its own `ptz2_*` variables |
-| 12 | PTZ 2 Setup | the same camera | As page 10, for the second camera |
-| 18 | Videohub | the whole router | Every output (rows 0–1, OUT 1–16) over every input (rows 2–3, IN 1–16), each captioned with the router's own live label; an output key also shows what feeds it. Tap an output to select it (violet), tap an input to route it there at once; the input feeding the selected output is green. **No folder row**: 32 ports need all four rows, so a Back key at r0c8 returns to VW. Since 2026-10-26, `tools/switch-page.js` |
+| # | Page | Drives | Opened from | Notes |
+|---|---|---|---|---|
+| 1 | Home | nothing — status only | folder row | Projectors, PA, Dante, PROGRAM, PREVIEW, Stream, Record, three ATEM macros. The deck resumes on its last page, so check where it is after a restart |
+| 2 | Power | Projectors, PA | folder row | One state-aware toggle per system; direction is worked out from polled state, not a step counter |
+| 3 | PP1 | ProPresenter | folder row | Clear keys, Next/Previous, **Freeze Slide** at r1c8 (`tools/pp1-freeze.js`, released by **All Screens** at r2c7), **Pre-Service** at r2c3 and **Countdown** at r2c6 (both trigger by playlist index: re-run their tools if items are added above them), Stage layout swap, and the Hosting / Speaker / Worship timers with their readouts on the strip |
+| 4 | MA2 | grandMA2 lighting | folder row | Executors 101–109 across row 1, Go Next / Go Back / BLACKOUT below, four encoders on row 5 |
+| 5 | ATEM | Television Studio HD8 | folder row | Program bus over preview bus, CUT and AUTO at column 8, guarded Stream, Record (the HyperDeck), three macros |
+| 6 | SQ7 | Allen & Heath SQ7 | folder row | DCA 1–8 with level and mute state, Mute DCAs key, Dante at r2c8. Stream / Foyer / MAIN readouts on the touchstrip |
+| 7 | VW | Blackmagic Videohub + LED wall | folder row | Five destinations over four sources: tap a destination to select it, tap a source to route. Two direct routes, four Videohub readouts, a brightness encoder for the wall, and **Videohub** at r1c8 |
+| 8 | System | the Pi itself | folder row | CPU temp, load, memory, disk, power, internet, address, uptime, Companion, storage. Fed by an `internal: exec` trigger |
+| 9 | PTZ | nothing: a chooser | folder row | Opens CAM 1, CAM 3, their Setup pages, Worship and Sermon. The camera keys are captioned with each camera's ATEM input |
+| 10 | CAM 1 | the PTZ on 10.23.0.196 | PTZ | Presets, save, nudge, zoom/focus, tracking, and pan/tilt/zoom/focus/speed/preset encoders. Fed by `ptz_state.py` every second and `ptz_web.py` every 5 s |
+| 11 | CAM 1 Setup | the same camera | PTZ, CAM 1 | Exposure, white balance, backlight, power, tracking mode and body framing |
+| 12 | CAM 3 | the PTZ on 10.23.0.181 (the switcher's "Cam 2" since 2026-10-26) | PTZ | As CAM 1, built by the same code |
+| 13 | CAM 3 Setup | the same camera | PTZ, CAM 3 | As CAM 1 Setup |
+| 14 | Tracks | walk-in music on the PP1 iMac | PP1 r2c4 | Play/pause, previous, skip, fade out, title and volume (`tools/pp1-tracks.js`) |
+| 15 | Worship | both PTZs | PTZ, Sermon | Both cameras side by side: presets, save, speed, autofocus, pan/tilt/zoom knobs |
+| 16 | Sermon | both PTZs | PTZ, Worship | Both cameras for the sermon: tracking, framing, who to follow, and pan/tilt/zoom by hand |
+| 17 | Dante | nothing: read only | Home r1c2, SQ7 r2c8 | Every Dante source into the SQ7 and whether its routes are up (`tools/dante-page.js`) |
+| 18 | Videohub | the whole router | VW r1c8 | Every output over every input, captioned with the router's own labels. **No folder row**: a Back key at r0c8 returns to VW (`tools/switch-page.js`) |
 
 **Both cameras run one page layout.** Pages 11 and 12 are emitted by the same
 `buildPage`/`buildSetupPage` calls as 9 and 10, and the build asserts they are identical
@@ -130,7 +136,7 @@ Read off the live Companion on 2026-08-28 and confirmed against each device on t
 | Allen & Heath SQ7 | Audio console | **10.23.0.191** (2026-10-26) |
 | grandMA2 | Lighting | **10.23.0.99** (2026-10-26) for the console login; OSC out to :8000 and feedback in on :9000 |
 | Shure ULXD4Q × 3 + ULXD4D × 1 | Wireless, **14** channels — not 16 | `10.23.0.20` "BGV 1-4" (Q), `10.23.0.23` "Lead 1-4" (Q), `10.23.0.253` "BGV+Host" (Q), `10.23.0.214` "Preach" — **a ULXD4D, two channels only**, Lav 1 and Lav 2. All on :2202 |
-| ProPresenter | Presentation | **10.23.0.111**:1100. A follower is configured at 10.23.0.11 but `control_follower` is off, and nothing is listening there |
+| ProPresenter | Presentation, on the PP1 iMac | **10.23.0.204**:1100 (2026-10-27; it was 10.23.0.111). A follower is configured at 10.23.0.11 but `control_follower` is off, and nothing is listening there |
 | NovaStar VX6S | LED wall processor | **10.23.0.23**:5200 (was .19 until August 2026) |
 | FoMaKo UV602 PTZ — **CAM 3** pages, shown as **CAM 2** | Camera, VISCA over IP, **ATEM input 2 since 2026-10-26** (was 3). The chooser, tally and captions read `ptz_atem_input`; the pages keep their CAM 3 names | **10.23.0.181**:5678, with an unauthenticated HTTP API on :80 that `ptz_web.py` drives |
 | FoMaKo UV602 PTZ — **CAM 1** | Camera, added 2026-08-28, ATEM input 1 | **10.23.0.196**:5678, same API |
@@ -179,15 +185,13 @@ none of them will fix themselves.
    there is no expression to fail, and both pages share one selection. `vh_dest` is unused.
    After a Companion restart nothing is selected, and an input press then sends nothing:
    checked on the rig by watching the router while pressing one.
-3. **The PTZ cannot be cut to from the deck.** It is on ATEM input 8, but the ATEM page's
-   program and preview buses carry inputs 1–7 and Media Player 1. With a second PTZ going
-   in, that gap gets worse.
-4. **Two pages depend on scripts that are not backed up.** The Power page and both PTZ
-   pages shell out to `/home/samuelbailey/Desktop/AV_Power_scripts/{speaker,projector}_power.py`,
-   `ptz_state.py` and `ptz_web.py` — a personal Desktop folder on the Pi, owned by a
-   different user than the one Companion runs as. They are not in this repo and
-   `rig.js export` does not capture them. Losing that folder silently kills the Power page
-   and every PTZ readout.
+3. ~~**The PTZ cannot be cut to from the deck.**~~ **Gone with the 2026-10-26 re-patch**: the
+   two PTZs are ATEM inputs 1 and 2 now, and the ATEM page's buses carry inputs 1–7 and Media
+   Player 1. Inputs 7 and 8 are not fed by the router.
+4. ~~**Two pages depend on scripts that are not backed up.**~~ **Backed up 2026-10-27** in
+   `pi/`, passwords swapped for their 1Password entries; refresh with `node tools/pi-backup.js`
+   whenever a script on the Pi changes. They still live in a personal Desktop folder on the Pi,
+   `/home/samuelbailey/Desktop/AV_Power_scripts`, which every key calls by full path.
 5. **The PTZ poll runs at 1 Hz, always.** `trigger-ptz-poll` fires every second whether or
    not anyone is on the PTZ page. The Pi is not struggling (load 0.02, 62 °C, 16% memory,
    3% disk), so this is a tidiness point rather than an urgent one.
@@ -196,6 +200,23 @@ none of them will fix themselves.
    export are served without authentication. Record where a credential lives, assume
    anything in a Companion connection is visible on this LAN, and keep export files
    somewhere that reflects that.
+
+Found by the manual build on 2026-10-27:
+
+7. **The nightly Companion backup is not running.** `companion-backup.timer` fires at 03:17
+   and fails with "Dependency failed": it needs `/mnt/storage`, a USB drive labelled `storage`,
+   and none is plugged in. Until one is, the only backups are exports taken by hand.
+8. **The PA relay's password is effectively public.** It is the same word as the PP1 iMac's
+   account name, which `chrome_tracks.sh` (in this public repo) has to name. Change it on the
+   relay and in 1Password.
+9. **The grandMA2 connection's password is a short dictionary word.** Change it on the
+   lighting PC and in the Companion connection.
+10. **Two notes on the rig have gone stale.** The *Sunday pre-service* trigger's note says it
+    cuts to input 7; it cuts to input 3 (PP1) since 2026-10-26. The PP1 *Countdown* key's note
+    says it starts the ATEM recording; it records on the HyperDeck and starts the stream.
+11. **Companion lists 25 surfaces besides the two Stream Decks**: one Service Health deck
+    session per browser that has opened the board's Deck tab, and four "timing probe"
+    satellites left from testing. Harmless, but the stale ones clutter Surfaces.
 
 ## Video routing
 

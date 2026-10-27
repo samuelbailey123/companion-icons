@@ -1,0 +1,86 @@
+PROTOCOL PREAMBLE:
+Version: 2.5
+
+VIDEOHUB DEVICE:
+Device present: true
+Model name: Blackmagic Micro Videohub
+Friendly name: Blackmagic Micro Videohub 7c2e0d0157d2
+Unique ID: 7c2e0d0157d2
+Video inputs: 16
+Video processing units: 0
+Video outputs: 16
+Video monitoring outputs: 0
+Serial ports: 0
+
+INPUT LABELS:
+0 Aux 1
+1 Multiview
+2 Aux 2
+3 Program
+4 Input 5
+5 Input 6
+6 Camera 1
+7 Camera 2
+8 Input 9
+9 Input 10
+10 Input 11
+11 Input 12
+12 Input 13
+13 Words Overlay
+14 PP1B
+15 PP1
+
+OUTPUT LABELS:
+0 ATEM 1
+1 ATEM 2
+2 ATEM 3
+3 ATEM 4
+4 ATEM 5
+5 ATEM 6
+6 Output 7
+7 Backwall Projector
+8 Mini Screen 1
+9 Mini Screen 2
+10 Seetec Mono
+11 Output 12
+12 Deck Recorder
+13 LED Wall
+14 Left Projector
+15 Right Projector
+
+VIDEO OUTPUT LOCKS:
+0 U
+1 U
+2 U
+3 U
+4 U
+5 U
+6 U
+7 U
+8 U
+9 U
+10 U
+11 U
+12 U
+13 U
+14 U
+15 U
+
+VIDEO OUTPUT ROUTING:
+0 6
+1 7
+2 15
+3 14
+4 13
+5 12
+6 3
+7 14
+8 0
+9 2
+10 1
+11 15
+12 3
+13 15
+14 15
+15 15
+

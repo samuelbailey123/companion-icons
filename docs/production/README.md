@@ -18,6 +18,7 @@ writes the live Companion. See [rig.md](rig.md) for the topology.
 | [recorder.md](recorder.md) | Format, profile, file splitting |
 | [checklists.md](checklists.md) | Pre-service and post-service run-throughs |
 | [findings/](findings/) | What was measured off real recordings, by date |
+| [../../manual/](../../manual/) | The rig manual as PDFs: Operator Guide, Reference (generated from the live rig), Recovery Guide |
 
 Post-production is scripted separately and lives on the media drive at
 `Services/_tools/` — render pipeline plus its own README.
