@@ -177,6 +177,13 @@ export const SUB_PAGES = {
 	Tracks: 'PP1',
 	// Dante routing and device health, read-only, opened from SQ7's Dante key (tools/dante-page.js).
 	Dante: 'SQ7',
+	// Fader folders, a knob per fader, opened from SQ7's bottom row (src/sq7-faders.js).
+	'DCA 1-4': 'SQ7',
+	'DCA 5-8': 'SQ7',
+	Leads: 'SQ7',
+	BGV: 'SQ7',
+	Lav: 'SQ7',
+	FX: 'SQ7',
 	// Every router input and output, opened from VW's Videohub key (src/switch.js). The one
 	// sub-page with no folder row: its 32 ports need all four rows, so it has a Back key instead.
 	Videohub: 'VW',
