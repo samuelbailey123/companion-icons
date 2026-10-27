@@ -124,8 +124,9 @@ Read off the live Companion on 2026-08-28 and confirmed against each device on t
 
 | Device | Role | Address |
 |---|---|---|
-| ATEM Television Studio HD8 | Vision mixer, program record | **10.23.0.34** (2026-10-26), control on UDP 9910. Also answers the Blackmagic routing protocol on TCP 9990, which is how its identity was confirmed: unique ID `1947523eab1a4015aa81b6a4ae2dfe43`, the same uuid stamped into the recordings. That same port reports its video standard — `1080p59.94` — and its aux routing, and accepts routing changes |
+| ATEM Television Studio HD8 | Vision mixer and **stream** (recording moved to the HyperDeck on 2026-10-26) | **10.23.0.34** (2026-10-26), control on UDP 9910. Also answers the Blackmagic routing protocol on TCP 9990, which is how its identity was confirmed: unique ID `1947523eab1a4015aa81b6a4ae2dfe43`, the same uuid stamped into the recordings. That same port reports its video standard — `1080p59.94` — and its aux routing, and accepts routing changes |
 | Blackmagic Micro Videohub, 16×16 | Routing to the screens **and to the switcher's inputs 1–6** | **10.23.0.21**:9990. Re-patched on 2026-10-26: see Video routing below |
+| HyperDeck Studio Mini | **Records the service** since 2026-10-26, from Videohub OUT 13 | **10.23.0.206**:9993, Companion connection `hyperdeck` (bmd-hyperdeck 3.2.0). SD cards only. See recorder.md |
 | Allen & Heath SQ7 | Audio console | **10.23.0.191** (2026-10-26) |
 | grandMA2 | Lighting | **10.23.0.99** (2026-10-26) for the console login; OSC out to :8000 and feedback in on :9000 |
 | Shure ULXD4Q × 3 + ULXD4D × 1 | Wireless, **14** channels — not 16 | `10.23.0.20` "BGV 1-4" (Q), `10.23.0.23` "Lead 1-4" (Q), `10.23.0.253` "BGV+Host" (Q), `10.23.0.214` "Preach" — **a ULXD4D, two channels only**, Lav 1 and Lav 2. All on :2202 |
@@ -166,7 +167,8 @@ Found by reading the live config on 2026-08-28. None of these are network proble
 none of them will fix themselves.
 
 1. **The Record key has no two-step guard.** Home `2,3` and ATEM `3,1` are a single press
-   straight into `recordStartStop`. The Stream key beside it has the guard — two steps,
+   straight into the HyperDeck's `recordStopToggle` (the ATEM's `recordStartStop` before
+   2026-10-26). The Stream key beside it has the guard — two steps,
    arm then fire — and Record does not. This is exactly the 7.6 s gap from 2026-08-23: one
    stray press stops the recording. The record *state* indicator did ship, on both keys,
    so the other half of that fix is in.
@@ -228,8 +230,8 @@ name — not what they are.
 
 ## The ISO problem
 
-The HD8 is the **plain** variant, and it records its own **program feed only** — there is
-no separate recorder in the chain at all. That has a
+The HD8 is the **plain** variant, and the HyperDeck that records since 2026-10-26 takes one SDI
+feed, the program — so there is still no second angle. That has a
 direct consequence for post, and it is the single biggest constraint on making clips:
 
 > Every clip inherits whatever the operator cut to at that moment. There is no second
