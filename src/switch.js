@@ -1,20 +1,22 @@
 /**
- * The Switch deck: a Stream Deck of its own, given over entirely to the Videohub.
+ * The Videohub page: the whole router on the + XL, every output over every input.
  *
- * Every output is a key and every input is a key, outputs in the top half of the deck and
- * inputs in the bottom half. Tap an output to select it, tap an input and it is routed there
- * at once (Sam, 2026-10-26: "tap output, tap input: routes at once").
+ * Every output is a key and every input is a key, outputs on the top two rows and inputs on the
+ * bottom two. Tap an output to select it, tap an input and it is routed there at once (Sam,
+ * 2026-10-26: "tap output, tap input: routes at once"). It lives on the main deck (Sam: "same
+ * stream deck"), opened from VW's Videohub key.
  *
  * SELECTING IS SEPARATE FROM ROUTING, AND THAT IS THE SAFETY PROPERTY. An output key only
  * selects; no press on the top half can change what is on a screen. Only an input key sends a
- * route, and only to the output that is visibly lit.
+ * route, and only to the output that is visibly lit. Since the 2026-10-26 move the router also
+ * feeds the ATEM's inputs (outputs 1-6), so a stray route can take a camera off the switcher.
  *
- * THE SELECTION IS THE MODULE'S OWN, NOT A CUSTOM VARIABLE. The VW page arms a destination
- * through `custom_vh_dest`, and its "this input feeds the armed output" highlight has to build
+ * THE SELECTION IS THE MODULE'S OWN, NOT A CUSTOM VARIABLE. VW used to arm a destination
+ * through `custom_vh_dest`, and its "this input feeds the armed output" highlight had to build
  * a variable name out of that variable, which Companion's expression parser rejects (rig.md,
  * open fault 2). bmd-videohub keeps a selected destination itself: `select_destination` sets
  * it, `route_source` routes to it, and the `selected_destination` / `selected_source`
- * feedbacks read it. Nothing here parses an expression, so nothing here can fail to.
+ * feedbacks read it. VW's keys now share that selection (src/vw.js).
  *
  * LABELS ARE THE ROUTER'S, LIVE (Sam's choice). Each key shows `$(videohub:input_N)` or
  * `$(videohub:output_N)`, so a port renamed in Videohub Setup is renamed here with no rebuild.
@@ -22,28 +24,25 @@
  * defaults, and the number is what a cable is marked with. An output key also shows what is
  * feeding it, so the top half of the deck is the whole routing table at a glance.
  *
- * The page has no folder row. It belongs to one surface, which is pinned to it, and it is
- * never reached from the main deck's row (see SURFACE_PAGES in src/navrow.js).
+ * NO FOLDER ROW, BECAUSE 32 PORTS NEED ALL FOUR ROWS. With row 0 spent on folders the page has
+ * 27 keys. So this one sub-page breaks the deck's rule and carries a single Back key in the
+ * spare column instead; the touchstrip and knobs below are left empty.
  */
-import { GRID_SIZE } from './layout.js'
+import { COLUMNS, GRID_SIZE, KEY_ROWS } from './layout.js'
 
-export const PAGE_NAME = 'Switch'
+export const PAGE_NAME = 'Videohub'
+export const PARENT = 'VW'
 export const MODULE_ID = 'bmd-videohub'
-export const MARK = 'switch'
+export const MARK = 'videohub'
 
-/** How the surface is recognised when no id is given: by the name it carries in Companion. */
-export const SURFACE_NAME = /switch/i
+/** The + XL's key grid with no folder row: rows 0-3, nine across. */
+export const GRID = { columns: COLUMNS, rows: KEY_ROWS.length + 1 }
 
-/**
- * Rows of real keys, for decks whose grid also counts a touchstrip and a row of encoders.
- *
- * Companion reports the + XL as 9x6 and the + as 4x4, but only the top four and top two rows
- * are keys (see src/layout.js). A port laid on the strip or a knob would be a port with no key.
- */
-export const KEY_ROWS = { 'Elgato Stream Deck + XL': 4, 'Elgato Stream Deck +': 2 }
+/** Back to VW, top right: the column the ports leave free. */
+export const BACK_CELL = { row: 0, col: COLUMNS - 1 }
 
 /** Violet is the routing identity on this deck; inputs sit cooler, as on VW. */
-export const BG = { output: 0x241a42, input: 0x14243a }
+export const BG = { output: 0x241a42, input: 0x14243a, nav: 0x1f2937 }
 export const SELECTED = 0xa78bfa
 export const FEEDING = 0x1f6f3a
 
@@ -56,7 +55,7 @@ const expr = (value) => ({ value, isExpression: true })
  * The one Videohub connection, with the router's size and its variable prefix.
  *
  * Refuses Take mode: with it on, `route_source` queues a route and waits for a Take key this
- * deck does not have, so every input press would silently do nothing.
+ * page does not have, so every input press would silently do nothing.
  */
 export function findVideohub(full) {
 	const found = Object.entries(full.instances ?? {}).filter(([, i]) => i?.moduleId === MODULE_ID)
@@ -73,40 +72,19 @@ export function findVideohub(full) {
 }
 
 /**
- * The surface this page is for: the one with `surfaceId`, or the one named like "Switch".
- *
- * @throws naming every surface on the rig, so the right id can be passed instead
- */
-export function findSurface(full, surfaceId) {
-	const surfaces = Object.entries(full.surfaces ?? {})
-	const matches = surfaceId
-		? surfaces.filter(([id]) => id === surfaceId)
-		: surfaces.filter(([, s]) => SURFACE_NAME.test(s?.name ?? ''))
-	if (matches.length !== 1) {
-		const known = surfaces.map(([id, s]) => `${id} "${s?.name ?? ''}" ${s?.type ?? ''}`).join('; ') || 'none'
-		const wanted = surfaceId ? `surface ${surfaceId}` : `one surface named like ${SURFACE_NAME}`
-		throw new Error(`expected ${wanted}, found ${matches.length}. Surfaces: ${known}`)
-	}
-	const [[id, surface]] = matches
-	const { columns, rows } = surface.gridSize ?? {}
-	if (!(columns > 0 && rows > 0)) throw new Error(`surface ${id} has no grid size`)
-	return { surfaceId: id, name: surface.name ?? '', type: surface.type ?? '', grid: { columns, rows: KEY_ROWS[surface.type] ?? rows } }
-}
-
-/**
- * Where every key goes: outputs fill the top half of the deck, inputs the bottom half.
+ * Where every key goes: outputs fill the top half of the grid, inputs the bottom half.
  *
  * Both halves use the same row width, so input N sits in the same column as output N. Sixteen
- * and sixteen on a four-row deck is eight a row, which leaves column 8 of a nine-wide deck
- * empty rather than wrapping port 9 onto the first row.
+ * and sixteen on four rows is eight a row, which leaves the last column for the Back key rather
+ * than wrapping port 9 onto the first row.
  *
- * @throws when the router does not fit the deck, rather than silently dropping ports
+ * @throws when the router does not fit beside the Back key, rather than silently dropping ports
  */
-export function plan({ inputs, outputs }, grid) {
+export function plan({ inputs, outputs }, grid = GRID) {
 	const half = Math.floor(grid.rows / 2)
 	const perRow = half ? Math.ceil(Math.max(inputs, outputs) / half) : Infinity
-	if (perRow > grid.columns) {
-		throw new Error(`${outputs} outputs and ${inputs} inputs do not fit a ${grid.columns}x${grid.rows} deck`)
+	if (perRow > grid.columns - 1) {
+		throw new Error(`${outputs} outputs and ${inputs} inputs do not fit a ${grid.columns}x${grid.rows} deck beside a Back key`)
 	}
 	const cell = (n, firstRow) => ({ n, row: firstRow + Math.floor((n - 1) / perRow), col: (n - 1) % perRow })
 	const ports = (count, firstRow) => Array.from({ length: count }, (_, i) => cell(i + 1, firstRow))
@@ -137,20 +115,64 @@ const layers = (bg, lines) => [
 	...lines,
 ]
 
-const control = ({ bg, lines, notes, feedback, action }) => ({
+const control = ({ bg, lines, notes, feedbacks, action }) => ({
 	type: 'button-layered',
 	style: { layers: layers(bg, lines) },
 	options: {
 		stepProgression: 'auto', stepExpression: '', rotaryActions: false,
 		canModifyStyleInApis: false, notes,
 	},
-	feedbacks: [feedback],
+	feedbacks,
 	steps: { 0: { action_sets: { down: [action], up: [] }, options: { runWhileHeld: [] } } },
 	localVariables: [],
 })
 
 const recolour = (id, element, property, value) => ({
 	overrideId: `${id}-${element}`, elementId: element, elementProperty: property, override: v(value),
+})
+
+/** The module's "this output is selected" feedback, restyling the key with `styleOverrides`. */
+export const selectedOutput = (connectionId, id, n, styleOverrides) => ({
+	id,
+	type: 'feedback',
+	definitionId: 'selected_destination',
+	connectionId,
+	options: { output: v(n) },
+	isInverted: v(false),
+	styleOverrides,
+})
+
+/** The module's "this input feeds the selected output" feedback. */
+export const feedingSelected = (connectionId, id, n, styleOverrides) => ({
+	id,
+	type: 'feedback',
+	definitionId: 'selected_source',
+	connectionId,
+	options: { input: v(n) },
+	isInverted: v(false),
+	styleOverrides,
+})
+
+export const selectAction = (connectionId, id, n) => ({
+	id,
+	definitionId: 'select_destination',
+	connectionId,
+	options: { destination: v(n) },
+	upgradeIndex: null,
+	type: 'action',
+})
+
+/**
+ * Route input `n` to the selected output. Locks are ignored, as VW always did: nothing on this
+ * rig sets them, and a lock nobody remembers setting would make a key look broken mid-service.
+ */
+export const routeAction = (connectionId, id, n) => ({
+	id,
+	definitionId: 'route_source',
+	connectionId,
+	options: { source: v(n), ignore_lock: v(true) },
+	upgradeIndex: null,
+	type: 'action',
 })
 
 /** An output key: shows its name and what feeds it, and selects it. It routes nothing. */
@@ -164,26 +186,13 @@ export function outputKey({ connectionId, label }, n) {
 			text('feed', 70, 28, expr(`$(${label}:output_${n}_input)`), INK.feed, 60),
 		],
 		notes: `${MARK}: select output ${n} as the destination`,
-		feedback: {
-			id,
-			type: 'feedback',
-			definitionId: 'selected_destination',
-			connectionId,
-			options: { output: v(n) },
-			isInverted: v(false),
-			styleOverrides: [
+		feedbacks: [
+			selectedOutput(connectionId, id, n, [
 				recolour(id, 'box0', 'color', SELECTED),
 				...['port', 'name', 'feed'].map((line) => recolour(id, line, 'color', INK.selected)),
-			],
-		},
-		action: {
-			id: `${id}-select`,
-			definitionId: 'select_destination',
-			connectionId,
-			options: { destination: v(n) },
-			upgradeIndex: null,
-			type: 'action',
-		},
+			]),
+		],
+		action: selectAction(connectionId, `${id}-select`, n),
 	})
 }
 
@@ -191,8 +200,7 @@ export function outputKey({ connectionId, label }, n) {
  * An input key: routes this input to the selected output, at once.
  *
  * It lights when it is already what the selected output is showing, so the two lit keys read
- * as "that screen is getting this picture". Locks are ignored, as on VW: nothing on this rig
- * sets them, and a lock nobody remembers setting would make a key look broken mid-service.
+ * as "that screen is getting this picture".
  */
 export function inputKey({ connectionId, label }, n) {
 	const id = `${MARK}-in-${n}`
@@ -200,33 +208,50 @@ export function inputKey({ connectionId, label }, n) {
 		bg: BG.input,
 		lines: [
 			text('port', 2, 20, v(`IN ${n}`), INK.port, 80),
-			text('name', 24, 72, expr(`$(${label}:input_${n})`), INK.name, 51),
+			// The same band as an output's name: font size is a share of the band, so a taller one
+			// set "Program" so large that it broke mid-word (seen on the rig 2026-10-26).
+			text('name', 36, 46, expr(`$(${label}:input_${n})`), INK.name, 51),
 		],
 		notes: `${MARK}: route input ${n} to the selected output`,
-		feedback: {
-			id,
-			type: 'feedback',
-			definitionId: 'selected_source',
-			connectionId,
-			options: { input: v(n) },
-			isInverted: v(false),
-			// The grey port number is too faint on green, so it goes white with the name.
-			styleOverrides: [recolour(id, 'box0', 'color', FEEDING), recolour(id, 'port', 'color', INK.name)],
-		},
+		// The grey port number is too faint on green, so it goes white with the name.
+		feedbacks: [feedingSelected(connectionId, id, n, [recolour(id, 'box0', 'color', FEEDING), recolour(id, 'port', 'color', INK.name)])],
+		action: routeAction(connectionId, `${id}-route`, n),
+	})
+}
+
+/**
+ * A key that opens page `pageNumber`, with an icon over a caption like every other key here.
+ * Navigation is `internal: set_page` on the surface that pressed it, as on the folder row.
+ */
+export function pageKey({ id, icon, label, pageNumber, notes }) {
+	return control({
+		bg: BG.nav,
+		lines: [
+			{
+				id: 'image0', name: 'Icon', usage: 'auto', type: 'image',
+				enabled: v(true), opacity: v(100),
+				x: v(0), y: v(2), width: v(100), height: v(44), rotation: v(0),
+				base64Image: v(`$(image:${icon})`),
+				halign: v('center'), valign: v('center'), fillMode: v('fit'),
+			},
+			text('text0', 46, 52, v(label), INK.name, 51),
+		],
+		notes,
+		feedbacks: [],
 		action: {
-			id: `${id}-route`,
-			definitionId: 'route_source',
-			connectionId,
-			options: { source: v(n), ignore_lock: v(true) },
+			id: `${id}-open`,
+			definitionId: 'set_page',
+			connectionId: 'internal',
+			options: { surfaceId: v('self'), page: v(String(pageNumber)) },
 			upgradeIndex: null,
 			type: 'action',
 		},
 	})
 }
 
-/** The Switch page for a router on a deck of `grid`. */
-export function buildSwitchPage(videohub, grid) {
-	const layout = plan(videohub, grid)
+/** The Videohub page for a router, with its Back key pointing at VW's page number. */
+export function buildVideohubPage(videohub, vwPage) {
+	const layout = plan(videohub)
 	const controls = {}
 	const place = ({ row, col }, key) => {
 		controls[row] ??= {}
@@ -234,24 +259,30 @@ export function buildSwitchPage(videohub, grid) {
 	}
 	for (const cell of layout.outputs) place(cell, outputKey(videohub, cell.n))
 	for (const cell of layout.inputs) place(cell, inputKey(videohub, cell.n))
+	place(
+		BACK_CELL,
+		pageKey({ id: `${MARK}-back`, icon: 'back', label: PARENT, pageNumber: vwPage, notes: `${MARK}: back to ${PARENT} (page ${vwPage})` })
+	)
 	return { name: PAGE_NAME, gridSize: { ...GRID_SIZE }, controls }
 }
 
 /**
- * Everything the tool writes, from a live export.
+ * The Videohub page from a live export, and the page number it lands on.
  *
- * Rebuilding replaces the existing Switch page in place, keeping its id, so the surface pinned
- * to it stays pinned. A first build lands after the last page.
+ * Rebuilding replaces the existing page in place, keeping its id. A first build lands after the
+ * last page, which is where Companion's "import to a new page" puts it.
  */
-export function buildConfig(full, surfaceId) {
+export function buildConfig(full) {
 	const videohub = findVideohub(full)
-	const surface = findSurface(full, surfaceId)
 	const numbers = Object.keys(full.pages ?? {}).map(Number)
 	if (Math.max(...numbers) !== numbers.length) {
 		throw new Error(`pages are not numbered 1..${numbers.length}; a new page would not land after the last`)
 	}
-	const existing = Object.entries(full.pages).find(([, p]) => p.name === PAGE_NAME)?.[0]
-	const page = buildSwitchPage(videohub, surface.grid)
+	const numberOf = (name) => Object.entries(full.pages).find(([, p]) => p.name === name)?.[0]
+	const vwPage = numberOf(PARENT)
+	if (!vwPage) throw new Error(`no ${PARENT} page on this rig to open the ${PAGE_NAME} page from`)
+	const existing = numberOf(PAGE_NAME)
+	const page = buildVideohubPage(videohub, vwPage)
 	if (existing) page.id = full.pages[existing].id
-	return { videohub, surface, page, number: existing ?? String(numbers.length + 1), existing: Boolean(existing) }
+	return { videohub, page, number: existing ?? String(numbers.length + 1), existing: Boolean(existing), vwPage }
 }

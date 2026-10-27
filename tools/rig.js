@@ -7,7 +7,6 @@
  *   node tools/rig.js import-page <page.companionconfig> <targetPage>|new
  *   node tools/rig.js add-trigger <bundle.companionconfig> <triggerId>
  *   node tools/rig.js create-vars <bundle.companionconfig>
- *   node tools/rig.js pin-surface <surfaceId> <pageNumber>
  *   node tools/rig.js log [minutes]
  *
  * Sections: buttons, triggers, customVariables, expressionVariables, imageLibrary,
@@ -206,33 +205,6 @@ export async function addTrigger(client, file, bundle, live, triggerId) {
 	return name
 }
 
-/**
- * Pin a surface to one page: it starts there, goes there now, and can show no other.
- *
- * These are the surface group settings the Surfaces tab edits (Companion 5's `restrict_pages`
- * and `allowed_page_ids`), set one key at a time as the UI does. A surface outside any group is
- * its own group under its own id. Nothing else about the surface or any other surface changes,
- * which an import of the surfaces section could not promise.
- */
-export async function pinSurface(client, live, surfaceId, pageNumber) {
-	const page = live.pages?.[pageNumber]
-	if (!page?.id) throw new Error(`the rig has no page ${pageNumber}`)
-	if (!live.surfaces?.[surfaceId]) throw new Error(`the rig has no surface ${surfaceId}`)
-	const groupId = live.surfaces[surfaceId].groupId || surfaceId
-	const settings = [
-		['allowed_page_ids', [page.id]],
-		['restrict_pages', true],
-		['startup_page_id', page.id],
-		['use_last_page', false],
-		['last_page_id', page.id],
-	]
-	for (const [key, value] of settings) {
-		const err = await client.mutation('surfaces.groupSetConfigKey', { groupId, key, value })
-		if (err) throw new Error(`setting ${key} on ${groupId}: ${err}`)
-	}
-	return { groupId, page }
-}
-
 /** The UI's selection object with the named sections set to import and the rest untouched. */
 export function selection(sections) {
 	const config = {
@@ -320,22 +292,11 @@ if (command === 'export') {
 	} finally {
 		client.close()
 	}
-} else if (command === 'pin-surface') {
-	const [surfaceId, pageNumber] = args
-	if (!surfaceId || !pageNumber) throw new Error('usage: pin-surface <surfaceId> <pageNumber>')
-	const live = await exportFull()
-	const client = connect()
-	try {
-		const { groupId, page } = await pinSurface(client, live, surfaceId, pageNumber)
-		console.log(`pinned ${surfaceId} (group ${groupId}) to page ${pageNumber} "${page.name}"`)
-	} finally {
-		client.close()
-	}
 } else if (command === 'log') {
 	const minutes = Number(args[0] ?? 10)
 	const res = await fetch(`${RIG}/int/log`)
 	console.log(res.ok ? (await res.text()).slice(-8000) : `log unavailable over HTTP (${res.status}); use journalctl on the Pi for the last ${minutes} minutes`)
 } else {
-	console.error('usage: node tools/rig.js export <out.json> | import <bundle> <sections> | import-page <page-bundle> <targetPage>|new | add-trigger <bundle> <triggerId> | create-vars <bundle> | pin-surface <surfaceId> <pageNumber> | log [minutes]')
+	console.error('usage: node tools/rig.js export <out.json> | import <bundle> <sections> | import-page <page-bundle> <targetPage>|new | add-trigger <bundle> <triggerId> | create-vars <bundle> | log [minutes]')
 	process.exit(1)
 }

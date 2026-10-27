@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { assertNavCoverage, NAV_ORDER } from '../src/navrow.js'
+import { assertNavCoverage, NAV_ORDER, SUB_PAGES } from '../src/navrow.js'
 import {
+	BACK_CELL,
 	BG,
 	FEEDING,
+	GRID,
 	INK,
 	MODULE_ID,
 	PAGE_NAME,
+	PARENT,
 	SELECTED,
 	buildConfig,
-	buildSwitchPage,
-	findSurface,
+	buildVideohubPage,
 	findVideohub,
 	inputKey,
 	outputKey,
@@ -17,25 +19,19 @@ import {
 } from '../src/switch.js'
 import { contrastRatio } from '../src/wiring.js'
 
-const XL = { columns: 8, rows: 4 }
-const PLUS_XL = { columns: 9, rows: 4 }
-
 const hub = (config = {}) => ({
 	moduleId: MODULE_ID,
 	label: 'videohub',
 	config: { inputCount: 16, outputCount: 16, take: false, ...config },
 })
 
-const rig = ({ instances, surfaces, pages } = {}) => ({
+const rig = ({ instances, pages } = {}) => ({
 	instances: instances ?? { vh1: hub(), atem: { moduleId: 'bmd-atem', label: 'atem' } },
-	surfaces: surfaces ?? {
-		'streamdeck:main': { name: 'Main', type: 'Elgato Stream Deck + XL', gridSize: { columns: 9, rows: 6 } },
-		'streamdeck:sw': { name: 'Switch', type: 'Elgato Stream Deck XL', gridSize: XL },
-	},
 	pages: pages ?? Object.fromEntries(NAV_ORDER.map((name, i) => [String(i + 1), { id: `p${i + 1}`, name }])),
 })
 
 const VH = { connectionId: 'vh1', label: 'videohub', inputs: 16, outputs: 16 }
+const VW_PAGE = String(NAV_ORDER.indexOf('VW') + 1)
 
 const keysOf = (page) =>
 	Object.entries(page.controls).flatMap(([row, cols]) =>
@@ -68,40 +64,13 @@ describe('the Videohub connection', () => {
 	})
 })
 
-describe('the surface', () => {
-	it('finds the deck named Switch', () => {
-		expect(findSurface(rig())).toEqual({ surfaceId: 'streamdeck:sw', name: 'Switch', type: 'Elgato Stream Deck XL', grid: XL })
-	})
-
-	it('counts only key rows on decks with a touchstrip and knobs', () => {
-		expect(findSurface(rig(), 'streamdeck:main').grid).toEqual(PLUS_XL)
-		const plus = { 'sd:p': { name: 'Switch', type: 'Elgato Stream Deck +', gridSize: { columns: 4, rows: 4 } } }
-		expect(findSurface(rig({ surfaces: plus })).grid).toEqual({ columns: 4, rows: 2 })
-		expect(() => buildConfig(rig({ surfaces: plus }))).toThrow(/do not fit a 4x2 deck/)
-	})
-
-	it('takes an explicit id over the name', () => {
-		expect(findSurface(rig(), 'streamdeck:main').surfaceId).toBe('streamdeck:main')
-		expect(findSurface(rig({ surfaces: { 'sd:a': { gridSize: XL } } }), 'sd:a').name).toBe('')
-	})
-
-	it('names every surface when it cannot tell which one is meant', () => {
-		const unnamed = { 'sd:a': { type: 'Elgato Stream Deck XL', gridSize: XL }, 'sd:b': {} }
-		expect(() => findSurface(rig({ surfaces: unnamed }))).toThrow(
-			/found 0\. Surfaces: sd:a "" Elgato Stream Deck XL; sd:b ""/
-		)
-		expect(() => findSurface(rig(), 'nope')).toThrow(/expected surface nope, found 0/)
-		expect(() => findSurface({})).toThrow(/Surfaces: none/)
-	})
-
-	it('refuses a surface with no grid', () => {
-		expect(() => findSurface(rig({ surfaces: { 'sd:x': { name: 'Switch' } } }))).toThrow(/no grid size/)
-	})
-})
-
 describe('the layout', () => {
-	it('puts sixteen outputs over sixteen inputs, eight a row, on an XL', () => {
-		const { perRow, outputs, inputs } = plan(VH, XL)
+	it('is the + XL key grid with no folder row', () => {
+		expect(GRID).toEqual({ columns: 9, rows: 4 })
+	})
+
+	it('puts sixteen outputs over sixteen inputs, eight a row', () => {
+		const { perRow, outputs, inputs } = plan(VH)
 		expect(perRow).toBe(8)
 		expect(outputs[0]).toEqual({ n: 1, row: 0, col: 0 })
 		expect(outputs[15]).toEqual({ n: 16, row: 1, col: 7 })
@@ -109,20 +78,20 @@ describe('the layout', () => {
 		expect(inputs[15]).toEqual({ n: 16, row: 3, col: 7 })
 	})
 
-	it('keeps input N under output N, and leaves the ninth column empty, on a + XL', () => {
-		const { outputs, inputs } = plan(VH, PLUS_XL)
+	it('keeps input N under output N, and the last column free for Back', () => {
+		const { outputs, inputs } = plan(VH)
 		for (let i = 0; i < 16; i++) expect(inputs[i].col).toBe(outputs[i].col)
-		expect([...outputs, ...inputs].some((c) => c.col === 8)).toBe(false)
+		expect([...outputs, ...inputs].some((c) => c.col === BACK_CELL.col)).toBe(false)
 	})
 
 	it('fits a router with more outputs than inputs', () => {
-		const { outputs, inputs } = plan({ inputs: 4, outputs: 12 }, XL)
+		const { outputs, inputs } = plan({ inputs: 4, outputs: 12 })
 		expect(outputs.at(-1)).toEqual({ n: 12, row: 1, col: 5 })
 		expect(inputs.at(-1)).toEqual({ n: 4, row: 2, col: 3 })
 	})
 
-	it('refuses a router that does not fit, rather than dropping ports', () => {
-		expect(() => plan(VH, { columns: 5, rows: 3 })).toThrow(/16 outputs and 16 inputs do not fit a 5x3 deck/)
+	it('refuses a router that does not fit beside Back, rather than dropping ports', () => {
+		expect(() => plan({ inputs: 18, outputs: 18 })).toThrow(/18 outputs and 18 inputs do not fit a 9x4 deck beside a Back key/)
 		expect(() => plan(VH, { columns: 32, rows: 1 })).toThrow(/do not fit/)
 	})
 })
@@ -191,49 +160,71 @@ describe('legibility', () => {
 			[INK.name, BG.input], [INK.port, BG.input],
 			[INK.name, FEEDING],
 			[INK.selected, SELECTED],
+			[INK.name, BG.nav],
 		]
 		for (const [fg, bg] of pairs) expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(4.5)
 	})
 })
 
 describe('the page', () => {
-	const page = buildSwitchPage(VH, XL)
+	const page = buildVideohubPage(VH, VW_PAGE)
 	const keys = keysOf(page)
 
-	it('has every port exactly once and nothing else', () => {
+	it('has every port exactly once, plus Back', () => {
 		const notes = keys.map((k) => k.control.options.notes)
-		expect(keys).toHaveLength(32)
-		expect(new Set(notes).size).toBe(32)
-		expect(keys.every((k) => k.row < XL.rows && k.col < XL.columns)).toBe(true)
+		expect(keys).toHaveLength(33)
+		expect(new Set(notes).size).toBe(33)
+		expect(keys.every((k) => k.row < GRID.rows && k.col < GRID.columns)).toBe(true)
 	})
 
-	it('has no folder row: row 0 is outputs', () => {
-		expect(Object.values(page.controls[0]).every((c) => actionOf(c).definitionId === 'select_destination')).toBe(true)
+	it('has no folder row: row 0 is outputs and Back', () => {
+		const row0 = Object.entries(page.controls[0]).filter(([col]) => Number(col) !== BACK_CELL.col)
+		expect(row0.every(([, c]) => actionOf(c).definitionId === 'select_destination')).toBe(true)
 		expect(Object.values(page.controls[3]).every((c) => actionOf(c).definitionId === 'route_source')).toBe(true)
 	})
 
-	it('is a page the folder row lets exist without a folder', () => {
+	it('goes back to VW on the surface that pressed Back', () => {
+		const back = page.controls[BACK_CELL.row][BACK_CELL.col]
+		expect(actionOf(back)).toMatchObject({
+			definitionId: 'set_page',
+			connectionId: 'internal',
+			options: { surfaceId: { value: 'self' }, page: { value: VW_PAGE } },
+		})
+		expect(textOf(back, 'text0').value).toBe(PARENT)
+	})
+
+	it('leaves the touchstrip and knobs empty', () => {
+		expect(page.controls[4]).toBeUndefined()
+		expect(page.controls[5]).toBeUndefined()
+	})
+
+	it('is a VW sub-page, so the folder row accepts it', () => {
 		expect(page.name).toBe(PAGE_NAME)
+		expect(SUB_PAGES[PAGE_NAME]).toBe(PARENT)
 		expect(() => assertNavCoverage([...NAV_ORDER, page.name], 9)).not.toThrow()
 	})
 })
 
 describe('building from a live export', () => {
 	it('lands a first build after the last page', () => {
-		const { number, existing, page, surface, videohub } = buildConfig(rig())
+		const { number, existing, page, videohub, vwPage } = buildConfig(rig())
 		expect(number).toBe(String(NAV_ORDER.length + 1))
 		expect(existing).toBe(false)
 		expect(page.id).toBeUndefined()
-		expect(surface.surfaceId).toBe('streamdeck:sw')
 		expect(videohub.connectionId).toBe('vh1')
+		expect(vwPage).toBe(VW_PAGE)
 	})
 
-	it('replaces an existing Switch page in place, keeping its id', () => {
-		const pages = { 1: { id: 'p1', name: 'Home' }, 2: { id: 'sw', name: PAGE_NAME } }
-		const { number, existing, page } = buildConfig(rig({ pages }), 'streamdeck:sw')
+	it('replaces an existing Videohub page in place, keeping its id', () => {
+		const pages = { 1: { id: 'p1', name: 'VW' }, 2: { id: 'vh', name: PAGE_NAME } }
+		const { number, existing, page } = buildConfig(rig({ pages }))
 		expect(number).toBe('2')
 		expect(existing).toBe(true)
-		expect(page.id).toBe('sw')
+		expect(page.id).toBe('vh')
+	})
+
+	it('refuses a rig with no VW page to come back to', () => {
+		expect(() => buildConfig(rig({ pages: { 1: { name: 'Home' } } }))).toThrow(/no VW page/)
 	})
 
 	it('refuses pages that are not numbered 1..n', () => {

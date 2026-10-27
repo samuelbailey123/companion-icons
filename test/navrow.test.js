@@ -127,10 +127,6 @@ describe('coverage checks', () => {
 		)
 	})
 
-	it('lets a page pinned to its own surface stay off the row', () => {
-		expect(() => assertNavCoverage([...Object.keys(NUMBERS), 'Switch'], COLUMNS)).not.toThrow()
-	})
-
 	it('catches a folder pointing at a page that is gone', () => {
 		expect(() => assertNavCoverage(Object.keys(NUMBERS).filter((n) => n !== 'VW'), COLUMNS)).toThrow(
 			/do not exist: VW/
