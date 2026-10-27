@@ -38,13 +38,13 @@ camera's pair behind that.
 | 4 | MA2 | grandMA2 lighting | Executors 101–109 across row 1, Go Next / Go Back / BLACKOUT below, four encoders on row 5 |
 | 5 | ATEM | Television Studio HD8 | Program bus over preview bus, CUT and AUTO at column 8. The eight bus keys are inputs 1–7 plus Media Player 1 — **input 8, the PTZ, has no key on either bus** |
 | 6 | SQ7 | Allen & Heath SQ7 | DCA 1–8 with level and mute state, Mute DCAs key. Stream / Foyer / MAIN readouts on the touchstrip |
-| 7 | VW | Blackmagic Videohub + LED wall | Five destinations over four sources: tap a destination to select it, tap a source to route. Two direct routes, four Videohub readouts, a brightness encoder for the wall, and **Videohub** at r1c8, which opens page 18. Repointed to the post-move port numbers on 2026-10-26 (`src/vw.js`) |
+| 7 | VW | Blackmagic Videohub + LED wall | **The whole router** since 2026-10-27 (Sam: VW should be "the new folder that shows everything"): every output (rows 0–1, OUT 1–16) over every input (rows 2–3, IN 1–16), each captioned with the router's own live label; an output key also shows what feeds it. Tap an output to select it (violet), tap an input to route it there at once; the input feeding the selected output is green. **No folder row**: 32 ports need all four rows, so a **Home** key at r0c8 leaves. The touchstrip and knobs are VW's as before: four screen readouts and the LED wall's brightness. `tools/switch-page.js`, `src/switch.js` |
 | 8 | System | the Pi itself | CPU temp, load, memory, disk, power, internet, address, uptime, Companion, storage. Fed by an `internal: exec` trigger because Companion publishes no OS-level variables |
 | 9 | PTZ | **CAM 3**, the PTZ on 10.23.0.181 | 48 controls: five presets, a camera-swap key, a nudge cluster, zoom/focus, tracking, and pan/tilt/zoom/focus/speed/preset encoders. Fed by `ptz_state.py` on a **1-second** trigger and `ptz_web.py` on a 5-second one |
 | 10 | PTZ Setup | the same camera | Exposure, white balance, backlight, power, tracking mode and body framing |
 | 11 | PTZ 2 | **CAM 1**, the PTZ on 10.23.0.196 | The same page, built by the same code, bound to the second camera and its own `ptz2_*` variables |
 | 12 | PTZ 2 Setup | the same camera | As page 10, for the second camera |
-| 18 | Videohub | the whole router | Every output (rows 0–1, OUT 1–16) over every input (rows 2–3, IN 1–16), each captioned with the router's own live label; an output key also shows what feeds it. Tap an output to select it (violet), tap an input to route it there at once; the input feeding the selected output is green. **No folder row**: 32 ports need all four rows, so a Back key at r0c8 returns to VW. Since 2026-10-26, `tools/switch-page.js` |
+| 18 | Videohub | nothing now | The router page as it was before it became VW (2026-10-26). Nothing opens it since 2026-10-27; its Back key goes to VW. Safe to delete: it is the last page, so no other page renumbers |
 
 **Both cameras run one page layout.** Pages 11 and 12 are emitted by the same
 `buildPage`/`buildSetupPage` calls as 9 and 10, and the build asserts they are identical
@@ -221,9 +221,9 @@ On the ATEM that makes input 1 "Cam 1", 2 "Cam 2", 3 "PP1", 4 "PP1B", 5 "Words O
 Sunday 10:00 pre-service cut moved from input 7 to 3 the same day. On 2026-10-26 the wall and
 both projectors were taking PP1 straight from the router, not from an ATEM aux.
 
-The deck reads these labels live, so renaming a port in Videohub Setup renames its key. VW's
-curated keys are by number (`src/vw.js`), so a re-patch means re-running
-`tools/switch-page.js`, which refuses a VW page it does not recognise.
+The deck reads these labels live, so renaming a port in Videohub Setup renames its key, and since
+2026-10-27 VW shows every port, so a re-patch needs no rebuild. The four screen readouts on VW's
+touchstrip are still by number (outputs 16, 15, 14 and 8).
 
 Credentials do not go in this file. Record **where** they live — a password manager entry
 name — not what they are.
