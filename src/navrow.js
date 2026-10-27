@@ -179,6 +179,17 @@ export const SUB_PAGES = {
 	Dante: 'SQ7',
 }
 
+/**
+ * Pages that belong to a surface of their own, not to the main deck.
+ *
+ * Each one is the only page its surface may show, so it has no folder row and nothing on the
+ * main deck's row leads to it.
+ */
+export const SURFACE_PAGES = [
+	// The whole Videohub on the Switch deck (src/switch.js).
+	'Switch',
+]
+
 /** The folder-row page a page belongs to: itself, or its parent for a sub-page. */
 export const folderFor = (pageName) => SUB_PAGES[pageName] ?? pageName
 
@@ -186,8 +197,9 @@ export const folderFor = (pageName) => SUB_PAGES[pageName] ?? pageName
  * Check the deck's pages and the folder row agree, before anything is written.
  *
  * A page missing from NAV_ORDER is unreachable from the row — the exact bug this row exists to
- * prevent — so it is an error rather than a warning. Sub-pages are the one exception: they are
- * reached from their parent, and their parent must be on the row.
+ * prevent — so it is an error rather than a warning. Sub-pages are one exception: they are
+ * reached from their parent, and their parent must be on the row. Surface pages are the other:
+ * their own surface is pinned to them.
  *
  * @throws listing whichever side is out of step
  */
@@ -199,7 +211,7 @@ export function assertNavCoverage(pageNames, columns) {
 	const orphans = pageNames.filter((n) => n in SUB_PAGES && !pageNames.includes(SUB_PAGES[n]))
 	if (orphans.length) throw new Error(`sub-pages whose parent page is missing: ${orphans.join(', ')}`)
 
-	const missing = pageNames.filter((n) => !NAV_ORDER.includes(n) && !(n in SUB_PAGES))
+	const missing = pageNames.filter((n) => !NAV_ORDER.includes(n) && !(n in SUB_PAGES) && !SURFACE_PAGES.includes(n))
 	if (missing.length) throw new Error(`pages unreachable from the folder row: ${missing.join(', ')}`)
 
 	const phantom = NAV_ORDER.filter((n) => !pageNames.includes(n))
