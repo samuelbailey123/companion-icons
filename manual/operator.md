@@ -139,6 +139,7 @@ The Worship page, both cameras side by side:
 - The strip shows the level **the deck last set**. It does not read the desk. If someone moves the
   fader on the desk, the strip is wrong until the knob is turned again, and that turn starts from
   the strip's number.
+- **Go Next** (green) and **Go Back** (red), on the left, step that fader's cues forward and back.
 - **BLACKOUT** turns every light in the building off at once. Press it only if you mean that.
 
 ### Screens (VW page)
