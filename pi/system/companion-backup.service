@@ -1,0 +1,8 @@
+[Unit]
+Description=Backup Companion configuration to storage drive
+RequiresMountsFor=/mnt/storage
+
+[Service]
+Type=oneshot
+User=companion
+ExecStart=/usr/local/bin/companion-backup.sh

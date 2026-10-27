@@ -50,6 +50,19 @@ exports from and imports to the rig over Companion's own admin API, one section 
 
 Only the library is touched. Rollback is re-importing the backup.
 
+## The rig manual
+
+`manual/` holds three PDFs for whoever has to run or rebuild the rig: the **Operator Guide**
+(running a Sunday), the **Reference** (every page, key, trigger, variable, connection and signal
+path, generated from the live rig) and the **Recovery Guide** (rebuilding the Pi, Companion, its
+scripts and backups; credentials by 1Password entry). `pi/` backs up the Pi's own scripts.
+
+```bash
+node tools/manual/collect.js   # on the AV network: reads the rig into .snapshot/ (holds passwords; gitignored)
+node tools/manual/build.js     # writes manual/*.pdf; refuses a book containing any password from the export
+node tools/pi-backup.js        # refreshes pi/ from the Pi, passwords redacted
+```
+
 ## Requirements
 
 - Node 25.4.0 (pinned via asdf)

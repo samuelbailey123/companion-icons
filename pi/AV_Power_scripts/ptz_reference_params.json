@@ -1,0 +1,337 @@
+{
+ "stExp": {
+  "bright": 10,
+  "expcomp": 7,
+  "expcomp_mode": 3,
+  "again": 0,
+  "backlight": 3,
+  "antiflicker": 2,
+  "gainLimit": 15,
+  "drc": 0,
+  "stExpMode": {
+   "emExpMode": 3,
+   "byExpModeList": [
+    0,
+    3,
+    10,
+    11,
+    13
+   ]
+  },
+  "stIris": {
+   "nIris": 12,
+   "stIrisList": [
+    {
+     "nValue": 0,
+     "szName": "Close"
+    },
+    {
+     "nValue": 1,
+     "szName": "F11.0"
+    },
+    {
+     "nValue": 2,
+     "szName": "F9.6"
+    },
+    {
+     "nValue": 3,
+     "szName": "F8.0"
+    },
+    {
+     "nValue": 4,
+     "szName": "F6.8"
+    },
+    {
+     "nValue": 5,
+     "szName": "F5.6"
+    },
+    {
+     "nValue": 6,
+     "szName": "F4.8"
+    },
+    {
+     "nValue": 7,
+     "szName": "F4.0"
+    },
+    {
+     "nValue": 8,
+     "szName": "F3.4"
+    },
+    {
+     "nValue": 9,
+     "szName": "F2.8"
+    },
+    {
+     "nValue": 10,
+     "szName": "F2.4"
+    },
+    {
+     "nValue": 11,
+     "szName": "F2.0"
+    },
+    {
+     "nValue": 12,
+     "szName": "F1.8"
+    }
+   ]
+  },
+  "stShutter": {
+   "nShutter": 18,
+   "stShutterList": [
+    {
+     "nValue": 0,
+     "szName": "1/25"
+    },
+    {
+     "nValue": 1,
+     "szName": "1/50"
+    },
+    {
+     "nValue": 2,
+     "szName": "1/75"
+    },
+    {
+     "nValue": 3,
+     "szName": "1/100"
+    },
+    {
+     "nValue": 4,
+     "szName": "1/120"
+    },
+    {
+     "nValue": 5,
+     "szName": "1/150"
+    },
+    {
+     "nValue": 6,
+     "szName": "1/215"
+    },
+    {
+     "nValue": 7,
+     "szName": "1/300"
+    },
+    {
+     "nValue": 8,
+     "szName": "1/425"
+    },
+    {
+     "nValue": 9,
+     "szName": "1/600"
+    },
+    {
+     "nValue": 10,
+     "szName": "1/1000"
+    },
+    {
+     "nValue": 11,
+     "szName": "1/1250"
+    },
+    {
+     "nValue": 12,
+     "szName": "1/1750"
+    },
+    {
+     "nValue": 13,
+     "szName": "1/2500"
+    },
+    {
+     "nValue": 14,
+     "szName": "1/3500"
+    },
+    {
+     "nValue": 15,
+     "szName": "1/6000"
+    },
+    {
+     "nValue": 16,
+     "szName": "1/10000"
+    },
+    {
+     "nValue": 17,
+     "szName": "1/30"
+    },
+    {
+     "nValue": 18,
+     "szName": "1/60"
+    },
+    {
+     "nValue": 19,
+     "szName": "1/90"
+    },
+    {
+     "nValue": 20,
+     "szName": "1/100"
+    },
+    {
+     "nValue": 21,
+     "szName": "1/125"
+    },
+    {
+     "nValue": 22,
+     "szName": "1/180"
+    },
+    {
+     "nValue": 23,
+     "szName": "1/250"
+    },
+    {
+     "nValue": 24,
+     "szName": "1/350"
+    },
+    {
+     "nValue": 25,
+     "szName": "1/500"
+    },
+    {
+     "nValue": 26,
+     "szName": "1/725"
+    },
+    {
+     "nValue": 27,
+     "szName": "1/1000"
+    },
+    {
+     "nValue": 28,
+     "szName": "1/1500"
+    },
+    {
+     "nValue": 29,
+     "szName": "1/2000"
+    },
+    {
+     "nValue": 30,
+     "szName": "1/3000"
+    },
+    {
+     "nValue": 31,
+     "szName": "1/4000"
+    },
+    {
+     "nValue": 32,
+     "szName": "1/6000"
+    },
+    {
+     "nValue": 33,
+     "szName": "1/10000"
+    }
+   ]
+  }
+ },
+ "stAF": {
+  "nSensitivity": 2,
+  "emAFMode": 3,
+  "emAFZone": 3
+ },
+ "nChannel": 0,
+ "stImg": {
+  "contrast": 40,
+  "nBWMode": 0,
+  "luminance": 60,
+  "nFlipV": 3,
+  "sharpness": 0,
+  "gamma": 1,
+  "dci": 0,
+  "nFlipH": 3,
+  "nEZoom": 2,
+  "slowLight": 0,
+  "nAutoFlip": 3
+ },
+ "stColor": {
+  "bgaintuning": 11,
+  "bg": 100,
+  "stWbMode": {
+   "emWbMode": 8,
+   "byWbModeList": [
+    0,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    1,
+    18,
+    19,
+    20,
+    21,
+    7,
+    22,
+    23,
+    24,
+    25,
+    2,
+    26,
+    27,
+    28,
+    29,
+    8,
+    30,
+    31,
+    33,
+    34,
+    4,
+    35,
+    36,
+    37,
+    38,
+    9,
+    39,
+    40,
+    41,
+    42,
+    10,
+    43,
+    44,
+    45,
+    46,
+    6,
+    47,
+    48,
+    49,
+    50,
+    11,
+    51,
+    5,
+    3,
+    52
+   ],
+   "byVAR": 8
+  },
+  "rg": 29,
+  "rgaintuning": 10,
+  "saturation": 30,
+  "nStyleInx": 1,
+  "hue": 3,
+  "awbsens": 1
+ },
+ "stNR": {
+  "noise2D": 0,
+  "noise3D": 0,
+  "dhotpixel": 0
+ },
+ "stValueRange": {
+  "listSize": 4,
+  "stValueRangeList": [
+   {
+    "min": 0,
+    "type": "luminance",
+    "max": 100
+   },
+   {
+    "min": 0,
+    "type": "sharpness",
+    "max": 15
+   },
+   {
+    "min": 0,
+    "type": "contrast",
+    "max": 100
+   },
+   {
+    "min": 0,
+    "type": "saturation",
+    "max": 127
+   }
+  ]
+ }
+}

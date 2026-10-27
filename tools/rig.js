@@ -32,6 +32,7 @@
  */
 import crypto from 'node:crypto'
 import fs from 'node:fs/promises'
+import { pathToFileURL } from 'node:url'
 import zlib from 'node:zlib'
 
 export const RIG = 'http://10.23.0.242:8000'
@@ -240,8 +241,11 @@ export async function createMissingVariables(client, bundle, live) {
 }
 
 const [, , command, ...args] = process.argv
+const isCli = Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href
 
-if (command === 'export') {
+if (!isCli) {
+	// Imported for its functions (tools/manual/collect.js): run nothing.
+} else if (command === 'export') {
 	const full = await exportFull()
 	await fs.writeFile(args[0], JSON.stringify(full))
 	console.log(`exported ${Object.keys(full.pages).length} pages, ${Object.keys(full.instances).length} connections -> ${args[0]}`)

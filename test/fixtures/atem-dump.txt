@@ -1,0 +1,83 @@
+PROTOCOL PREAMBLE:
+Version: 2.7
+
+VIDEOHUB DEVICE:
+Device present: true
+Model name: ATEM Television Studio HD8
+Friendly name: ATEM Television Studio HD8
+Unique ID: 1947523eab1a4015aa81b6a4ae2dfe43
+Video inputs: 21
+Video outputs: 5
+
+INPUT LABELS:
+0 Black
+1 Cam 1
+2 Cam 2
+3 PP1
+4 PP1B
+5 Words Overlay
+6 Camera 6
+7 Camera 7
+8 Camera 8
+9 Color Bars
+10 Color 1
+11 Color 2
+12 Media Player 1
+13 Media Player 1 Key
+14 Media Player 2
+15 Media Player 2 Key
+16 SuperSource
+17 Clean Feed
+18 Multiview
+19 Program
+20 Preview
+
+VIDEO INPUT STATUS:
+0 Internal
+1 BNC
+2 BNC
+3 BNC
+4 BNC
+5 BNC
+6 BNC
+7 BNC
+8 BNC
+9 Internal
+10 Internal
+11 Internal
+12 Internal
+13 Internal
+14 Internal
+15 Internal
+16 Internal
+17 Internal
+18 Internal
+19 Internal
+20 Internal
+
+OUTPUT LABELS:
+0 Auxiliary 1
+1 Auxiliary 2
+2 Webcam Out
+3 Program
+4 Preview
+
+CONFIGURATION:
+Video Mode: 1080p59.94
+
+VIDEO OUTPUT ROUTING:
+0 3
+1 4
+2 19
+3 1
+4 1
+
+VIDEO OUTPUT LOCKS:
+0 U
+1 U
+2 U
+3 U
+4 U
+
+END PRELUDE:
+
