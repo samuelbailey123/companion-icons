@@ -12,7 +12,9 @@
  * left on the card, or go amber with NO CARD when there is none. The PP1 Countdown key, whose
  * actions the Sunday 10:24:57 trigger copies, starts the HyperDeck where it started the switcher,
  * and first puts Program on the recorder's Videohub output (Sam, 2026-10-27: "force Program to
- * OUT 13"), so a route someone left on that output cannot become the service recording.
+ * OUT 13"), so a route someone left on that output cannot become the service recording. Then it
+ * starts the switcher's stream (Sam, the same day: "I'd like the stream to be automatic"), with
+ * the module's On rather than its toggle, so a second press of Countdown cannot end a live stream.
  *
  * NO CARD IS READ FROM THE MODULE'S ACTIVE SLOT. With both slots empty `slotId` reads "-" (read
  * off the rig 2026-10-26, cards out). The recorder has no USB disk: it records to SD cards only.
@@ -138,19 +140,29 @@ const isFeedRoute = (a, videohub) =>
 	a.options?.source?.value === PROGRAM_INPUT &&
 	a.options?.destination?.value === RECORDER_OUTPUT
 
+/** The switcher's stream, turned on. */
+export const streamStart = (atem) => ({
+	...action(`${MARK}:stream`, atem, 'streamStartStop'),
+	options: { stream: v('true') },
+})
+
+const isStreamStart = (a, atem) =>
+	a.connectionId === atem.connectionId && a.definitionId === 'streamStartStop' && a.options?.stream?.value === 'true'
+
 /**
- * The Countdown key with its switcher start replaced by the feed route and the HyperDeck's start,
- * in that order, and nothing else moved.
+ * The Countdown key with its switcher record start replaced by the feed route, the HyperDeck's
+ * start and the stream's start, in that order, and nothing else moved.
  */
 export function countdownKey(control, atem, hyperdeck, videohub) {
 	const out = structuredClone(control)
 	const isStart = (a) => isAtemStart(a, atem) || (a.connectionId === hyperdeck.connectionId && a.definitionId === 'rec')
+	const go = [feedRoute(videohub), action(`${MARK}:start`, hyperdeck, 'rec'), streamStart(atem)]
 	for (const step of Object.values(out.steps ?? {})) {
 		for (const [set, actions] of Object.entries(step.action_sets ?? {})) {
 			if (!Array.isArray(actions)) continue
 			step.action_sets[set] = actions
-				.filter((a) => !isFeedRoute(a, videohub))
-				.flatMap((a) => (isStart(a) ? [feedRoute(videohub), action(`${MARK}:start`, hyperdeck, 'rec')] : [a]))
+				.filter((a) => !isFeedRoute(a, videohub) && !isStreamStart(a, atem))
+				.flatMap((a) => (isStart(a) ? go : [a]))
 		}
 	}
 	return out
