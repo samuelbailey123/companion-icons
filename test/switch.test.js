@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { assertNavCoverage, NAV_ORDER, SUB_PAGES } from '../src/navrow.js'
+import { NAV_ORDER } from '../src/navrow.js'
 import {
-	BACK_CELL,
 	BG,
 	FEEDING,
 	GRID,
+	HOME,
+	HOME_CELL,
 	INK,
 	MODULE_ID,
 	PAGE_NAME,
-	PARENT,
 	SELECTED,
 	buildConfig,
-	buildVideohubPage,
+	buildVwPage,
 	findVideohub,
 	inputKey,
 	outputKey,
@@ -32,6 +32,7 @@ const rig = ({ instances, pages } = {}) => ({
 
 const VH = { connectionId: 'vh1', label: 'videohub', inputs: 16, outputs: 16 }
 const VW_PAGE = String(NAV_ORDER.indexOf('VW') + 1)
+const HOME_PAGE = String(NAV_ORDER.indexOf('Home') + 1)
 
 const keysOf = (page) =>
 	Object.entries(page.controls).flatMap(([row, cols]) =>
@@ -78,10 +79,10 @@ describe('the layout', () => {
 		expect(inputs[15]).toEqual({ n: 16, row: 3, col: 7 })
 	})
 
-	it('keeps input N under output N, and the last column free for Back', () => {
+	it('keeps input N under output N, and the last column free for Home', () => {
 		const { outputs, inputs } = plan(VH)
 		for (let i = 0; i < 16; i++) expect(inputs[i].col).toBe(outputs[i].col)
-		expect([...outputs, ...inputs].some((c) => c.col === BACK_CELL.col)).toBe(false)
+		expect([...outputs, ...inputs].some((c) => c.col === HOME_CELL.col)).toBe(false)
 	})
 
 	it('fits a router with more outputs than inputs', () => {
@@ -90,8 +91,8 @@ describe('the layout', () => {
 		expect(inputs.at(-1)).toEqual({ n: 4, row: 2, col: 3 })
 	})
 
-	it('refuses a router that does not fit beside Back, rather than dropping ports', () => {
-		expect(() => plan({ inputs: 18, outputs: 18 })).toThrow(/18 outputs and 18 inputs do not fit a 9x4 deck beside a Back key/)
+	it('refuses a router that does not fit beside Home, rather than dropping ports', () => {
+		expect(() => plan({ inputs: 18, outputs: 18 })).toThrow(/18 outputs and 18 inputs do not fit a 9x4 deck beside a Home key/)
 		expect(() => plan(VH, { columns: 32, rows: 1 })).toThrow(/do not fit/)
 	})
 })
@@ -167,68 +168,63 @@ describe('legibility', () => {
 })
 
 describe('the page', () => {
-	const page = buildVideohubPage(VH, VW_PAGE)
-	const keys = keysOf(page)
+	const kept = { 4: { 6: { readout: 'Wall' } }, 5: { 6: { knob: 'Wall' } } }
+	const page = buildVwPage(VH, HOME_PAGE, kept)
+	const keys = keysOf(page).filter((k) => k.row < GRID.rows)
 
-	it('has every port exactly once, plus Back', () => {
+	it('has every port exactly once, plus Home', () => {
 		const notes = keys.map((k) => k.control.options.notes)
 		expect(keys).toHaveLength(33)
 		expect(new Set(notes).size).toBe(33)
-		expect(keys.every((k) => k.row < GRID.rows && k.col < GRID.columns)).toBe(true)
+		expect(keys.every((k) => k.col < GRID.columns)).toBe(true)
 	})
 
-	it('has no folder row: row 0 is outputs and Back', () => {
-		const row0 = Object.entries(page.controls[0]).filter(([col]) => Number(col) !== BACK_CELL.col)
+	it('has no folder row: row 0 is outputs and Home', () => {
+		const row0 = Object.entries(page.controls[0]).filter(([col]) => Number(col) !== HOME_CELL.col)
 		expect(row0.every(([, c]) => actionOf(c).definitionId === 'select_destination')).toBe(true)
 		expect(Object.values(page.controls[3]).every((c) => actionOf(c).definitionId === 'route_source')).toBe(true)
 	})
 
-	it('goes back to VW on the surface that pressed Back', () => {
-		const back = page.controls[BACK_CELL.row][BACK_CELL.col]
-		expect(actionOf(back)).toMatchObject({
+	it('goes Home on the surface that pressed the corner key', () => {
+		const home = page.controls[HOME_CELL.row][HOME_CELL.col]
+		expect(actionOf(home)).toMatchObject({
 			definitionId: 'set_page',
 			connectionId: 'internal',
-			options: { surfaceId: { value: 'self' }, page: { value: VW_PAGE } },
+			options: { surfaceId: { value: 'self' }, page: { value: HOME_PAGE } },
 		})
-		expect(textOf(back, 'text0').value).toBe(PARENT)
+		expect(textOf(home, 'text0').value).toBe(HOME)
 	})
 
-	it('leaves the touchstrip and knobs empty', () => {
-		expect(page.controls[4]).toBeUndefined()
-		expect(page.controls[5]).toBeUndefined()
+	it('keeps the touchstrip and knobs it is given, as copies', () => {
+		expect(page.controls[4]).toEqual(kept[4])
+		expect(page.controls[5]).toEqual(kept[5])
+		expect(page.controls[5]).not.toBe(kept[5])
 	})
 
-	it('is a VW sub-page, so the folder row accepts it', () => {
+	it('leaves the touchstrip and knobs empty when given none, and is VW, a folder-row page', () => {
+		const bare = buildVwPage(VH, HOME_PAGE)
+		expect(bare.controls[4]).toBeUndefined()
+		expect(bare.controls[5]).toBeUndefined()
 		expect(page.name).toBe(PAGE_NAME)
-		expect(SUB_PAGES[PAGE_NAME]).toBe(PARENT)
-		expect(() => assertNavCoverage([...NAV_ORDER, page.name], 9)).not.toThrow()
+		expect(NAV_ORDER).toContain(PAGE_NAME)
 	})
 })
 
 describe('building from a live export', () => {
-	it('lands a first build after the last page', () => {
-		const { number, existing, page, videohub, vwPage } = buildConfig(rig())
-		expect(number).toBe(String(NAV_ORDER.length + 1))
-		expect(existing).toBe(false)
-		expect(page.id).toBeUndefined()
+	it('replaces VW in place, keeping its id and its strip and knobs, and drops its old keys', () => {
+		const full = rig()
+		full.pages[VW_PAGE].controls = { 1: { 0: { old: 'Right Proj' } }, 4: { 6: { readout: 'Wall' } }, 5: { 6: { knob: 'Wall' } } }
+		const { number, page, videohub, homePage } = buildConfig(full)
+		expect(number).toBe(VW_PAGE)
+		expect(homePage).toBe(HOME_PAGE)
+		expect(page.id).toBe(`p${VW_PAGE}`)
 		expect(videohub.connectionId).toBe('vh1')
-		expect(vwPage).toBe(VW_PAGE)
+		expect(page.controls[5][6]).toEqual({ knob: 'Wall' })
+		expect(JSON.stringify(page)).not.toContain('Right Proj')
 	})
 
-	it('replaces an existing Videohub page in place, keeping its id', () => {
-		const pages = { 1: { id: 'p1', name: 'VW' }, 2: { id: 'vh', name: PAGE_NAME } }
-		const { number, existing, page } = buildConfig(rig({ pages }))
-		expect(number).toBe('2')
-		expect(existing).toBe(true)
-		expect(page.id).toBe('vh')
-	})
-
-	it('refuses a rig with no VW page to come back to', () => {
+	it('refuses a rig with no VW page, or no Home for the corner key', () => {
 		expect(() => buildConfig(rig({ pages: { 1: { name: 'Home' } } }))).toThrow(/no VW page/)
-	})
-
-	it('refuses pages that are not numbered 1..n', () => {
-		expect(() => buildConfig(rig({ pages: { 1: { name: 'Home' }, 3: { name: 'PP1' } } }))).toThrow(/not numbered 1\.\.2/)
-		expect(() => buildConfig({ ...rig(), pages: undefined })).toThrow(/not numbered/)
+		expect(() => buildConfig(rig({ pages: { 1: { name: 'VW', controls: {} } } }))).toThrow(/no Home page/)
 	})
 })
