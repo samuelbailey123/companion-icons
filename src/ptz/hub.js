@@ -19,7 +19,7 @@
  * pages stay for everything the shared pages leave out.
  */
 
-import { cv, v, when, override } from './actions.js'
+import { cv, expr, v, when, override, overrideExpr } from './actions.js'
 import { BG, key } from './controls.js'
 import { navKey } from './keys.js'
 
@@ -58,34 +58,45 @@ export const SERVICE_LOOK = {
 /** The shared pages' entries sit in the centre column, between the two cameras. */
 const SERVICE_COLUMN = 4
 
-const layersFor = ({ atem, bg, accent }) => [
-	{
-		id: 'canvas', name: 'Canvas', usage: 'auto', type: 'canvas',
-		decoration: v('default'), showStatusIcons: v('default'),
-	},
-	{
-		id: 'box0', name: 'Background', usage: 'auto', type: 'box',
-		enabled: v(true), opacity: v(100),
-		x: v(0), y: v(0), width: v(100), height: v(100), rotation: v(0),
-		color: v(bg), borderWidth: v(BORDER), borderColor: v(accent), borderPosition: v('inside'),
-	},
-	{
-		id: 'image0', name: 'Icon', usage: 'auto', type: 'image',
-		enabled: v(true), opacity: v(100),
-		x: v(0), y: v(4), width: v(100), height: v(46), rotation: v(0),
-		base64Image: v(`$(image:cam${atem}-idle)`),
-		halign: v('center'), valign: v('center'), fillMode: v('fit'),
-	},
-	{
-		id: 'text0', name: 'Camera', usage: 'auto', type: 'text',
-		enabled: v(true), opacity: v(100),
-		x: v(0), y: v(50), width: v(100), height: v(46), rotation: v(0),
-		text: v(`CAM ${atem}`), color: v(0xffffff),
-		halign: v('center'), valign: v('center'),
-		fontsize: v(70), fontsizeAllowShrink: v(true), font: v('companion-sans'),
-		outlineColor: v(0xff000000),
-	},
-]
+/**
+ * A camera's caption, `CAM n` plus `suffix`. With `atemVar` the number is read live from that
+ * custom variable, the one the run pages' tally already uses, so a re-patch is one variable
+ * rather than a rebuild (2026-10-26: CAM 3 moved to ATEM input 2). Returns [text, isExpression].
+ */
+export const camLabel = (atem, atemVar, suffix = '') =>
+	atemVar ? [`concat('CAM ', ${cv(atemVar)}${suffix ? `, '${suffix}'` : ''})`, true] : [`CAM ${atem}${suffix}`, false]
+
+const layersFor = ({ atem, atemVar, bg, accent }) => {
+	const [label, isExpression] = camLabel(atem, atemVar)
+	return [
+		{
+			id: 'canvas', name: 'Canvas', usage: 'auto', type: 'canvas',
+			decoration: v('default'), showStatusIcons: v('default'),
+		},
+		{
+			id: 'box0', name: 'Background', usage: 'auto', type: 'box',
+			enabled: v(true), opacity: v(100),
+			x: v(0), y: v(0), width: v(100), height: v(100), rotation: v(0),
+			color: v(bg), borderWidth: v(BORDER), borderColor: v(accent), borderPosition: v('inside'),
+		},
+		{
+			id: 'image0', name: 'Icon', usage: 'auto', type: 'image',
+			enabled: v(true), opacity: v(100),
+			x: v(0), y: v(4), width: v(100), height: v(46), rotation: v(0),
+			base64Image: v(`$(image:cam${atem}-idle)`),
+			halign: v('center'), valign: v('center'), fillMode: v('fit'),
+		},
+		{
+			id: 'text0', name: 'Camera', usage: 'auto', type: 'text',
+			enabled: v(true), opacity: v(100),
+			x: v(0), y: v(50), width: v(100), height: v(46), rotation: v(0),
+			text: isExpression ? expr(label) : v(label), color: v(0xffffff),
+			halign: v('center'), valign: v('center'),
+			fontsize: v(70), fontsizeAllowShrink: v(true), font: v('companion-sans'),
+			outlineColor: v(0xff000000),
+		},
+	]
+}
 
 /**
  * A camera's entry key.
@@ -94,11 +105,13 @@ const layersFor = ({ atem, bg, accent }) => [
  * question "is that camera on air" are the same question asked half a second apart. The
  * colours are the ATEM page's own, so red and green mean here what they mean there.
  */
-function enterKey({ atem, page, stateVar }) {
+function enterKey({ atem, atemVar, page, stateVar }) {
 	const look = LOOK[atem] ?? LOOK.default
+	const input = atemVar ? cv(atemVar) : atem
+	const [down, downIsExpression] = camLabel(atem, atemVar, ' DOWN')
 	return {
 		type: 'button-layered',
-		style: { layers: layersFor({ atem, ...look }) },
+		style: { layers: layersFor({ atem, atemVar, ...look }) },
 		options: {
 			stepProgression: 'auto', stepExpression: '', rotaryActions: false,
 			canModifyStyleInApis: false,
@@ -107,15 +120,15 @@ function enterKey({ atem, page, stateVar }) {
 				`and green when it is on preview, so you can see what moving it would cost before you move it.`,
 		},
 		feedbacks: [
-			when(`hub-cam${atem}-pgm`, `$(atem:pgm1_input_id) == ${atem}`, [
+			when(`hub-cam${atem}-pgm`, `$(atem:pgm1_input_id) == ${input}`, [
 				override(`hub-cam${atem}-pgm-bg`, 'box0', 'color', BG.program),
 			]),
-			when(`hub-cam${atem}-pvw`, `$(atem:pvw1_input_id) == ${atem}`, [
+			when(`hub-cam${atem}-pvw`, `$(atem:pvw1_input_id) == ${input}`, [
 				override(`hub-cam${atem}-pvw-bg`, 'box0', 'color', BG.preview),
 			]),
 			when(`hub-cam${atem}-down`, `jsonpath(${cv(stateVar)}, '$.online') != "OK"`, [
 				override(`hub-cam${atem}-down-bg`, 'box0', 'color', BG.armed),
-				override(`hub-cam${atem}-down-text`, 'text0', 'text', `CAM ${atem} DOWN`),
+				(downIsExpression ? overrideExpr : override)(`hub-cam${atem}-down-text`, 'text0', 'text', down),
 			]),
 		],
 		steps: {
@@ -174,13 +187,15 @@ export function buildHubPage(cameras, service) {
 
 	cameras.forEach((cam, i) => {
 		const column = columns[i]
-		controls[ROW.enter][column] = enterKey({ atem: cam.atem, page: cam.runPage, stateVar: cam.stateVar })
+		controls[ROW.enter][column] = enterKey({ atem: cam.atem, atemVar: cam.atemVar, page: cam.runPage, stateVar: cam.stateVar })
+		const [setupLabel, labelIsExpression] = camLabel(cam.atem, cam.atemVar, ' Setup')
 		controls[ROW.state][column] = stateKey(cam)
 		controls[ROW.setup][column] = navKey(
 			`hub-cam${cam.atem}-setup`,
 			{
 				icon: 'ptz-setup',
-				label: `CAM ${cam.atem} Setup`,
+				label: setupLabel,
+				labelIsExpression,
 				notes: `Exposure, white balance, backlight, power and tracking for CAM ${cam.atem}.`,
 			},
 			cam.setupPage

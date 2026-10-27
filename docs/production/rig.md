@@ -131,9 +131,9 @@ Read off the live Companion on 2026-08-28 and confirmed against each device on t
 | Shure ULXD4Q × 3 + ULXD4D × 1 | Wireless, **14** channels — not 16 | `10.23.0.20` "BGV 1-4" (Q), `10.23.0.23` "Lead 1-4" (Q), `10.23.0.253` "BGV+Host" (Q), `10.23.0.214` "Preach" — **a ULXD4D, two channels only**, Lav 1 and Lav 2. All on :2202 |
 | ProPresenter | Presentation | **10.23.0.111**:1100. A follower is configured at 10.23.0.11 but `control_follower` is off, and nothing is listening there |
 | NovaStar VX6S | LED wall processor | **10.23.0.23**:5200 (was .19 until August 2026) |
-| FoMaKo UV602 PTZ — **CAM 3** | Camera, VISCA over IP, ATEM input 3 | **10.23.0.181**:5678, with an unauthenticated HTTP API on :80 that `ptz_web.py` drives |
+| FoMaKo UV602 PTZ — **CAM 3** pages, shown as **CAM 2** | Camera, VISCA over IP, **ATEM input 2 since 2026-10-26** (was 3). The chooser, tally and captions read `ptz_atem_input`; the pages keep their CAM 3 names | **10.23.0.181**:5678, with an unauthenticated HTTP API on :80 that `ptz_web.py` drives |
 | FoMaKo UV602 PTZ — **CAM 1** | Camera, added 2026-08-28, ATEM input 1 | **10.23.0.196**:5678, same API |
-| JVC GY-HM600 static — **CAM 2** | Fixed, unmanned, ATEM input 2 | Not on the network: it has no network option at all, and its only remote input is LANC. Goes HD-SDI into the switcher |
+| JVC GY-HM600 static — **CAM 2** | Fixed, unmanned. **Not on the switcher since 2026-10-26**: both camera inputs are the PTZs "for this moment" (Sam) | Not on the network: it has no network option at all, and its only remote input is LANC. Goes HD-SDI into the switcher |
 | Raspberry Pi | Companion host | 10.23.0.242 |
 
 **Addresses drift.** Every one of these except the Pi had moved at least once by

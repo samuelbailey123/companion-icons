@@ -224,4 +224,37 @@ describe('the chooser', () => {
 		expect(() => buildHubPage(cameras.slice(0, 1))).toThrow(/two cameras/)
 		expect(() => buildHubPage([...cameras, { atem: 4 }])).toThrow(/two cameras/)
 	})
+
+	describe('with the ATEM input read live, as the rig has it since CAM 3 moved to input 2', () => {
+		const live = buildHubPage([
+			{ ...cameras[0], atemVar: 'ptz2_atem_input' },
+			{ ...cameras[1], atemVar: 'ptz_atem_input' },
+		])
+		const entry = Object.values(live[1])[1]
+		const text = (c) => c.style.layers.find((l) => l.type === 'text').text
+
+		it('captions the camera from the variable, not its page name', () => {
+			expect(text(entry)).toEqual({ value: "concat('CAM ', $(internal:custom_ptz_atem_input))", isExpression: true })
+			expect(text(Object.values(live[3])[1])).toEqual({
+				value: "concat('CAM ', $(internal:custom_ptz_atem_input), ' Setup')",
+				isExpression: true,
+			})
+		})
+
+		it('takes the tally from the variable, so PP1 on input 3 no longer lights it', () => {
+			const expressions = entry.feedbacks.map((f) => f.options.expression.value)
+			expect(expressions).toContain('$(atem:pgm1_input_id) == $(internal:custom_ptz_atem_input)')
+			expect(expressions).toContain('$(atem:pvw1_input_id) == $(internal:custom_ptz_atem_input)')
+			expect(expressions.join()).not.toMatch(/== 3\b/)
+		})
+
+		it('says which camera is down by its live number', () => {
+			const down = entry.feedbacks.flatMap((f) => f.styleOverrides).find((o) => o.elementProperty === 'text')
+			expect(down.override).toEqual({ value: "concat('CAM ', $(internal:custom_ptz_atem_input), ' DOWN')", isExpression: true })
+		})
+
+		it('still goes to the same pages', () => {
+			expect(Object.values(live[1]).map((e) => e.steps[0].action_sets.down[0].options.page.value)).toEqual(['10', '12'])
+		})
+	})
 })
