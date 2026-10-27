@@ -42,6 +42,23 @@ Page tools in `tools/` read a live export and emit `.companionconfig` bundles; `
 exports from and imports to the rig over Companion's own admin API, one section at a time
 (`node tools/rig.js import <bundle> buttons,triggers`), leaving everything unselected untouched.
 
+## The rig manual
+
+Three PDF books built from the live rig: an **Operator Guide** (running a Sunday), a
+**Reference** (every page, key, trigger, variable, connection and signal path) and a **Recovery
+Guide** (rebuilding the rig from nothing). On the AV LAN:
+
+```bash
+node tools/manual-collect.js ~/rig-snapshot     # read-only; the snapshot holds passwords
+node tools/manual.js ~/rig-snapshot ~/rig-html
+python3 scripts/manual_pdf.py ~/rig-html <pdfDir>
+```
+
+The hand-written chapters are `docs/manual/operator.md` and `recovery.md`; the Reference is
+generated (`src/manual/`) and closes with `docs/production/`. A book that contains any
+credential from the export is refused, not written. The PDFs live on the Decima Server, not in
+this public repo.
+
 ## Importing into Companion
 
 1. **Take a full backup first** — Settings → Export → Full backup.

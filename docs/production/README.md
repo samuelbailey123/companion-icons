@@ -11,6 +11,7 @@ writes the live Companion. See [rig.md](rig.md) for the topology.
 
 | File | What's in it |
 |---|---|
+| [../manual/](../manual/) | The rig manual's hand-written books (Operator, Recovery); the Reference is generated from the live rig. See the repo README |
 | [rig.md](rig.md) | Every device and address, every page, how Companion is backed up — and the open configuration faults |
 | [cameras.md](cameras.md) | Per-camera settings, exposure targets, framing discipline |
 | [switcher-atem.md](switcher-atem.md) | The 59.94 check — the current worst fault lives here |

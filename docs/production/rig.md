@@ -26,9 +26,10 @@ the wrong Companion by a typo.
 
 ## Pages
 
-**Twelve**, in this order, each with the folder row across the top. Read off the live rig on
-2026-08-28 — the Mics page is gone, replaced by PTZ, with PTZ Setup behind it and a second
-camera's pair behind that.
+**Eighteen**, read off the live rig on 2026-10-27. The folder row across the top opens the nine
+pages in it (Home, Power, PP1, MA2, ATEM, SQ7, VW, PTZ, System); pages 10–18 are sub-pages,
+opened from a key on one of those. The Reference book (`docs/manual/`) shows every key on
+every page as built from the live export; the notes below are the why.
 
 | # | Page | Drives | Notes |
 |---|---|---|---|
@@ -36,29 +37,33 @@ camera's pair behind that.
 | 2 | Power | Projectors, PA | One state-aware toggle per system; direction is worked out from polled state, not a step counter |
 | 3 | PP1 | ProPresenter | Speaker and Worship are duration presets on one shared timer — 45 min and 25 min, not two timers. **Freeze Slide** at r1c8 (on the rig since 2026-10-10, `tools/pp1-freeze.js`) fires ProPresenter's "Freeze" macro: Slide Destination, Stage Only, so clicks stop reaching the audience screens and what is up stays up. **All Screens** at r2c7 releases it. It holds every audience output, the stream's words overlay included. ProPresenter's API cannot give a macro its actions, so the macro was made by hand. **Pre-Service** at r2c3 (since 2026-10-11, `tools/pp1-preservice.js`) fires the pre-roll, the first presentation in the Sunday Service playlist; like Countdown it triggers by playlist index, so re-run the tool if items are added above it |
 | 4 | MA2 | grandMA2 lighting | Executors 101–109 across row 1, Go Next / Go Back / BLACKOUT below, four encoders on row 5 |
-| 5 | ATEM | Television Studio HD8 | Program bus over preview bus, CUT and AUTO at column 8. The eight bus keys are inputs 1–7 plus Media Player 1 — **input 8, the PTZ, has no key on either bus** |
+| 5 | ATEM | Television Studio HD8 | Program bus over preview bus, CUT and AUTO at column 8. The eight bus keys are inputs 1–7 plus Media Player 1; since 2026-10-26 the two PTZs are inputs 1 and 2 |
 | 6 | SQ7 | Allen & Heath SQ7 | DCA 1–8 with level and mute state, Mute DCAs key. Stream / Foyer / MAIN readouts on the touchstrip |
 | 7 | VW | Blackmagic Videohub + LED wall | Five destinations over four sources: tap a destination to select it, tap a source to route. Two direct routes, four Videohub readouts, a brightness encoder for the wall, and **Videohub** at r1c8, which opens page 18. Repointed to the post-move port numbers on 2026-10-26 (`src/vw.js`) |
 | 8 | System | the Pi itself | CPU temp, load, memory, disk, power, internet, address, uptime, Companion, storage. Fed by an `internal: exec` trigger because Companion publishes no OS-level variables |
-| 9 | PTZ | **CAM 3**, the PTZ on 10.23.0.181 | 48 controls: five presets, a camera-swap key, a nudge cluster, zoom/focus, tracking, and pan/tilt/zoom/focus/speed/preset encoders. Fed by `ptz_state.py` on a **1-second** trigger and `ptz_web.py` on a 5-second one |
-| 10 | PTZ Setup | the same camera | Exposure, white balance, backlight, power, tracking mode and body framing |
-| 11 | PTZ 2 | **CAM 1**, the PTZ on 10.23.0.196 | The same page, built by the same code, bound to the second camera and its own `ptz2_*` variables |
-| 12 | PTZ 2 Setup | the same camera | As page 10, for the second camera |
+| 9 | PTZ | chooser | Opens either camera's page and its Setup page, and the Worship and Sermon pages that run both cameras side by side. Holds no camera controls itself |
+| 10 | CAM 1 | the PTZ on 10.23.0.196, ATEM input 1 | Presets, a camera-swap key, a nudge cluster, zoom/focus, tracking, and pan/tilt/zoom/focus/speed/preset dials. Fed by `ptz_state.py` on a **1-second** trigger and `ptz_web.py` on a 5-second one |
+| 11 | CAM 1 Setup | the same camera | Exposure, white balance, backlight, power, tracking mode, body framing and the saved look |
+| 12 | CAM 3 | the PTZ on 10.23.0.181, ATEM input 2 (shown as CAM 2 on the switcher) | As page 10, bound to this camera and its own variables |
+| 13 | CAM 3 Setup | the same camera | As page 11 |
+| 14 | Tracks | YouTube Music on the PP1 iMac | Opened from PP1. Previous, play/pause, skip, fade out, volume dial, all through `chrome_tracks.sh` |
+| 15 | Worship | both PTZs | Each camera's presets side by side, save, speed, focus, and pan/tilt/zoom dials |
+| 16 | Sermon | both PTZs | Tracking, close-up / half / full body, left / middle / right, presets and dials |
+| 17 | Dante | the Dante patch | Read-only; see Dante below |
 | 18 | Videohub | the whole router | Every output (rows 0–1, OUT 1–16) over every input (rows 2–3, IN 1–16), each captioned with the router's own live label; an output key also shows what feeds it. Tap an output to select it (violet), tap an input to route it there at once; the input feeding the selected output is green. **No folder row**: 32 ports need all four rows, so a Back key at r0c8 returns to VW. Since 2026-10-26, `tools/switch-page.js` |
 
-**Both cameras run one page layout.** Pages 11 and 12 are emitted by the same
-`buildPage`/`buildSetupPage` calls as 9 and 10, and the build asserts they are identical
-once the connection, host, page numbers and variable prefix are normalised away — so they
-cannot drift apart. See `tools/ptz2-page.js`.
+**Both cameras run one page layout.** Each camera's page and Setup page are emitted by the
+same `buildPage`/`buildSetupPage` calls, and the build asserts they are identical once the
+connection, host, page numbers and variable prefix are normalised away — so they cannot
+drift apart. See `tools/ptz2-page.js`.
 
-**The four PTZ pages share one folder-row slot.** The row is exactly nine columns for nine
-pages and was already full, so pages 10, 11 and 12 are sub-pages reached from page 9. The
-swap key at row 1 column 8 of each run page moves between the two cameras, and is captioned
-with that camera's **ATEM input number** so the deck and the switcher agree. It took the
-slot that held preset 6, which was unnamed and saved at preset 5's identical position.
+**The camera pages share one folder-row slot.** The row is exactly nine columns for nine
+pages, so every camera page is a sub-page reached from PTZ. The swap key on each camera page
+moves between the two cameras, and is captioned with that camera's **ATEM input number** so
+the deck and the switcher agree.
 
-There is **no Mics page any more.** The four Shure connections still run, but nothing on
-the deck reads them.
+There is **no Mics page any more**, and no Shure connections: the receivers are watched only
+through the Dante page.
 
 ## Planning Center
 
