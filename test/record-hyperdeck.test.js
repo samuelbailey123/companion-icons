@@ -111,13 +111,22 @@ describe('the Countdown key', () => {
 	const key = countdownKey(LIVE.countdown, ATEM, HD, VH)
 
 	it('puts Program on the recorder, then starts it, where it started the switcher, keeping the cue', () => {
-		expect(down(key).map((a) => `${a.definitionId} ${a.connectionId}`)).toEqual([`specificPlaylistOperation ${PP}`, 'route vh1', 'rec hd1'])
+		expect(down(key).map((a) => `${a.definitionId} ${a.connectionId}`)).toEqual([
+			`specificPlaylistOperation ${PP}`,
+			'route vh1',
+			'rec hd1',
+			`streamStartStop ${ATEM.connectionId}`,
+		])
 		expect(down(key)[0]).toEqual(down(LIVE.countdown)[0])
 		expect(down(key)[1].options).toEqual({
 			source: { value: 4, isExpression: false },
 			destination: { value: 13, isExpression: false },
 			ignore_lock: { value: true, isExpression: false },
 		})
+	})
+
+	it('turns the stream on, never toggles it, so a second press cannot end it', () => {
+		expect(down(key)[3].options).toEqual({ stream: { value: 'true', isExpression: false } })
 	})
 
 	it('is unchanged when run again, even after Companion renames its actions', () => {
@@ -130,7 +139,13 @@ describe('the Countdown key', () => {
 	it('keeps a route to some other output', () => {
 		const other = structuredClone(key)
 		down(other)[1].options.destination.value = 9
-		expect(down(countdownKey(other, ATEM, HD, VH)).map((a) => a.definitionId)).toEqual(['specificPlaylistOperation', 'route', 'route', 'rec'])
+		expect(down(countdownKey(other, ATEM, HD, VH)).map((a) => a.definitionId)).toEqual([
+			'specificPlaylistOperation',
+			'route',
+			'route',
+			'rec',
+			'streamStartStop',
+		])
 	})
 
 	it('changes nothing else about the key', () => {
