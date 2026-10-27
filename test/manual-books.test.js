@@ -169,6 +169,14 @@ describe('the reference', () => {
 		delete bare.surfaces
 		expect(referenceSections(snapshot({ exp: bare })).find((s) => s.id === 'surfaces').html).toContain('no other surfaces')
 	})
+	it('says on its first page when the build has no key pictures or module labels', () => {
+		const about = (over) => referenceSections(snapshot(over)).find((s) => s.id === 'about').html
+		expect(about({})).toContain('No key pictures in this build')
+		expect(about({})).not.toContain('No module labels')
+		expect(about({ defs: null })).toContain('No module labels in this build')
+		expect(about({ keyImage: () => 'data:image/png;base64,K' })).toContain('Companion\'s own renders')
+		expect(about({ exp: { ...exportFixture(), pages: {} } })).toContain('No key pictures in this build')
+	})
 	it('says when nothing on the deck opens a page', () => {
 		const exp = exportFixture()
 		exp.pages[5] = { name: 'Orphan', controls: {} }

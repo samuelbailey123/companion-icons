@@ -71,7 +71,7 @@ Work down this list from about 9:30.
 8. Go back to the **Home** page and leave the deck there.
 
 The full engineering checklist (camera formats, exposure, audio levels) is in the Reference,
-*Checklists*. It is for setting the rig up, not for every Sunday.
+*Engineering notes: Checklists*. It is for setting the rig up, not for every Sunday.
 
 ## During the service
 
@@ -113,7 +113,7 @@ The Worship page, both cameras side by side:
 - **Freeze Slide** holds the audience screens and the stream overlay on the current slide while
   you work ahead; **All Screens** releases it.
 - **Hosting / Speaker / Worship** set and start the stage timers (7, 45 and 25 minutes). The
-  touchstrip shows them; the knobs add or take a minute.
+  touchstrip shows them, with a key either side of each clock to take off or add a minute.
 - **Tracks** opens the walk-in music page: play/pause, skip, fade out, and a volume knob.
 
 ### Sound (SQ7 page)
@@ -151,8 +151,8 @@ The Worship page, both cameras side by side:
 
 | What you see | What to do |
 |---|---|
-| A key does nothing, or a page's readouts are blank | The device behind it is off or has a new address. Check the board: it names the device. Power it on; if it is on and still blank, see *Addresses* in the Recovery Guide |
-| The whole deck is dark or frozen | Companion is restarting (it **updates itself**, sometimes on a Sunday). Wait two minutes. If it does not come back, unplug and replug the deck's USB; then see *The Pi* in the Recovery Guide |
+| A key does nothing, or a page's readouts are blank | The device behind it is off or has a new address. Check the board: it names the device. Power it on; if it is on and still blank, see *When one thing breaks* in the Recovery Guide |
+| The whole deck is dark or frozen | Companion is restarting (it **updates itself**, sometimes on a Sunday). Wait two minutes. If it does not come back, unplug and replug the deck's USB; then see *When one thing breaks* in the Recovery Guide |
 | Board says the switcher is down | Check the ATEM in the rack has power. Cuts can still be made on its front panel |
 | Recording did not start at 10:24:57 | Press **Record** on Home. If it shows **NO CARD**, there is no SD card: put one in |
 | Stream did not start | ATEM page, **Stream**: press, then press again |

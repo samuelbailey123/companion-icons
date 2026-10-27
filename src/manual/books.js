@@ -95,6 +95,12 @@ export function keysHtml(page, snap, skipFolder) {
 	return rows.length ? `<table class="keys"><tbody>${rows.join('')}</tbody></table>` : '<p class="none">No keys besides the folder row.</p>'
 }
 
+/** The first key on the deck, as `[page, row, column]`, to ask the snapshot whether it has pictures. */
+const firstKey = (list) => {
+	const p = list.find((x) => x.keys.length)
+	return p ? [p.number, p.keys[0].row, p.keys[0].column] : [0, 0, 0]
+}
+
 /** Sub-pages, and which page first opens each, from every `set_page` outside the folder row. */
 export function navigation(list) {
 	const folder = folderRow(list)
@@ -238,7 +244,8 @@ export function referenceSections(snap, docs = []) {
 		title: 'About this book',
 		html: `<p>Everything Companion holds, read off the live rig: ${counts.pages} pages, ${counts.keys} controls, ${counts.triggers} triggers, ${customVariables(snap.exp).length} custom variables, ${connections(snap.exp).length} connections and ${(snap.exp.imageLibrary ?? []).length} library images. It is generated, not written: rebuild it after any change to the rig (<code>node tools/manual/collect.js</code>, then <code>node tools/manual/build.js</code>, on the AV network).</p>
 <p><b>Positions</b> are written <code>r1c3</code>: row 1, column 3, counting from 0 at the top left. Row 0 is the folder row, rows 1–3 are keys, row 4 the touchstrip and row 5 the knobs. The touchstrip and knobs exist only at columns 0, 2, 3, 5, 6 and 8.</p>
-<p><b>Key pictures</b> are Companion's own renders at the moment of reading, so they show that moment's state (what was live, what was on).</p>
+${snap.keyImage(...firstKey(list)) ? '<p><b>Key pictures</b> are Companion\'s own renders at the moment of reading, so they show that moment\'s state (what was live, what was on).</p>' : '<p class="todo"><b>No key pictures in this build:</b> the rig could not be reached for them, so each key is drawn as its label on its resting colour. Rebuild on the AV network to add them.</p>'}
+${snap.defs ? '' : '<p class="todo"><b>No module labels in this build:</b> actions and feedbacks are named by the modules\' internal ids (<code>program</code>, not "Set input on Program"). Rebuild on the AV network to add the labels Companion\'s editor shows.</p>'}
 <p><b>Credentials</b> never appear: each is named by its 1Password entry in the Recovery Guide.</p>`,
 	})
 
