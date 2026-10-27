@@ -16,6 +16,7 @@ import {
 	secretValues,
 	setName,
 	stepsOf,
+	surfaces,
 	textOf,
 	triggers,
 	weak,
@@ -157,5 +158,22 @@ describe('connections and credentials', () => {
 		const secrets = secretValues(exportFixture())
 		expect(() => assertNoSecrets('all clear', secrets)).not.toThrow()
 		expect(() => assertNoSecrets('the pass is Sup3r-Secret! ok', secrets)).toThrow(/13 chars, starts "Su"/)
+	})
+})
+
+describe('surfaces', () => {
+	it('lists the Stream Decks by serial and counts the software surfaces', () => {
+		const { hardware, others } = surfaces(exportFixture())
+		expect(hardware.map((s) => [s.type, s.brightness, s.startsOn])).toEqual([
+			['Elgato Stream Deck + XL', 100, 'the page it was last on'],
+			['Elgato Stream Deck +', null, 'page 1'],
+		])
+		expect(others).toEqual([
+			{ type: 'Service Health deck', count: 2 },
+			{ type: 'timing probe', count: 1 },
+		])
+		expect(surfaces({ surfaces: { x: {} } }).others).toEqual([{ type: 'x', count: 1 }])
+		expect(surfaces({ surfaces: { y: { integrationType: 'elgato-stream-deck', groupConfig: {} } } }).hardware[0].startsOn).toBe('page ?')
+		expect(surfaces({})).toEqual({ hardware: [], others: [] })
 	})
 })

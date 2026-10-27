@@ -154,7 +154,7 @@ describe('the reference', () => {
 		const snap = snapshot({ libraryImage: (n) => (n === 'power-on' ? 'data:image/svg+xml;base64,AAA' : null) })
 		const sections = referenceSections(snap, [{ title: 'The rig', md: '# The rig\n\nNotes.' }])
 		const ids = sections.map((s) => s.id)
-		expect(ids).toEqual(expect.arrayContaining(['about', 'page-map', 'signal-video', 'signal-audio', 'signal-control', 'signal-todo', 'page-1', 'page-3', 'triggers', 'variables', 'connections', 'images', 'notes-the-rig']))
+		expect(ids).toEqual(expect.arrayContaining(['surfaces', 'about', 'page-map', 'signal-video', 'signal-audio', 'signal-control', 'signal-todo', 'page-1', 'page-3', 'triggers', 'variables', 'connections', 'images', 'notes-the-rig']))
 		const all = sections.map((s) => s.html).join('\n')
 		for (const s of secretValues(snap.exp)) expect(all).not.toContain(s)
 		expect(all).toContain('disabled</span>')
@@ -162,6 +162,12 @@ describe('the reference', () => {
 		expect(all).toContain('src="data:image/svg+xml;base64,AAA"')
 		expect(sections.find((s) => s.id === 'page-map').html).toContain('Home r1c0')
 		expect(referenceSections(snapshot()).find((s) => s.id === 'images').html).not.toContain('<img')
+		const surf = sections.find((s) => s.id === 'surfaces').html
+		expect(surf).toContain('<code>AD4MA619138NSK</code>')
+		expect(surf).toContain('2 × Service Health deck')
+		const bare = exportFixture()
+		delete bare.surfaces
+		expect(referenceSections(snapshot({ exp: bare })).find((s) => s.id === 'surfaces').html).toContain('no other surfaces')
 	})
 	it('says when nothing on the deck opens a page', () => {
 		const exp = exportFixture()

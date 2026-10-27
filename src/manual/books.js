@@ -27,6 +27,7 @@ import {
 	stepsOf,
 	textOf,
 	setName,
+	surfaces,
 	triggers,
 } from './rig.js'
 
@@ -305,6 +306,16 @@ ${gridHtml({ number: nav.folder.pages[0], keys: nav.folder.keys }, snap, [0])}`,
 			html: `${gridHtml(p, snap)}${keysHtml(p, snap, skip)}`,
 		})
 	}
+
+	const surf = surfaces(snap.exp)
+	sections.push({
+		id: 'surfaces',
+		title: 'Surfaces',
+		html: `<p>The Stream Decks Companion drives, by serial number. A replacement deck of the same model is picked up as a new surface: give it the same settings.</p>${table(
+			['Deck', 'Serial', 'Brightness', 'Starts on'],
+			surf.hardware.map((s) => [escape(s.type), `<code>${escape(s.id.replace(/^streamdeck:/, ''))}</code>`, s.brightness == null ? '' : `${s.brightness}%`, escape(s.startsOn)])
+		)}<p>Companion also lists ${surf.others.map((o) => `${o.count} × ${escape(o.type)}`).join(', ') || 'no other surfaces'}: software surfaces (the Service Health board's Deck tab opens one per browser).</p>`,
+	})
 
 	sections.push({
 		id: 'triggers',

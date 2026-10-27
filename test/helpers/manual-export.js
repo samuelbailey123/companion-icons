@@ -113,6 +113,13 @@ export function exportFixture() {
 			pco: { label: 'pco', moduleId: 'planningcenter-serviceslive', moduleVersionId: '2.7.0', sortOrder: 4, config: { applicationid: 'app-id-123456', secretkey: 'key-abcdef123456' } },
 			dn: { label: 'dante', moduleId: 'audinate-dantecontroller', moduleVersionId: '1.1.2', sortOrder: 5, config: { ip: '10.23.0.242' } },
 		},
+		surfaces: {
+			'streamdeck:AD4MA619138NSK': { type: 'Elgato Stream Deck + XL', integrationType: 'elgato-stream-deck', config: { brightness: 100 }, groupConfig: { use_last_page: true } },
+			'streamdeck:A00W': { type: 'Elgato Stream Deck +', integrationType: 'elgato-stream-deck', config: {}, groupConfig: { use_last_page: false, startup_page: 1 } },
+			'board:1': { type: 'Service Health deck', integrationType: 'satellite' },
+			'board:2': { type: 'Service Health deck' },
+			probe: { name: 'timing probe' },
+		},
 		imageLibrary: [
 			{ originalImage: 'data:image/svg+xml;base64,AAA', previewImage: 'data:image/webp;base64,BBB', info: { name: 'power-on', description: 'On', collectionId: 'power' } },
 			{ originalImage: 'data:image/png;base64,CCC', previewImage: 'data:image/webp;base64,DDD', info: { name: 'loose' } },

@@ -142,6 +142,20 @@ export function imageLibrary(exp) {
 	return [...groups.entries()].map(([collection, images]) => ({ collection, images }))
 }
 
+/** The surfaces Companion knows: each Stream Deck by serial, and the software ones grouped. */
+export function surfaces(exp) {
+	const list = Object.entries(exp.surfaces ?? {}).map(([id, s]) => ({
+		id,
+		type: s.type ?? s.name ?? id,
+		hardware: s.integrationType === 'elgato-stream-deck',
+		brightness: s.config?.brightness ?? null,
+		startsOn: s.groupConfig?.use_last_page ? 'the page it was last on' : `page ${s.groupConfig?.startup_page ?? '?'}`,
+	}))
+	const others = new Map()
+	for (const s of list.filter((x) => !x.hardware)) others.set(s.type, (others.get(s.type) ?? 0) + 1)
+	return { hardware: list.filter((x) => x.hardware), others: [...others.entries()].map(([type, count]) => ({ type, count })) }
+}
+
 /** A setting's value for print: credentials masked, long text shortened. */
 function shown(key, value) {
 	if (SECRET_KEY.test(key)) return value === '' || value == null ? '(empty)' : '(credential: see the vault)'
