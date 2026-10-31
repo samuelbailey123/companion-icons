@@ -11,7 +11,7 @@ all and needs hands on the equipment.
 
 | | |
 |---|---|
-| Companion | Build `5.0.4+9717-stable-a69c14dec2` on a Raspberry Pi (`internal:hostname` reads `CompanionPi`) |
+| Companion | Build `5.1.1+10000-stable-1e2454ae78` (2026-10-31) on a Raspberry Pi (`internal:hostname` reads `CompanionPi`) |
 | Address | **http://10.23.0.242:8000** on the AV LAN — see Network below. Not reachable off-site |
 | Updates | **Companion updates itself unattended.** On 2026-08-28 it went 5.0.3 → 5.0.4 and restarted on its own; Pi uptime was 40d, so the Pi did not reboot. The same thing landing on a Sunday morning takes the deck down mid-service |
 | Admin API | tRPC over a WebSocket at `/trpc`, **unauthenticated** — anyone on the AV LAN can read the config and the log |
@@ -105,7 +105,7 @@ reports the new patch as broken.
 | `ULXD4Q-BGV-5-6-HOST-1-2` | not on the network — feeds the desk over XLR | 9-12 subscribed but unused |
 | `ULXD4D-LAV-1-2` | 10.23.0.143 | 13-14 |
 | `TCBs-MacBook-Pro-Tracks` — Dante Virtual Soundcard | 10.23.0.230 | 15-22 |
-| `iMac-PP1` — Dante Virtual Soundcard | 10.23.0.204 | 23-24 and 45-46 |
+| `iMac-PP1` — Dante Virtual Soundcard | 10.23.0.119 (2026-10-31; was .204) | 23-24 and 45-46 |
 | `Devans-Mac-mini`, `Josues-MacBook-Pro` | away on 2026-10-11 | 33-41 and 51-64; 42-44 and 47-49 |
 
 The receivers' Dante interfaces have their own addresses, separate from the :2202 control
@@ -127,10 +127,10 @@ Read off the live Companion on 2026-08-28 and confirmed against each device on t
 | ATEM Television Studio HD8 | Vision mixer and **stream** (recording moved to the HyperDeck on 2026-10-26) | **10.23.0.34** (2026-10-26), control on UDP 9910. Also answers the Blackmagic routing protocol on TCP 9990, which is how its identity was confirmed: unique ID `1947523eab1a4015aa81b6a4ae2dfe43`, the same uuid stamped into the recordings. That same port reports its video standard — `1080p59.94` — and its aux routing, and accepts routing changes |
 | Blackmagic Micro Videohub, 16×16 | Routing to the screens **and to the switcher's inputs 1–6** | **10.23.0.21**:9990. Re-patched on 2026-10-26: see Video routing below |
 | HyperDeck Studio Mini | **Records the service** since 2026-10-26, from Videohub OUT 13 | **10.23.0.206**:9993, Companion connection `hyperdeck` (bmd-hyperdeck 3.2.0). SD cards only. See recorder.md |
-| Allen & Heath SQ7 | Audio console | **10.23.0.191** (2026-10-26) |
+| Allen & Heath SQ7 | Audio console | **10.23.0.191** (2026-10-26). MIDI on :51325, which the `SQ` connection holds; :51326 answers whenever the mixer is up, so the board and `Poll SQ network` knock there |
 | grandMA2 | Lighting | **10.23.0.99** (2026-10-26) for the console login; OSC out to :8000 and feedback in on :9000 |
 | Shure ULXD4Q × 3 + ULXD4D × 1 | Wireless, **14** channels — not 16 | `10.23.0.20` "BGV 1-4" (Q), `10.23.0.23` "Lead 1-4" (Q), `10.23.0.253` "BGV+Host" (Q), `10.23.0.214` "Preach" — **a ULXD4D, two channels only**, Lav 1 and Lav 2. All on :2202 |
-| ProPresenter | Presentation | **10.23.0.111**:1100. A follower is configured at 10.23.0.11 but `control_follower` is off, and nothing is listening there |
+| ProPresenter | Presentation, on the PP1 iMac | `iMac-PP1.local`, **10.23.0.119**:1100 (DHCP moved it from .204 at 10:10 on 2026-10-31). The `propresenter` connection holds the number; the stage-layout poll, `chrome_tracks.sh` and the board use the name. A follower is configured at 10.23.0.11 but `control_follower` is off, and nothing is listening there |
 | NovaStar VX6S | LED wall processor | **10.23.0.23**:5200 (was .19 until August 2026) |
 | FoMaKo UV602 PTZ — **CAM 3** pages, shown as **CAM 2** | Camera, VISCA over IP, **ATEM input 2 since 2026-10-26** (was 3). The chooser, tally and captions read `ptz_atem_input`; the pages keep their CAM 3 names | **10.23.0.181**:5678, with an unauthenticated HTTP API on :80 that `ptz_web.py` drives |
 | FoMaKo UV602 PTZ — **CAM 1** | Camera, added 2026-08-28, ATEM input 1 | **10.23.0.196**:5678, same API |
@@ -144,6 +144,17 @@ Shure module has no such fallback, which is why those were the ones that broke. 
 Videohub's stored `host` is still `192.168.10.150`, an address on a subnet that does not
 exist here — it works purely on Bonjour. **Check the addresses whenever a page goes
 quiet, and prefer a pinned address over a discovered one.**
+
+**The SQ connection comes back by itself** since 2026-10-31. The `allenheath-sq` module (3.1.0,
+and 4.0.0-rc1 too) never reconnects after the mixer goes away, which is why it needed stopping
+and starting every day. `Poll SQ network` knocks on the mixer every 10 s and `Reconnect SQ` stops
+and starts the connection when it is down and the mixer answers, the same thing a hand did. It
+cannot touch a working link, and the module only reads on connect. Built by
+tools/live-state-triggers.js, with the why in src/live-state.js.
+
+**`chrome_tracks` is polled** every 10 s by `Poll tracks`, which also stamps `chrome_tracks_at`.
+The board treats a stamp over 30 s old as unknown, because a custom variable looks the same
+whether it was written a moment ago or last week.
 
 ## Network
 
