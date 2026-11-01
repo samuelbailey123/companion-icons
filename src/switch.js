@@ -1,10 +1,13 @@
 /**
- * The Videohub page: the whole router on the + XL, every output over every input.
+ * VW: the whole router on the + XL, every output over every input.
  *
  * Every output is a key and every input is a key, outputs on the top two rows and inputs on the
  * bottom two. Tap an output to select it, tap an input and it is routed there at once (Sam,
  * 2026-10-26: "tap output, tap input: routes at once"). It lives on the main deck (Sam: "same
- * stream deck"), opened from VW's Videohub key.
+ * stream deck"). It began as a Videohub sub-page opened from VW; since 2026-10-27 it IS VW (Sam:
+ * "the VW shows a pre page we just need the new folder that shows everything there"), so the
+ * folder row's VW key opens it directly. VW's touchstrip and knobs (the LED wall's brightness and
+ * the screen readouts) are carried over from the live page as they are.
  *
  * SELECTING IS SEPARATE FROM ROUTING, AND THAT IS THE SAFETY PROPERTY. An output key only
  * selects; no press on the top half can change what is on a screen. Only an input key sends a
@@ -16,7 +19,7 @@
  * a variable name out of that variable, which Companion's expression parser rejects (rig.md,
  * open fault 2). bmd-videohub keeps a selected destination itself: `select_destination` sets
  * it, `route_source` routes to it, and the `selected_destination` / `selected_source`
- * feedbacks read it. VW's keys now share that selection (src/vw.js).
+ * feedbacks read it.
  *
  * LABELS ARE THE ROUTER'S, LIVE (Sam's choice). Each key shows `$(videohub:input_N)` or
  * `$(videohub:output_N)`, so a port renamed in Videohub Setup is renamed here with no rebuild.
@@ -25,21 +28,21 @@
  * feeding it, so the top half of the deck is the whole routing table at a glance.
  *
  * NO FOLDER ROW, BECAUSE 32 PORTS NEED ALL FOUR ROWS. With row 0 spent on folders the page has
- * 27 keys. So this one sub-page breaks the deck's rule and carries a single Back key in the
- * spare column instead; the touchstrip and knobs below are left empty.
+ * 27 keys. So this one page breaks the deck's rule and carries a single Home key in the spare
+ * column instead.
  */
-import { COLUMNS, GRID_SIZE, KEY_ROWS } from './layout.js'
+import { COLUMNS, GRID_SIZE, KEY_ROWS, KNOB_ROW, STRIP_ROW } from './layout.js'
 
-export const PAGE_NAME = 'Videohub'
-export const PARENT = 'VW'
+export const PAGE_NAME = 'VW'
+export const HOME = 'Home'
 export const MODULE_ID = 'bmd-videohub'
 export const MARK = 'videohub'
 
 /** The + XL's key grid with no folder row: rows 0-3, nine across. */
 export const GRID = { columns: COLUMNS, rows: KEY_ROWS.length + 1 }
 
-/** Back to VW, top right: the column the ports leave free. */
-export const BACK_CELL = { row: 0, col: COLUMNS - 1 }
+/** Home, top right: the column the ports leave free. */
+export const HOME_CELL = { row: 0, col: COLUMNS - 1 }
 
 /** Violet is the routing identity on this deck; inputs sit cooler, as on VW. */
 export const BG = { output: 0x241a42, input: 0x14243a, nav: 0x1f2937 }
@@ -75,16 +78,16 @@ export function findVideohub(full) {
  * Where every key goes: outputs fill the top half of the grid, inputs the bottom half.
  *
  * Both halves use the same row width, so input N sits in the same column as output N. Sixteen
- * and sixteen on four rows is eight a row, which leaves the last column for the Back key rather
+ * and sixteen on four rows is eight a row, which leaves the last column for the Home key rather
  * than wrapping port 9 onto the first row.
  *
- * @throws when the router does not fit beside the Back key, rather than silently dropping ports
+ * @throws when the router does not fit beside the Home key, rather than silently dropping ports
  */
 export function plan({ inputs, outputs }, grid = GRID) {
 	const half = Math.floor(grid.rows / 2)
 	const perRow = half ? Math.ceil(Math.max(inputs, outputs) / half) : Infinity
 	if (perRow > grid.columns - 1) {
-		throw new Error(`${outputs} outputs and ${inputs} inputs do not fit a ${grid.columns}x${grid.rows} deck beside a Back key`)
+		throw new Error(`${outputs} outputs and ${inputs} inputs do not fit a ${grid.columns}x${grid.rows} deck beside a Home key`)
 	}
 	const cell = (n, firstRow) => ({ n, row: firstRow + Math.floor((n - 1) / perRow), col: (n - 1) % perRow })
 	const ports = (count, firstRow) => Array.from({ length: count }, (_, i) => cell(i + 1, firstRow))
@@ -249,8 +252,11 @@ export function pageKey({ id, icon, label, pageNumber, notes }) {
 	})
 }
 
-/** The Videohub page for a router, with its Back key pointing at VW's page number. */
-export function buildVideohubPage(videohub, vwPage) {
+/**
+ * VW for a router: every port, a Home key pointing at Home's page number, and `kept`, the
+ * touchstrip and knob rows to carry over as they are.
+ */
+export function buildVwPage(videohub, homePage, kept = {}) {
 	const layout = plan(videohub)
 	const controls = {}
 	const place = ({ row, col }, key) => {
@@ -260,29 +266,26 @@ export function buildVideohubPage(videohub, vwPage) {
 	for (const cell of layout.outputs) place(cell, outputKey(videohub, cell.n))
 	for (const cell of layout.inputs) place(cell, inputKey(videohub, cell.n))
 	place(
-		BACK_CELL,
-		pageKey({ id: `${MARK}-back`, icon: 'back', label: PARENT, pageNumber: vwPage, notes: `${MARK}: back to ${PARENT} (page ${vwPage})` })
+		HOME_CELL,
+		pageKey({ id: `${MARK}-home`, icon: 'home', label: HOME, pageNumber: homePage, notes: `${MARK}: to ${HOME} (page ${homePage})` })
 	)
+	for (const row of [STRIP_ROW, KNOB_ROW]) if (kept[row]) controls[row] = structuredClone(kept[row])
 	return { name: PAGE_NAME, gridSize: { ...GRID_SIZE }, controls }
 }
 
 /**
- * The Videohub page from a live export, and the page number it lands on.
- *
- * Rebuilding replaces the existing page in place, keeping its id. A first build lands after the
- * last page, which is where Companion's "import to a new page" puts it.
+ * VW from a live export, replacing the VW page in place: same number, same id, and its touchstrip
+ * and knobs kept.
  */
 export function buildConfig(full) {
 	const videohub = findVideohub(full)
-	const numbers = Object.keys(full.pages ?? {}).map(Number)
-	if (Math.max(...numbers) !== numbers.length) {
-		throw new Error(`pages are not numbered 1..${numbers.length}; a new page would not land after the last`)
-	}
 	const numberOf = (name) => Object.entries(full.pages).find(([, p]) => p.name === name)?.[0]
-	const vwPage = numberOf(PARENT)
-	if (!vwPage) throw new Error(`no ${PARENT} page on this rig to open the ${PAGE_NAME} page from`)
-	const existing = numberOf(PAGE_NAME)
-	const page = buildVideohubPage(videohub, vwPage)
-	if (existing) page.id = full.pages[existing].id
-	return { videohub, page, number: existing ?? String(numbers.length + 1), existing: Boolean(existing), vwPage }
+	const number = numberOf(PAGE_NAME)
+	if (!number) throw new Error(`no ${PAGE_NAME} page on this rig`)
+	const homePage = numberOf(HOME)
+	if (!homePage) throw new Error(`no ${HOME} page on this rig for the corner key to open`)
+	const live = full.pages[number]
+	const page = buildVwPage(videohub, homePage, live.controls)
+	page.id = live.id
+	return { videohub, page, number, homePage }
 }
