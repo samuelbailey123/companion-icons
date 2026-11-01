@@ -114,9 +114,10 @@ const LIVE = `$(internal:custom_${STATE})`
  * The poll: ProPresenter's own layout endpoint, reduced to the bare name.
  *
  * `sed` rather than a JSON parser so the command depends on nothing installed on the Pi, and
- * `-m 2` so a ProPresenter that is busy or gone cannot back the poller up behind itself.
+ * `-m 2` so a ProPresenter that is busy or gone cannot back the poller up behind itself. By name,
+ * not `HOST`: DHCP moved the iMac on 2026-10-31 and this poll kept calling the old address.
  */
-const POLL = `curl -s -m 2 http://${HOST}/v1/stage/screen/${screenUuid}/layout | sed -n 's/.*"name" *: *"\\([^"]*\\)".*/\\1/p'`
+const POLL = `curl -s -m 2 http://iMac-PP1.local:${instance.config.port}/v1/stage/screen/${screenUuid}/layout | sed -n 's/.*"name" *: *"\\([^"]*\\)".*/\\1/p'`
 
 const setLayout = (id, layoutName) => ({
 	id,
