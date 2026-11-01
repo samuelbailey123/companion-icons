@@ -41,6 +41,18 @@ show hours left, a press should turn it red and count up, and the board should g
 holds roughly five hours. The deck's own rate is unmeasured until the first file. Use cards from
 Blackmagic's supported media list for the Studio Mini and format them in the deck.
 
+**Formatting from the deck.** Two keys on the System page, row 3 (Sam, 2026-11-01). **Format card**
+at column 6 asks the HyperDeck to get ready and erases nothing. **Confirm** at column 8 erases the
+card as exFAT, and works only within 10 seconds of that, when it's red and says ERASE with the
+number of clips. Dark, it does nothing. Both refuse while the deck is recording. There are two
+keys, apart, because a stepped key like Stream stays armed with no timeout, and the deck's own
+prepare and confirm can't. **There's no undo: copy the service off the card first.**
+
+**Proven, and not.** On 2026-11-01, with no card in, a Format card press reached the deck and came
+back `105 no disk`, and Confirm stayed dark. With a card in, Confirm going red, the 10 second
+lapse and the erase itself are unproven, and so is the refusal while recording. The first proof
+wants a spare card with nothing on it. Built by `tools/hyperdeck-format.js`.
+
 ## Before 2026-10-26: the ATEM recorded
 
 The ATEM Television Studio HD8 recorded its own program feed directly to disk.
