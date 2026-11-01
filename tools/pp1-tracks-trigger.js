@@ -12,7 +12,7 @@
  * playing one alone. Run it twice and the tracks are still playing.
  *
  * It writes `chrome_tracks` as the key does, so PP1's Tracks key and the folder's Play/Pause key
- * go green when it lands. Nothing polls that variable, so this is the only way they would know.
+ * go green when it lands, without waiting up to 10 s for the Poll tracks trigger (src/live-state.js).
  *
  * The time is Central because Companion's `timezone` setting is America/Chicago, not because of
  * the Pi's clock (see tools/sunday-power-trigger.js). SUNDAY ONLY (`days: [0]`): tracks starting

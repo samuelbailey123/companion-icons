@@ -11,13 +11,13 @@ all and needs hands on the equipment.
 
 | | |
 |---|---|
-| Companion | Build `5.0.4+9717-stable-a69c14dec2` on a Raspberry Pi (`internal:hostname` reads `CompanionPi`) |
-| Address | **http://10.23.0.242:8000** on the AV LAN — see Network below. Not reachable off-site |
+| Companion | Build `5.1.1+10000-stable-1e2454ae78` (2026-10-31) on a Raspberry Pi (`internal:hostname` reads `CompanionPi`) |
+| Address | **http://10.23.0.242:8000**, for Sam's Mac (`10.23.0.100`) and the VPN (`192.168.2.0/24`) only. Since 2026-11-01 a firewall on the Pi closes ports 8000, 16622 and 16623 to the rest of the AV LAN. From anywhere else, run `ssh -L 8000:127.0.0.1:8000 samuelbailey@10.23.0.242` and open `http://localhost:8000`. The list and how to change or undo it are in service-health's README, under "Closing Companion's ports" |
 | Updates | **Companion updates itself unattended.** On 2026-08-28 it went 5.0.3 → 5.0.4 and restarted on its own; Pi uptime was 40d, so the Pi did not reboot. The same thing landing on a Sunday morning takes the deck down mid-service |
-| Admin API | tRPC over a WebSocket at `/trpc`, **unauthenticated** — anyone on the AV LAN can read the config and the log |
+| Admin API | tRPC over a WebSocket at `/trpc`, **unauthenticated**: any machine the firewall lets in can read the config and the log |
 | Surfaces | Stream Deck + and Stream Deck XL. The XL grid is 9 columns; row 0 is the folder row on every page, row 4 the touchstrip, row 5 the encoders |
 | Config in/out | `node tools/rig.js export <out.json>` reads the live config; `import` pushes selected sections. See the header of that file for why it exists and why it never touches `connections` or `userconfig`. **`tools/rig.js` is not on `main`** — it currently lives only on the `atem-stream-record` branch |
-| Reading it without the tool | The export half is one plain HTTP GET: `curl -s http://10.23.0.242:8000/int/export/full \| gunzip > rig.json`. Useful when you are on the LAN with no checkout |
+| Reading it without the tool | The export half is one plain HTTP GET: `curl -s http://10.23.0.242:8000/int/export/full \| gunzip > rig.json`. Useful on a machine the firewall lets in, with no checkout |
 | Backup | `tools/rig.js export` **is** the backup. Run it before any change. **The file carries the ProPresenter and grandMA2 passwords in clear text** — treat an export as a credential, not as a document |
 
 `tools/rig.js` talks tRPC over a WebSocket at `/trpc`, the same way Companion's own web UI
@@ -35,16 +35,16 @@ camera's pair behind that.
 | 1 | Home | nothing — status only | Projectors, PA, PROGRAM, PREVIEW, Stream, Record, three ATEM macros. **No longer carries mic batteries, packs, internet or CPU temp** — those moved to System or went away with the Mics page. The deck resumes on its last page, so this is where you land after a restart |
 | 2 | Power | Projectors, PA | One state-aware toggle per system; direction is worked out from polled state, not a step counter |
 | 3 | PP1 | ProPresenter | Speaker and Worship are duration presets on one shared timer — 45 min and 25 min, not two timers. **Freeze Slide** at r1c8 (on the rig since 2026-10-10, `tools/pp1-freeze.js`) fires ProPresenter's "Freeze" macro: Slide Destination, Stage Only, so clicks stop reaching the audience screens and what is up stays up. **All Screens** at r2c7 releases it. It holds every audience output, the stream's words overlay included. ProPresenter's API cannot give a macro its actions, so the macro was made by hand. **Pre-Service** at r2c3 (since 2026-10-11, `tools/pp1-preservice.js`) fires the pre-roll, the first presentation in the Sunday Service playlist; like Countdown it triggers by playlist index, so re-run the tool if items are added above it |
-| 4 | MA2 | grandMA2 lighting | Executors 101–109 across row 1, Go Next / Go Back / BLACKOUT below, four encoders on row 5 |
+| 4 | MA2 | grandMA2 lighting | Since 2026-10-27 the whole lighting is one fader on the desk, Fader 1 on fader page 5 (Executor 5.1), and the page is built round it: knob 1, **Lights**, sets it 0–100 in steps of 5, with its level on the strip above; **Go Next** (r2c0) and **Go Back** (r3c0) send `Go Executor 5.1` / `GoBack Executor 5.1`, stepping its cues whatever the desk has selected; BLACKOUT stays at r3c8 (`src/ma2.js`). The level is what the deck last sent, not read back from the desk, so move the fader on the console and the strip is wrong until the knob is turned. `fader2_level`–`fader4_level` and `selected_exec` are left over from the old four knobs and drive nothing |
 | 5 | ATEM | Television Studio HD8 | Program bus over preview bus, CUT and AUTO at column 8. The eight bus keys are inputs 1–7 plus Media Player 1 — **input 8, the PTZ, has no key on either bus** |
 | 6 | SQ7 | Allen & Heath SQ7 | DCA 1–8 with level and mute state, Mute DCAs key. Stream / Foyer / MAIN readouts on the touchstrip. Since 2026-10-27 the bottom row (r3c0–r3c5) opens six fader folders, pages 19–24 (`src/sq7-faders.js`) |
-| 7 | VW | Blackmagic Videohub + LED wall | Five destinations over four sources: tap a destination to select it, tap a source to route. Two direct routes, four Videohub readouts, a brightness encoder for the wall, and **Videohub** at r1c8, which opens page 18. Repointed to the post-move port numbers on 2026-10-26 (`src/vw.js`) |
+| 7 | VW | Blackmagic Videohub + LED wall | **The whole router** since 2026-10-27 (Sam: VW should be "the new folder that shows everything"): every output (rows 0–1, OUT 1–16) over every input (rows 2–3, IN 1–16), each captioned with the router's own live label; an output key also shows what feeds it. Tap an output to select it (violet), tap an input to route it there at once; the input feeding the selected output is green. **No folder row**: 32 ports need all four rows, so a **Home** key at r0c8 leaves. The touchstrip and knobs are VW's as before: four screen readouts and the LED wall's brightness. `tools/switch-page.js`, `src/switch.js` |
 | 8 | System | the Pi itself | CPU temp, load, memory, disk, power, internet, address, uptime, Companion, storage. Fed by an `internal: exec` trigger because Companion publishes no OS-level variables |
 | 9 | PTZ | **CAM 3**, the PTZ on 10.23.0.181 | 48 controls: five presets, a camera-swap key, a nudge cluster, zoom/focus, tracking, and pan/tilt/zoom/focus/speed/preset encoders. Fed by `ptz_state.py` on a **1-second** trigger and `ptz_web.py` on a 5-second one |
 | 10 | PTZ Setup | the same camera | Exposure, white balance, backlight, power, tracking mode and body framing |
 | 11 | PTZ 2 | **CAM 1**, the PTZ on 10.23.0.196 | The same page, built by the same code, bound to the second camera and its own `ptz2_*` variables |
 | 12 | PTZ 2 Setup | the same camera | As page 10, for the second camera |
-| 18 | Videohub | the whole router | Every output (rows 0–1, OUT 1–16) over every input (rows 2–3, IN 1–16), each captioned with the router's own live label; an output key also shows what feeds it. Tap an output to select it (violet), tap an input to route it there at once; the input feeding the selected output is green. **No folder row**: 32 ports need all four rows, so a Back key at r0c8 returns to VW. Since 2026-10-26, `tools/switch-page.js` |
+| 18 | Videohub | nothing now | The router page as it was before it became VW (2026-10-26). Nothing opens it since 2026-10-27; its Back key goes to VW. Deleting it renumbers the pages after it (SQ7's fader folders, 19–24, since 2026-10-27), so rebuild those after a delete |
 | 19–24 | DCA 1-4, DCA 5-8, Leads, BGV, Lav, FX | SQ7 faders | SQ7 sub-pages since 2026-10-27 (Sam: "more faders", "folders for this stuff"). One knob per fader: turn for level, 1 dB a click; press to mute. The strip above shows the name and the desk's own dB (`level_<MSB>.<LSB>` from the allenheath-sq module), red when muted. DCA 1–4 and 5–8 are the DCA masters. Leads (CH 1–4), BGV (CH 5–8) and Lav (CH 13–14) are those inputs' level into Main (LR), on the channels the Dante page names. FX is FX returns 1–4 into Main. `tools/sq7-faders.js` |
 
 **Both cameras run one page layout.** Pages 11 and 12 are emitted by the same
@@ -106,7 +106,7 @@ reports the new patch as broken.
 | `ULXD4Q-BGV-5-6-HOST-1-2` | not on the network — feeds the desk over XLR | 9-12 subscribed but unused |
 | `ULXD4D-LAV-1-2` | 10.23.0.143 | 13-14 |
 | `TCBs-MacBook-Pro-Tracks` — Dante Virtual Soundcard | 10.23.0.230 | 15-22 |
-| `iMac-PP1` — Dante Virtual Soundcard | 10.23.0.204 | 23-24 and 45-46 |
+| `iMac-PP1` — Dante Virtual Soundcard | 10.23.0.119 (2026-10-31; was .204) | 23-24 and 45-46 |
 | `Devans-Mac-mini`, `Josues-MacBook-Pro` | away on 2026-10-11 | 33-41 and 51-64; 42-44 and 47-49 |
 
 The receivers' Dante interfaces have their own addresses, separate from the :2202 control
@@ -128,10 +128,10 @@ Read off the live Companion on 2026-08-28 and confirmed against each device on t
 | ATEM Television Studio HD8 | Vision mixer and **stream** (recording moved to the HyperDeck on 2026-10-26) | **10.23.0.34** (2026-10-26), control on UDP 9910. Also answers the Blackmagic routing protocol on TCP 9990, which is how its identity was confirmed: unique ID `1947523eab1a4015aa81b6a4ae2dfe43`, the same uuid stamped into the recordings. That same port reports its video standard — `1080p59.94` — and its aux routing, and accepts routing changes |
 | Blackmagic Micro Videohub, 16×16 | Routing to the screens **and to the switcher's inputs 1–6** | **10.23.0.21**:9990. Re-patched on 2026-10-26: see Video routing below |
 | HyperDeck Studio Mini | **Records the service** since 2026-10-26, from Videohub OUT 13 | **10.23.0.206**:9993, Companion connection `hyperdeck` (bmd-hyperdeck 3.2.0). SD cards only. See recorder.md |
-| Allen & Heath SQ7 | Audio console | **10.23.0.191** (2026-10-26) |
+| Allen & Heath SQ7 | Audio console | **10.23.0.191** (2026-10-26). MIDI on :51325, which the `SQ` connection holds; :51326 answers whenever the mixer is up, so the board and `Poll SQ network` knock there |
 | grandMA2 | Lighting | **10.23.0.99** (2026-10-26) for the console login; OSC out to :8000 and feedback in on :9000 |
 | Shure ULXD4Q × 3 + ULXD4D × 1 | Wireless, **14** channels — not 16 | `10.23.0.20` "BGV 1-4" (Q), `10.23.0.23` "Lead 1-4" (Q), `10.23.0.253` "BGV+Host" (Q), `10.23.0.214` "Preach" — **a ULXD4D, two channels only**, Lav 1 and Lav 2. All on :2202 |
-| ProPresenter | Presentation | **10.23.0.111**:1100. A follower is configured at 10.23.0.11 but `control_follower` is off, and nothing is listening there |
+| ProPresenter | Presentation, on the PP1 iMac | `iMac-PP1.local`, **10.23.0.119**:1100 (DHCP moved it from .204 at 10:10 on 2026-10-31). The `propresenter` connection holds the number; the stage-layout poll, `chrome_tracks.sh` and the board use the name. A follower is configured at 10.23.0.11 but `control_follower` is off, and nothing is listening there |
 | NovaStar VX6S | LED wall processor | **10.23.0.23**:5200 (was .19 until August 2026) |
 | FoMaKo UV602 PTZ — **CAM 3** pages, shown as **CAM 2** | Camera, VISCA over IP, **ATEM input 2 since 2026-10-26** (was 3). The chooser, tally and captions read `ptz_atem_input`; the pages keep their CAM 3 names | **10.23.0.181**:5678, with an unauthenticated HTTP API on :80 that `ptz_web.py` drives |
 | FoMaKo UV602 PTZ — **CAM 1** | Camera, added 2026-08-28, ATEM input 1 | **10.23.0.196**:5678, same API |
@@ -145,6 +145,17 @@ Shure module has no such fallback, which is why those were the ones that broke. 
 Videohub's stored `host` is still `192.168.10.150`, an address on a subnet that does not
 exist here — it works purely on Bonjour. **Check the addresses whenever a page goes
 quiet, and prefer a pinned address over a discovered one.**
+
+**The SQ connection comes back by itself** since 2026-10-31. The `allenheath-sq` module (3.1.0,
+and 4.0.0-rc1 too) never reconnects after the mixer goes away, which is why it needed stopping
+and starting every day. `Poll SQ network` knocks on the mixer every 10 s and `Reconnect SQ` stops
+and starts the connection when it is down and the mixer answers, the same thing a hand did. It
+cannot touch a working link, and the module only reads on connect. Built by
+tools/live-state-triggers.js, with the why in src/live-state.js.
+
+**`chrome_tracks` is polled** every 10 s by `Poll tracks`, which also stamps `chrome_tracks_at`.
+The board treats a stamp over 30 s old as unknown, because a custom variable looks the same
+whether it was written a moment ago or last week.
 
 ## Network
 
@@ -222,9 +233,9 @@ On the ATEM that makes input 1 "Cam 1", 2 "Cam 2", 3 "PP1", 4 "PP1B", 5 "Words O
 Sunday 10:00 pre-service cut moved from input 7 to 3 the same day. On 2026-10-26 the wall and
 both projectors were taking PP1 straight from the router, not from an ATEM aux.
 
-The deck reads these labels live, so renaming a port in Videohub Setup renames its key. VW's
-curated keys are by number (`src/vw.js`), so a re-patch means re-running
-`tools/switch-page.js`, which refuses a VW page it does not recognise.
+The deck reads these labels live, so renaming a port in Videohub Setup renames its key, and since
+2026-10-27 VW shows every port, so a re-patch needs no rebuild. The four screen readouts on VW's
+touchstrip are still by number (outputs 16, 15, 14 and 8).
 
 Credentials do not go in this file. Record **where** they live — a password manager entry
 name — not what they are.

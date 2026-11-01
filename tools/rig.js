@@ -6,6 +6,7 @@
  *   node tools/rig.js import <bundle.companionconfig> <section>[,<section>...]
  *   node tools/rig.js import-page <page.companionconfig> <targetPage>|new
  *   node tools/rig.js add-trigger <bundle.companionconfig> <triggerId>
+ *   node tools/rig.js set-trigger-action <triggerId> <actionId> <key> <value>
  *   node tools/rig.js create-vars <bundle.companionconfig>
  *   node tools/rig.js log [minutes]
  *
@@ -279,6 +280,23 @@ if (command === 'export') {
 	try {
 		const name = await addTrigger(client, file, bundle, live, triggerId)
 		console.log(`added "${name}" (${triggerId}) from ${file}; the other ${Object.keys(live.triggers ?? {}).length} triggers were not touched`)
+	} finally {
+		client.close()
+	}
+} else if (command === 'set-trigger-action') {
+	const [triggerId, actionId, key, value] = args
+	if (value === undefined) throw new Error('usage: set-trigger-action <triggerId> <actionId> <key> <value>')
+	const client = connect()
+	try {
+		const done = await client.mutation('controls.entities.setOption', {
+			controlId: `trigger:${triggerId}`,
+			entityLocation: 'trigger_actions',
+			entityId: actionId,
+			key,
+			value: { value, isExpression: false },
+		})
+		if (!done) throw new Error(`Companion did not change ${key} on ${actionId} of trigger ${triggerId}`)
+		console.log(`set ${key} on ${actionId} of trigger ${triggerId}; nothing else was touched`)
 	} finally {
 		client.close()
 	}
