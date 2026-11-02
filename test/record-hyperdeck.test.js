@@ -12,6 +12,7 @@ import {
 	isCountdownKey,
 	isRecordKey,
 	recordKey,
+	streamStart,
 } from '../src/record-hyperdeck.js'
 
 /** The live Home Record key and PP1 Countdown key, read off the rig on 2026-10-26. */
@@ -115,7 +116,6 @@ describe('the Countdown key', () => {
 			`specificPlaylistOperation ${PP}`,
 			'route vh1',
 			'rec hd1',
-			`streamStartStop ${ATEM.connectionId}`,
 		])
 		expect(down(key)[0]).toEqual(down(LIVE.countdown)[0])
 		expect(down(key)[1].options).toEqual({
@@ -125,8 +125,17 @@ describe('the Countdown key', () => {
 		})
 	})
 
-	it('turns the stream on, never toggles it, so a second press cannot end it', () => {
-		expect(down(key)[3].options).toEqual({ stream: { value: 'true', isExpression: false } })
+	it('does not start the stream, and takes off a stream start it carried, so a rerun cannot put it back', () => {
+		expect(down(key).some((a) => a.definitionId === 'streamStartStop')).toBe(false)
+		const streamed = structuredClone(key)
+		down(streamed).push(streamStart(ATEM))
+		expect(down(countdownKey(streamed, ATEM, HD, VH)).map((a) => a.definitionId)).toEqual(['specificPlaylistOperation', 'route', 'rec'])
+	})
+
+	it('leaves a stream toggle alone: only a start comes off', () => {
+		const toggled = structuredClone(key)
+		down(toggled).push({ ...streamStart(ATEM), options: { stream: { value: 'toggle', isExpression: false } } })
+		expect(down(countdownKey(toggled, ATEM, HD, VH)).map((a) => a.definitionId)).toContain('streamStartStop')
 	})
 
 	it('is unchanged when run again, even after Companion renames its actions', () => {
@@ -144,7 +153,6 @@ describe('the Countdown key', () => {
 			'route',
 			'route',
 			'rec',
-			'streamStartStop',
 		])
 	})
 

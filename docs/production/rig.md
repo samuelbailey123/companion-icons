@@ -16,7 +16,7 @@ all and needs hands on the equipment.
 | Updates | **Companion updates itself unattended.** On 2026-08-28 it went 5.0.3 → 5.0.4 and restarted on its own; Pi uptime was 40d, so the Pi did not reboot. The same thing landing on a Sunday morning takes the deck down mid-service |
 | Admin API | tRPC over a WebSocket at `/trpc`, **unauthenticated**: any machine the firewall lets in can read the config and the log |
 | Surfaces | Stream Deck + and Stream Deck XL. The XL grid is 9 columns; row 0 is the folder row on every page, row 4 the touchstrip, row 5 the encoders |
-| Config in/out | `node tools/rig.js export <out.json>` reads the live config; `import` pushes selected sections. See the header of that file for why it exists and why it never touches `connections` or `userconfig`. **`tools/rig.js` is not on `main`** — it currently lives only on the `atem-stream-record` branch |
+| Config in/out | `node tools/rig.js export <out.json>` reads the live config; `import` pushes selected sections. See the header of that file for why it exists, why it never touches `connections` or `userconfig`, and its other commands (`import-page`, `add-trigger`, `set-trigger-action`, `remove-trigger-action`, `create-vars`) |
 | Reading it without the tool | The export half is one plain HTTP GET: `curl -s http://10.23.0.242:8000/int/export/full \| gunzip > rig.json`. Useful on a machine the firewall lets in, with no checkout |
 | Backup | `tools/rig.js export` **is** the backup. Run it before any change. **The file carries the ProPresenter and grandMA2 passwords in clear text** — treat an export as a credential, not as a document |
 

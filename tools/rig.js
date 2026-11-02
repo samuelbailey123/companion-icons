@@ -7,6 +7,7 @@
  *   node tools/rig.js import-page <page.companionconfig> <targetPage>|new
  *   node tools/rig.js add-trigger <bundle.companionconfig> <triggerId>
  *   node tools/rig.js set-trigger-action <triggerId> <actionId> <key> <value>
+ *   node tools/rig.js remove-trigger-action <triggerId> <actionId>
  *   node tools/rig.js create-vars <bundle.companionconfig>
  *   node tools/rig.js log [minutes]
  *
@@ -300,6 +301,21 @@ if (command === 'export') {
 	} finally {
 		client.close()
 	}
+} else if (command === 'remove-trigger-action') {
+	const [triggerId, actionId] = args
+	if (!actionId) throw new Error('usage: remove-trigger-action <triggerId> <actionId>')
+	const client = connect()
+	try {
+		const done = await client.mutation('controls.entities.remove', {
+			controlId: `trigger:${triggerId}`,
+			entityLocation: 'trigger_actions',
+			entityId: actionId,
+		})
+		if (!done) throw new Error(`Companion did not remove ${actionId} from trigger ${triggerId}`)
+		console.log(`removed ${actionId} from trigger ${triggerId}; nothing else was touched`)
+	} finally {
+		client.close()
+	}
 } else if (command === 'create-vars') {
 	const bundle = JSON.parse(await fs.readFile(args[0], 'utf8'))
 	const live = await exportFull()
@@ -315,6 +331,6 @@ if (command === 'export') {
 	const res = await fetch(`${RIG}/int/log`)
 	console.log(res.ok ? (await res.text()).slice(-8000) : `log unavailable over HTTP (${res.status}); use journalctl on the Pi for the last ${minutes} minutes`)
 } else {
-	console.error('usage: node tools/rig.js export <out.json> | import <bundle> <sections> | import-page <page-bundle> <targetPage>|new | add-trigger <bundle> <triggerId> | create-vars <bundle> | log [minutes]')
+	console.error('usage: node tools/rig.js export <out.json> | import <bundle> <sections> | import-page <page-bundle> <targetPage>|new | add-trigger <bundle> <triggerId> | set-trigger-action <triggerId> <actionId> <key> <value> | remove-trigger-action <triggerId> <actionId> | create-vars <bundle> | log [minutes]')
 	process.exit(1)
 }
