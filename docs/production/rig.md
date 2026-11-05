@@ -11,11 +11,11 @@ all and needs hands on the equipment.
 
 | | |
 |---|---|
-| Companion | Build `5.1.1+10000-stable-1e2454ae78` (2026-10-31) on a Raspberry Pi (`internal:hostname` reads `CompanionPi`) |
+| Companion | Build `5.1.2+10019-stable-98d5d4e1a1` (2026-11-05) on the fan Pi, `companion-server` (MAC `98:fe:54:18:f3:f8`), which took over 10.23.0.242 from the old Pi on 2026-11-05. It also runs the board, the AV_Power_scripts and a nightly backup of `/home/companion/.config` to `/var/backups/companion` (03:17, 30 days kept) |
 | Address | **http://10.23.0.242:8000**, for Sam's Mac (`10.23.0.100`) and the VPN (`192.168.2.0/24`) only. Since 2026-11-01 a firewall on the Pi closes ports 8000, 16622 and 16623 to the rest of the AV LAN. From anywhere else, run `ssh -L 8000:127.0.0.1:8000 samuelbailey@10.23.0.242` and open `http://localhost:8000`. The list and how to change or undo it are in service-health's README, under "Closing Companion's ports" |
 | Updates | **Companion updates itself unattended.** On 2026-08-28 it went 5.0.3 → 5.0.4 and restarted on its own; Pi uptime was 40d, so the Pi did not reboot. The same thing landing on a Sunday morning takes the deck down mid-service |
 | Admin API | tRPC over a WebSocket at `/trpc`, **unauthenticated**: any machine the firewall lets in can read the config and the log |
-| Surfaces | Stream Deck + and Stream Deck XL. The XL grid is 9 columns; row 0 is the folder row on every page, row 4 the touchstrip, row 5 the encoders |
+| Surfaces | Stream Deck + XL on the Companion Pi's USB. The XL grid is 9 columns; row 0 is the folder row on every page, row 4 the touchstrip, row 5 the encoders. The booth's Stream Deck + is on the old Pi (`CompanionPi`, **10.23.0.243**), which since 2026-11-05 runs Companion Satellite only, pointed at 10.23.0.242; the firewall lets 10.23.0.243 reach 16622 and 16623 and nothing else. That deck is limited to the Booth pages (25–27) and starts on Booth. Its old Companion is stopped and disabled, kept for rollback |
 | Config in/out | `node tools/rig.js export <out.json>` reads the live config; `import` pushes selected sections. See the header of that file for why it exists, why it never touches `connections` or `userconfig`, and its other commands (`import-page`, `add-trigger`, `set-trigger-action`, `remove-trigger-action`, `create-vars`) |
 | Reading it without the tool | The export half is one plain HTTP GET: `curl -s http://10.23.0.242:8000/int/export/full \| gunzip > rig.json`. Useful on a machine the firewall lets in, with no checkout |
 | Backup | `tools/rig.js export` **is** the backup. Run it before any change. **The file carries the ProPresenter and grandMA2 passwords in clear text** — treat an export as a credential, not as a document |
@@ -46,6 +46,7 @@ camera's pair behind that.
 | 12 | PTZ 2 Setup | the same camera | As page 10, for the second camera |
 | 18 | Videohub | nothing now | The router page as it was before it became VW (2026-10-26). Nothing opens it since 2026-10-27; its Back key goes to VW. Deleting it renumbers the pages after it (SQ7's fader folders, 19–24, since 2026-10-27), so rebuild those after a delete |
 | 19–24 | DCA 1-4, DCA 5-8, Leads, BGV, Lav, FX | SQ7 faders | SQ7 sub-pages since 2026-10-27 (Sam: "more faders", "folders for this stuff"). One knob per fader: turn for level, 1 dB a click; press to mute. The strip above shows the name and the desk's own dB (`level_<MSB>.<LSB>` from the allenheath-sq module), red when muted. DCA 1–4 and 5–8 are the DCA masters. Leads (CH 1–4), BGV (CH 5–8) and Lav (CH 13–14) are those inputs' level into Main (LR), on the channels the Dante page names. FX is FX returns 1–4 into Main. `tools/sq7-faders.js` |
+| 25–27 | Booth, Booth Dante, Booth System | the booth's Stream Deck + | Added 2026-11-05, the only pages that deck can reach. Booth: Projectors, PA, MA2 Go Back / Go Next / Blackout, Dante and System keys, the Lights level on strip and dial 1. Booth Dante: seven subscription tiles on keys, with sample rate and Josue on the strip. Booth System: seven System tiles on keys, with Storage on the strip. On both, the bottom-right key goes back to Booth, and so do strip and dial 4. Every key is a copy of the XL key that does the same job |
 
 **Both cameras run one page layout.** Pages 11 and 12 are emitted by the same
 `buildPage`/`buildSetupPage` calls as 9 and 10, and the build asserts they are identical
@@ -88,7 +89,7 @@ when the patch is not normal. On the rig since 2026-10-11, `tools/dante-page.js`
 
 | | |
 |---|---|
-| Connection | `dante` — Bitfocus `audinate-dantecontroller` **1.1.2**, bound to the Pi's 10.23.0.242, 5 s sweep, a device dropped after 15 s unheard. The module can make and clear routes; nothing on the deck asks it to |
+| Connection | `dante` — Bitfocus `audinate-dantecontroller` **2.0.0**, bound to the Pi's 10.23.0.242 (`98:fe:54:18:f3:f8` since 2026-11-05), 5 s sweep, a device dropped after 15 s unheard. The module can make and clear routes; nothing on the deck asks it to |
 | Row 1 | One key per source into the SQ7: Leads, BGV 1-4, BGV+Host, Lav 1-2, Tracks, PP1, Devan, Josue, then **Routing**. Green = on the network with every route subscribed; amber = on the network, a route down; red = a source the desk needs is missing. The three laptops show "Not here" in slate when away, and BGV+Host shows "On XLR" (below). Routing is green only when every required route is up, and the SQ7's Dante key goes red with it |
 | Row 2 | Each device's sample rate and Dante latency under its source; the SQ7's own card at r2c8 |
 | r3c0 | Sample rate: red if any device present is not at 48 kHz |
@@ -136,7 +137,8 @@ Read off the live Companion on 2026-08-28 and confirmed against each device on t
 | FoMaKo UV602 PTZ — **CAM 3** pages, shown as **CAM 2** | Camera, VISCA over IP, **ATEM input 2 since 2026-10-26** (was 3). The chooser, tally and captions read `ptz_atem_input`; the pages keep their CAM 3 names | **10.23.0.181**:5678, with an unauthenticated HTTP API on :80 that `ptz_web.py` drives |
 | FoMaKo UV602 PTZ — **CAM 1** | Camera, added 2026-08-28, ATEM input 1 | **10.23.0.196**:5678, same API |
 | JVC GY-HM600 static — **CAM 2** | Fixed, unmanned. **Not on the switcher since 2026-10-26**: both camera inputs are the PTZs "for this moment" (Sam) | Not on the network: it has no network option at all, and its only remote input is LANC. Goes HD-SDI into the switcher |
-| Raspberry Pi | Companion host | 10.23.0.242 |
+| Raspberry Pi `companion-server` | Companion host, the board | 10.23.0.242 (UniFi fixed IP on `98:fe:54:18:f3:f8`) |
+| Raspberry Pi `CompanionPi` | Companion Satellite for the booth's Stream Deck + | 10.23.0.243 (UniFi fixed IP on `2c:cf:67:0c:2a:65`) |
 
 **Addresses drift.** Every one of these except the Pi had moved at least once by
 2026-08-28, and three of the four Shure receivers were pointing at dead hosts. The ATEM
