@@ -12,9 +12,14 @@
  * left on the card, or go amber with NO CARD when there is none. The PP1 Countdown key, whose
  * actions the Sunday 10:24:57 trigger copies, starts the HyperDeck where it started the switcher,
  * and first puts Program on the recorder's Videohub output (Sam, 2026-10-27: "force Program to
- * OUT 13"), so a route someone left on that output cannot become the service recording. Then it
- * starts the switcher's stream (Sam, the same day: "I'd like the stream to be automatic"), with
- * the module's On rather than its toggle, so a second press of Countdown cannot end a live stream.
+ * OUT 13"), so a route someone left on that output cannot become the service recording.
+ *
+ * THE COUNTDOWN DOES NOT START THE STREAM. From 2026-10-27 it did (Sam: "I'd like the stream to be
+ * automatic"), and YouTube, set to auto-start, went live the moment the HD8 sent, so the whole
+ * countdown and its music went out and the music was flagged. Since 2026-11-02 (Sam: "LIVE needs
+ * to happen as countdown is ending") the "Sunday stream" trigger starts it at 10:30:00
+ * (src/stream-at-service.js), and this strips any stream start from the Countdown key, so a rerun
+ * cannot put it back.
  *
  * NO CARD IS READ FROM THE MODULE'S ACTIVE SLOT. With both slots empty `slotId` reads "-" (read
  * off the rig 2026-10-26, cards out). The recorder has no USB disk: it records to SD cards only.
@@ -146,17 +151,18 @@ export const streamStart = (atem) => ({
 	options: { stream: v('true') },
 })
 
-const isStreamStart = (a, atem) =>
+/** The switcher's stream turned on, recognised by what it does rather than its id. */
+export const isStreamStart = (a, atem) =>
 	a.connectionId === atem.connectionId && a.definitionId === 'streamStartStop' && a.options?.stream?.value === 'true'
 
 /**
- * The Countdown key with its switcher record start replaced by the feed route, the HyperDeck's
- * start and the stream's start, in that order, and nothing else moved.
+ * The Countdown key with its switcher record start replaced by the feed route and the HyperDeck's
+ * start, in that order, any stream start taken off, and nothing else moved.
  */
 export function countdownKey(control, atem, hyperdeck, videohub) {
 	const out = structuredClone(control)
 	const isStart = (a) => isAtemStart(a, atem) || (a.connectionId === hyperdeck.connectionId && a.definitionId === 'rec')
-	const go = [feedRoute(videohub), action(`${MARK}:start`, hyperdeck, 'rec'), streamStart(atem)]
+	const go = [feedRoute(videohub), action(`${MARK}:start`, hyperdeck, 'rec')]
 	for (const step of Object.values(out.steps ?? {})) {
 		for (const [set, actions] of Object.entries(step.action_sets ?? {})) {
 			if (!Array.isArray(actions)) continue

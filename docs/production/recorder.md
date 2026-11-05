@@ -21,11 +21,20 @@ Read off the deck over its control port (TCP 9993) on 2026-10-26.
 **What starts it.** The Record keys on Home r2c3 and ATEM r3c1 toggle it, the PP1 Countdown key
 starts it, and the Sunday 10:24:57 trigger (which copies the Countdown key) starts it. The
 Countdown key and the trigger first route Videohub IN 4 "Program" to OUT 13 "Deck Recorder" (Sam,
-2026-10-27), so a route left on that output cannot become the recording. Then they start the
-ATEM's **stream** (Sam, same day: "I'd like the stream to be automatic"), with the module's On,
-not its toggle, so a second Countdown press cannot end a live stream. The guarded Stream key still
-starts and stops it by hand. Nothing on the deck starts the ATEM's recording any more. Built by `tools/record-hyperdeck.js`; the trigger's
-action was swapped on the rig in place, because the trigger copies the key only when it is built.
+2026-10-27), so a route left on that output cannot become the recording. Nothing on the deck
+starts the ATEM's recording any more. Built by `tools/record-hyperdeck.js`; the trigger's action
+was swapped on the rig in place, because the trigger copies the key only when it is built.
+
+**The stream starts at 10:30, as the countdown ends.** From 2026-10-27 the Countdown key and the
+10:24:57 trigger also started the ATEM's stream (Sam: "I'd like the stream to be automatic").
+YouTube's event is set to auto-start, so it went live the moment the HD8 sent, the whole countdown
+went out with its music, and YouTube flagged the music. Since 2026-11-02 (Sam: "LIVE needs to
+happen as countdown is ending") neither starts the stream; the **Sunday stream** trigger turns it
+On at 10:30:00 on Sundays, when the countdown has run out and the walk-in tracks (faded from
+10:29:56) are silent. On, not toggle, so a stream already started by hand keeps running. The
+YouTube event's scheduled start should be 10:30, so its "Upcoming" countdown ends as the stream
+begins. Any other day, or if the countdown runs late, the guarded Stream key starts it by hand,
+after the countdown. Built by `tools/stream-at-service.js` (`src/stream-at-service.js`).
 
 **What the deck shows.** The Record keys are red with the clip's running time while it records.
 Idle, they show the time left on the card, or go amber with **NO CARD** when neither slot has
