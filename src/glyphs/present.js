@@ -225,4 +225,17 @@ export default {
 			{ d: 'M62 60 L48 86 H58 L52 106 L74 78 H62 Z', fill: true },
 		],
 	},
+
+	/**
+	 * Two walls with traffic between them: the back wall taking the front's picture or its own.
+	 * Front is the larger frame, as it is in the room.
+	 */
+	'wall-swap': {
+		paths: [
+			{ rect: [18, 22, 50, 32, 5] },
+			{ rect: [54, 66, 46, 30, 5] },
+			'M78 30 H92 V54 M86 48 L92 54 L98 48',
+			'M42 90 H28 V64 M22 70 L28 64 L34 70',
+		],
+	},
 }

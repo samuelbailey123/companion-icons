@@ -15,7 +15,7 @@ all and needs hands on the equipment.
 | Address | **http://10.23.0.242:8000**, for Sam's Mac (`10.23.0.100`) and the VPN (`192.168.2.0/24`) only. Since 2026-11-01 a firewall on the Pi closes ports 8000, 16622 and 16623 to the rest of the AV LAN. From anywhere else, run `ssh -L 8000:127.0.0.1:8000 samuelbailey@10.23.0.242` and open `http://localhost:8000`. The list and how to change or undo it are in service-health's README, under "Closing Companion's ports" |
 | Updates | **Companion updates itself unattended.** On 2026-08-28 it went 5.0.3 → 5.0.4 and restarted on its own; Pi uptime was 40d, so the Pi did not reboot. The same thing landing on a Sunday morning takes the deck down mid-service |
 | Admin API | tRPC over a WebSocket at `/trpc`, **unauthenticated**: any machine the firewall lets in can read the config and the log |
-| Surfaces | Stream Deck + XL on the Companion Pi's USB. The XL grid is 9 columns; row 0 is the folder row on every page, row 4 the touchstrip, row 5 the encoders. The booth's Stream Deck + is on the Pi 5 `booth-satellite` (**10.23.0.48**), which since 2026-11-06 runs Companion Satellite only, pointed at 10.23.0.242; the firewall lets 10.23.0.48 reach 16622 and 16623 and nothing else. That deck is limited to the Booth pages (25–27) and starts on Booth. The old fanless Pi (`CompanionPi`) is retired, so there is no standby Companion |
+| Surfaces | Stream Deck + XL on the Companion Pi's USB. The XL grid is 9 columns; row 0 is the folder row on every page, row 4 the touchstrip, row 5 the encoders. The booth's Stream Deck + is on the Pi 5 `booth-satellite` (**10.23.0.48**), which since 2026-11-06 runs Companion Satellite only, pointed at 10.23.0.242; the firewall lets 10.23.0.48 reach 16622 and 16623 and nothing else. That deck is limited to the Booth pages (25–27) and starts on Booth. The booth's Stream Deck Neo runs on the same Satellite (pages 31–32). The PP1 iMac (**10.23.0.119**) runs Companion Satellite 3.7.0 since 2026-11-18 for the Neo under ProPresenter (pages 33–34): it starts at login from `~/Library/LaunchAgents/no.bitfocus.companion-satellite.plist` (`open -g`, so it never takes focus) and its REST API on :9999 sets its host. It reaches Companion only once 10.23.0.119 is in the firewall's `satellites` set. The old fanless Pi (`CompanionPi`) is retired, so there is no standby Companion |
 | Config in/out | `node tools/rig.js export <out.json>` reads the live config; `import` pushes selected sections. See the header of that file for why it exists, why it never touches `connections` or `userconfig`, and its other commands (`import-page`, `add-trigger`, `set-trigger-action`, `remove-trigger-action`, `create-vars`) |
 | Reading it without the tool | The export half is one plain HTTP GET: `curl -s http://10.23.0.242:8000/int/export/full \| gunzip > rig.json`. Useful on a machine the firewall lets in, with no checkout |
 | Backup | `tools/rig.js export` **is** the backup. Run it before any change. **The file carries the ProPresenter and grandMA2 passwords in clear text** — treat an export as a credential, not as a document |
@@ -47,6 +47,9 @@ camera's pair behind that.
 | 18 | Videohub | nothing now | The router page as it was before it became VW (2026-10-26). Nothing opens it since 2026-10-27; its Back key goes to VW. Deleting it renumbers the pages after it (SQ7's fader folders, 19–24, since 2026-10-27), so rebuild those after a delete |
 | 19–24 | DCA 1-4, DCA 5-8, Leads, BGV, Lav, FX | SQ7 faders | SQ7 sub-pages since 2026-10-27 (Sam: "more faders", "folders for this stuff"). One knob per fader: turn for level, 1 dB a click; press to mute. The strip above shows the name and the desk's own dB (`level_<MSB>.<LSB>` from the allenheath-sq module), red when muted. DCA 1–4 and 5–8 are the DCA masters. Leads (CH 1–4), BGV (CH 5–8) and Lav (CH 13–14) are those inputs' level into Main (LR), on the channels the Dante page names. FX is FX returns 1–4 into Main. `tools/sq7-faders.js` |
 | 25–27 | Booth, Booth Dante, Booth System | the booth's Stream Deck + | Added 2026-11-05, the only pages that deck can reach. Booth: Projectors, PA, MA2 Go Back / Go Next / Blackout, Dante and System keys, the Lights level on strip and dial 1. Booth Dante: seven subscription tiles on keys, with sample rate and Josue on the strip. Booth System: seven System tiles on keys, with Storage on the strip. On both, the bottom-right key goes back to Booth, and so do strip and dial 4. Every key is a copy of the XL key that does the same job |
+| 28–30 | Booth Tracks, Booth Slides, Booth Routing | the booth's Stream Deck + | Further Booth sub-pages |
+| 31–32 | Neo Audio, Neo Scenes | the booth's **Stream Deck Neo** | Added 2026-11-18 (`src/neo.js`, `tools/neo-pages.js`). Neo Audio: TCB Sam (SQ scene 81), Vox hot mute (the vocal DCAs), FX mute, tracks Play/Pause, Vol −/+ and the track title. Neo Scenes: five other scenes, Vox hot mute again, the Main LR readout and Home. The left touch point goes to Audio, the right to Scenes. The info screen is the mic-battery warning: blank while every pack is fine, flashing amber at 2 bars and red at 1 or less |
+| 33–34 | Neo Timers, Neo Clears | the PP1 iMac's **Stream Deck Neo** | Added 2026-11-18. Neo Timers: Speaker 45 and Hosting 7 presets (both on Main Timer), Worship 25 (Segment Countdown), start/stop and reset for each, and Speaker +1 min. Neo Clears: Clear Audio, Clear Media and Clear All in red (ProPresenter's media is one layer, so Clear Media already clears front and back), the back wall toggle (Videohub OUT 8, PP1B or PP1), Freeze, All Screens, and the two running timers. The info screen shows both timers, amber from halfway, red in the last 5 min (1 min for Hosting), solid red once overrun. No slide controls |
 
 **Both cameras run one page layout.** Pages 11 and 12 are emitted by the same
 `buildPage`/`buildSetupPage` calls as 9 and 10, and the build asserts they are identical
@@ -59,8 +62,10 @@ swap key at row 1 column 8 of each run page moves between the two cameras, and i
 with that camera's **ATEM input number** so the deck and the switcher agree. It took the
 slot that held preset 6, which was unnamed and saved at preset 5's identical position.
 
-There is **no Mics page any more.** The four Shure connections still run, but nothing on
-the deck reads them.
+There is **no Mics page any more**, and since some time before 2026-11-18 **no Shure
+connections either**. The Neo's battery warning reads the four Shure connections' battery
+variables, so it stays blank until all four (`shure1`–`shure4`, the receivers under Devices) are
+added back; with one missing, the warning cannot be worked out.
 
 ## Planning Center
 
@@ -138,7 +143,8 @@ Read off the live Companion on 2026-08-28 and confirmed against each device on t
 | FoMaKo UV602 PTZ — **CAM 1** | Camera, added 2026-08-28, ATEM input 1 | **10.23.0.196**:5678, same API |
 | JVC GY-HM600 static — **CAM 2** | Fixed, unmanned. **Not on the switcher since 2026-10-26**: both camera inputs are the PTZs "for this moment" (Sam) | Not on the network: it has no network option at all, and its only remote input is LANC. Goes HD-SDI into the switcher |
 | Raspberry Pi `companion-server` | Companion host, the board | 10.23.0.242 (UniFi fixed IP on `98:fe:54:18:f3:f8`) |
-| Raspberry Pi 5 `booth-satellite` | Companion Satellite for the booth's Stream Deck + | 10.23.0.48 (DHCP on `98:fe:54:02:9e:cd`) |
+| Raspberry Pi 5 `booth-satellite` | Companion Satellite for the booth's Stream Deck + and Stream Deck Neo | 10.23.0.48 (DHCP on `98:fe:54:02:9e:cd`) |
+| iMac `PP1` | ProPresenter, and Companion Satellite for the presenter's Stream Deck Neo | 10.23.0.119 |
 
 **Addresses drift.** Every one of these except the Pi had moved at least once by
 2026-08-28, and three of the four Shure receivers were pointing at dead hosts. The ATEM

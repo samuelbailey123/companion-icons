@@ -104,4 +104,25 @@ export default {
 			{ rect: [68, 52, 24, 12, 3], fill: true },
 		],
 	},
+
+	/** Speaker with a minus: one step quieter. Shares the cone so it reads as the speaker. */
+	'volume-down': {
+		paths: [CONE, { line: [70, 60, 98, 60] }],
+	},
+
+	/** Speaker with a plus: one step louder. */
+	'volume-up': {
+		paths: [CONE, { line: [70, 60, 98, 60] }, { line: [84, 46, 84, 74] }],
+	},
+
+	/**
+	 * An effects return: a sparkle, the usual mark for "effects". Arcs were tried first and read as
+	 * a wireless signal, which this deck already uses for the mics.
+	 */
+	fx: {
+		paths: [
+			'M46 36 L52 58 L74 64 L52 70 L46 92 L40 70 L18 64 L40 58 Z',
+			{ d: 'M86 21 L89 29 L97 32 L89 35 L86 43 L83 35 L75 32 L83 29 Z', fill: true },
+		],
+	},
 }
