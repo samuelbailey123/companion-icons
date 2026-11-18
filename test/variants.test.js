@@ -5,8 +5,8 @@ import { SHAPES } from '../src/glyphs/index.js'
 import { isLabelValid, makeLabelSafe } from './helpers/labelsafe.js'
 
 describe('icon inventory', () => {
-	it('contains exactly 249 icons', () => {
-		expect(ICONS).toHaveLength(249)
+	it('contains exactly 261 icons', () => {
+		expect(ICONS).toHaveLength(261)
 	})
 
 	/**
@@ -67,15 +67,15 @@ describe('icon inventory', () => {
 		const counts = {}
 		for (const i of ICONS) counts[i.collection] = (counts[i.collection] ?? 0) + 1
 		expect(counts).toEqual({
-			contrast: 54,
+			contrast: 62,
 			folders: 9,
 			camera: 50,
 			system: 8,
 			power: 17,
 			video: 35,
 			routing: 7,
-			present: 31,
-			audio: 14,
+			present: 32,
+			audio: 17,
 			wireless: 15,
 			utility: 9,
 		})
@@ -120,5 +120,14 @@ describe('index families', () => {
 		expect(colorOf('battery-4')).toBe('on')
 		expect(colorOf('rf-0')).toBe('off')
 		expect(colorOf('rf-3')).toBe('on')
+	})
+})
+
+describe('a light battery', () => {
+	it('keeps its level, not the bare family drawing', async () => {
+		const { ICONS, resolveShape } = await import('../src/variants.js')
+		const byName = (n) => ICONS.find((i) => i.name === n)
+		expect(resolveShape(byName('battery-2-paper'))).toEqual(resolveShape(byName('battery-2')))
+		expect(resolveShape(byName('battery-0-paper'))).not.toEqual(resolveShape(byName('battery-2-paper')))
 	})
 })

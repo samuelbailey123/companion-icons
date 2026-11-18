@@ -163,6 +163,7 @@ const present = [
 	icon('water-calm', 'water-calm', 'audio', 'present', 'Calm water look'),
 	icon('water-storm', 'water-storm', 'audio', 'present', 'Storm water look'),
 	icon('thunder', 'thunder', 'warn', 'present', 'Thunder sting'),
+	icon('wall-swap', 'wall-swap', 'route', 'present', 'Switch what the back wall shows'),
 ]
 
 const audio = [
@@ -180,6 +181,9 @@ const audio = [
 	icon('dca', 'dca', 'audio', 'audio', 'DCA group'),
 	icon('mono', 'mono', 'audio', 'audio', 'Mono output'),
 	icon('mains', 'mains', 'audio', 'audio', 'Main outputs'),
+	icon('volume-down', 'volume-down', 'audio', 'audio', 'Volume down a step'),
+	icon('volume-up', 'volume-up', 'audio', 'audio', 'Volume up a step'),
+	icon('fx-return', 'fx', 'audio', 'audio', 'Effects returns'),
 ]
 
 /** Colour grades with level, so a glance reads healthy/low/flat without reading the bars. */
@@ -300,12 +304,20 @@ const CONTRAST_SHAPES = [
 	// The PTZ stop key carries ATEM tally (red live, green preview), and the save key turns
 	// solid red while it is armed. Both are backgrounds the camera hue cannot survive.
 	'stop', 'preset-save',
+	// The Neo audio keys: hot mute and FX mute turn their key red when muted. See src/neo.js.
+	'mic-muted', 'fx',
+	// The Neo start/stop keys turn green, amber and red as a clock runs down. See src/neo.js.
+	'timer-stop',
 ]
 
 const contrast = CONTRAST_SHAPES.flatMap((shape) => [
 	icon(`${shape}-paper`, shape, 'paper', 'contrast', `${shape} (light, for dark backgrounds)`),
 	icon(`${shape}-ink`, shape, 'ink', 'contrast', `${shape} (dark, for light backgrounds)`),
-])
+]).concat(
+	// A Neo info screen turns amber or red with a low battery; the battery itself, in its own
+	// amber or red, would vanish into it. See batteryWarnings in src/neo.js.
+	[0, 2].map((n) => icon(`battery-${n}-paper`, 'battery', 'paper', 'contrast', `Transmitter battery ${n} of 4 (light)`))
+)
 
 /** @type {Icon[]} */
 export const ICONS = [
@@ -331,7 +343,8 @@ export const ICONS = [
 export function resolveShape(entry) {
 	const shape = SHAPES[entry.shape]
 	if (typeof shape.levels !== 'function') return shape
-	const level = Number(entry.name.slice(entry.name.lastIndexOf('-') + 1))
+	const name = entry.name.replace(/-(paper|ink)$/, '')
+	const level = Number(name.slice(name.lastIndexOf('-') + 1))
 	/*
 	 * A non-numeric suffix (`rf-idle`) means the family's BASE drawing, with no level marks
 	 * at all. That is not the same picture as level zero: `rf-0` is a red antenna reading

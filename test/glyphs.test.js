@@ -67,12 +67,12 @@ describe('glyph shapes', () => {
 			'clear-props', 'clear-audio', 'logo', 'stage-display', 'message', 'timer-start',
 			'timer-stop', 'timer-reset', 'countdown', 'media', 'prop', 'playlist',
 			'focus-next', 'focus-prev',
-			'green-wall', 'water-calm', 'water-storm', 'thunder',
+			'green-wall', 'water-calm', 'water-storm', 'thunder', 'wall-swap',
 			'clear-messages', 'clear-announce', 'clear-media', 'clear-video',
 			'executor',
 			// audio
 			'speaker', 'mute', 'fader', 'mix', 'scene-recall', 'gain', 'aux-send', 'talkback',
-			'pfl', 'phantom', 'meter', 'dca', 'mono', 'mains',
+			'pfl', 'phantom', 'meter', 'dca', 'mono', 'mains', 'volume-down', 'volume-up', 'fx',
 			// folders
 			'folder-power', 'folder-present', 'folder-lighting', 'folder-video',
 			'folder-audio', 'folder-routing', 'folder-system', 'folder-wireless',
