@@ -13,8 +13,10 @@
  *   - the string "Unknown"          — transmitter powered off
  *   - EMPTY                         — the channel has never reported (seen on unused slots)
  *   - a numeric sentinel            — 255 for bars, -128ish for RF, from the wire protocol
+ *   - UNDEFINED                     — the channel does not exist: channels 3-4 of a 2-channel
+ *                                     ULXD4D, whose variables Companion never creates
  *
- * Arithmetic swallows all three. `min()` over a set containing "Unknown" is poisoned, and an
+ * Arithmetic swallows all of them. `min()` over a set containing "Unknown" is poisoned, and an
  * empty string coerces to 0 — which is worse than useless, because 0 is the *alarm* value. A
  * rack whose mics are simply in the cupboard would sit red every week until the page was
  * ignored, which is the only real failure mode a status display has.
@@ -54,11 +56,12 @@ const ref = (label, ch, field) => `$(${label}:ch_${ch}_${field})`
  *
  * Battery bars is the liveness oracle because every supported model reports it, and it is
  * exactly the field the module sets to "Unknown" when a transmitter drops off.
+ *
+ * `isNumber`, not a list of known non-values: a channel the receiver does not have reads as
+ * undefined, which `!= "Unknown" && != ""` passes as live, and one undefined term turns
+ * `min()` into NaN, so the whole worst-battery check went blank and never warned.
  */
-export const isLive = (label, ch) => {
-	const bars = ref(label, ch, 'battery_bars')
-	return `(${bars} != "Unknown" && ${bars} != "")`
-}
+export const isLive = (label, ch) => `isNumber(${ref(label, ch, 'battery_bars')})`
 
 /** Battery bars, or OFF when the transmitter is not on. */
 export const battery = (label, ch) => `(${isLive(label, ch)} ? ${ref(label, ch, 'battery_bars')} : ${OFF})`
