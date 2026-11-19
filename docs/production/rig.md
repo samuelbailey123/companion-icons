@@ -62,10 +62,22 @@ swap key at row 1 column 8 of each run page moves between the two cameras, and i
 with that camera's **ATEM input number** so the deck and the switcher agree. It took the
 slot that held preset 6, which was unnamed and saved at preset 5's identical position.
 
-There is **no Mics page any more**, and since some time before 2026-11-18 **no Shure
-connections either**. The Neo's battery warning reads the four Shure connections' battery
-variables, so it stays blank until all four (`shure1`–`shure4`, the receivers under Devices) are
-added back; with one missing, the warning cannot be worked out.
+There is **no Mics page any more**. The four Shure connections were re-added on 2026-11-18
+(shure-wireless 2.3.1, port 2202), and the Neo's battery warning reads their battery variables:
+
+| Connection | Receiver | Model | IP |
+|---|---|---|---|
+| `shure1` | BGV | ULXD4Q | 10.23.0.20 |
+| `shure2` | Lead | ULXD4Q | 10.23.0.23 |
+| `shure3` | Lav/Preach | ULXD4D (2 channels) | 10.23.0.214 |
+| `shure4` | Host | ULXD4Q | 10.23.0.253 |
+
+**shure2's 10.23.0.23 is suspect**: the NovaStar now has that address. Check it with the
+receivers powered on, and correct the connection and `tools/shure-page.js` if it has moved.
+
+A channel the receiver does not have (3–4 on the ULXD4D) counts as off, so `shure3` runs with
+its true model. A connection that is missing altogether reads the same way, so a deleted
+receiver silences its own warnings rather than everyone's.
 
 ## Planning Center
 

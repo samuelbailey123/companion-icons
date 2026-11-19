@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
 	BACK_WALL, BATTERY_CRITICAL, BATTERY_LOW, CLOCKS, DANGER_REST, FX_RETURNS, GREEN, MUTED, NEO, PAGE_NAMES, RED,
-	SCENES, TCB_SAM, VOCAL_DCAS, buildNeoPages, connectionIds, lowMicExpr, pageNumbers, phases, sceneNameExpr, worstBattery,
+	RACKS, SCENES, TCB_SAM, VOCAL_DCAS, buildNeoPages, connectionIds, lowMicExpr, pageNumbers, phases, sceneNameExpr, worstBattery,
 } from '../src/neo.js'
 import * as tracks from '../tools/pp1-tracks.js'
 import { buildConfig, iconsUsed } from '../tools/neo-pages.js'
@@ -21,10 +21,15 @@ const overridesOf = (c, id) => c.feedbacks.find((f) => f.id === id).styleOverrid
 /** Companion expressions are JavaScript underneath; this evaluates the operators these use. */
 function evaluate(expression, variables) {
 	const js = expression
-		.replace(/\$\(([a-z0-9]+):([a-z0-9_.]+)\)/gi, (_, conn, name) => JSON.stringify(variables[`${conn}:${name}`] ?? ''))
+		.replace(/\$\(([a-z0-9]+):([a-z0-9_.]+)\)/gi, (_, conn, name) => String(JSON.stringify(variables[`${conn}:${name}`])))
 		.replaceAll('concat(', 'FN.concat(')
 		.replaceAll('min(', 'FN.min(')
-	const FN = { concat: (...a) => a.join(''), min: (...a) => Math.min(...a) }
+		.replaceAll('isNumber(', 'FN.isNumber(')
+	const FN = {
+		concat: (...a) => a.join(''),
+		min: (...a) => Math.min(...a),
+		isNumber: (v) => (typeof v === 'number' ? !Number.isNaN(v) : typeof v === 'string' ? v.trim() !== '' && !isNaN(Number(v)) : false),
+	}
 	return new Function('FN', `return (${js})`)(FN)
 }
 
@@ -126,6 +131,14 @@ describe('mic battery warnings', () => {
 	it('stay quiet with every pack off, or never reported', () => {
 		expect(fires('neo-audio-batt-low', mic('shure1', 1, 'Unknown'))).toBe(false)
 		expect(fires('neo-audio-batt-low', {})).toBe(false)
+	})
+
+	/* shure3 is a 2-channel ULXD4D: Companion has no ch_3/ch_4 variables for it, so they read undefined. */
+	it('work with a 2-channel receiver whose channels 3-4 do not exist', () => {
+		const rig = Object.assign({}, ...RACKS.flatMap((r) => (r.label === 'shure3' ? [1, 2] : [1, 2, 3, 4]).map((c) => mic(r.label, c, 'Unknown'))))
+		expect(fires('neo-audio-batt-low', rig)).toBe(false)
+		expect(fires('neo-audio-batt-crit', { ...rig, ...mic('shure3', 1, '1') })).toBe(true)
+		expect(evaluate(worstBattery(), { ...rig, ...mic('shure3', 1, '1') })).toBe(1)
 	})
 
 	it(`warn at ${BATTERY_LOW} bars and go critical at ${BATTERY_CRITICAL}`, () => {

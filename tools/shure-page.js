@@ -8,11 +8,11 @@
  * when something sounds wrong, and a control that both reports and acts is a control you
  * press by accident. Only Home navigates.
  *
- * FOUR ULXD4Q QUAD RECEIVERS = 16 CHANNELS AGAINST 8 KEYS. Per-channel does not fit on the
+ * THREE ULXD4Q QUADS AND A ULXD4D DUAL = 14 CHANNELS AGAINST 8 KEYS. Per-channel does not fit on the
  * keys, so the layout answers three questions at three levels of detail:
  *
  *   row 0/1  one key per rack, reporting its WORST channel's battery — "is anything low?"
- *   row 1    three summary keys across all 16 channels — RF, muted, and packs powered on
+ *   row 1    three summary keys across all 14 channels — RF, muted, and packs powered on
  *   row 2    the touchstrip, per-channel battery for each rack — "which one?"
  *
  * The touchstrip sits in the same COLUMN as the rack key it details, so the eye travels
@@ -64,14 +64,14 @@ const id = (p) => `${p}-${(seq++).toString(36)}`
  * you whose pack is flat.
  */
 const RECEIVERS = [
-	{ label: 'shure1', name: 'BGV 1-4', host: '10.23.0.18' },
-	{ label: 'shure2', name: 'Lead 1-4', host: '10.23.0.22' },
-	{ label: 'shure3', name: 'Lav 1-2', host: '10.23.0.212' },
-	{ label: 'shure4', name: 'Host+BGV', host: '10.23.0.253' },
+	{ label: 'shure1', name: 'BGV', host: '10.23.0.20', model: 'ulxd4q', channels: [1, 2, 3, 4] },
+	{ label: 'shure2', name: 'Lead', host: '10.23.0.23', model: 'ulxd4q', channels: [1, 2, 3, 4] },
+	{ label: 'shure3', name: 'Lav/Preach', host: '10.23.0.214', model: 'ulxd4d', channels: [1, 2] },
+	{ label: 'shure4', name: 'Host', host: '10.23.0.253', model: 'ulxd4q', channels: [1, 2, 3, 4] },
 ]
 
 const CHANNELS = [1, 2, 3, 4]
-const TOTAL = RECEIVERS.length * CHANNELS.length
+const TOTAL = RECEIVERS.reduce((n, rx) => n + rx.channels.length, 0)
 
 const CARD_BG = 0x14161c
 const NAV_BG = 0x1f2937
@@ -191,10 +191,10 @@ const readOnly = (layers, feedbacks = []) => ({
 const IDLE_MIC = 'mic-off'
 const LIVE_MIC = 'mic-on'
 
-/** One rack: worst battery of its four channels. */
+/** One rack: worst battery of its channels. */
 function rackKey(rx) {
-	const worst = worstOf(battery, [rx], CHANNELS)
-	const on = countOf(isOn, [rx], CHANNELS)
+	const worst = worstOf(battery, [rx], rx.channels)
+	const on = countOf(isOn, [rx], rx.channels)
 	return readOnly(
 		cardLayers({ image: IDLE_MIC, label: rx.name, valueText: expr(worstText(worst)), bg: CARD_BG }),
 		[
@@ -252,7 +252,7 @@ function packsKey() {
 
 /** One touchstrip segment: every channel in a rack, idle ones dashed. */
 function rackStrip(rx) {
-	return readOnly(stripLayers({ label: rx.name, valueText: expr(channelStrip(rx.label, CHANNELS)), bg: CARD_BG }))
+	return readOnly(stripLayers({ label: rx.name, valueText: expr(channelStrip(rx.label, rx.channels)), bg: CARD_BG }))
 }
 
 const homeButton = () => ({
@@ -308,11 +308,11 @@ for (const rx of RECEIVERS) {
 		secrets: {},
 		enabled: true,
 		config: {
-			host: rx.host, port: '2202', modelID: 'ulxd4q',
+			host: rx.host, port: '2202', modelID: rx.model,
 			meteringOn: true, meteringInterval: 5000, variableFormat: 'units',
 		},
 	}
-	console.log(`  connection ${rx.label.padEnd(7)} ${rx.host}  model=ulxd4q port=2202`)
+	console.log(`  connection ${rx.label.padEnd(7)} ${rx.host}  model=${rx.model} port=2202`)
 }
 
 // ------------------------------------------------------------------ the page

@@ -30,7 +30,7 @@ const CH = [1, 2]
  */
 function evaluate(expression, variables) {
 	const js = expression
-		.replace(/\$\(([a-z0-9]+):([a-z0-9_]+)\)/gi, (_, conn, name) => JSON.stringify(variables[`${conn}:${name}`] ?? ''))
+		.replace(/\$\(([a-z0-9]+):([a-z0-9_]+)\)/gi, (_, conn, name) => String(JSON.stringify(variables[`${conn}:${name}`])))
 		.replaceAll('concat(', 'FN.concat(')
 		.replaceAll('min(', 'FN.min(')
 		.replaceAll('isNumber(', 'FN.isNumber(')
@@ -80,6 +80,11 @@ describe('liveness', () => {
 
 	it('treats a channel that never reported as not live', () => {
 		expect(evaluate(isLive('shure1', 1), never('shure1', 1))).toBe(false)
+	})
+
+	it('treats a channel the receiver does not have as not live', () => {
+		expect(evaluate(isLive('shure3', 3), {})).toBe(false)
+		expect(evaluate(worstOf(battery, [{ label: 'shure3' }], [1, 2, 3, 4]), live('shure3', 1, { battery_bars: '1' }))).toBe(1)
 	})
 })
 
