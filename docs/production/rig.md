@@ -45,7 +45,7 @@ camera's pair behind that.
 | 11 | PTZ 2 | **CAM 1**, the PTZ on 10.23.0.196 | The same page, built by the same code, bound to the second camera and its own `ptz2_*` variables |
 | 12 | PTZ 2 Setup | the same camera | As page 10, for the second camera |
 | 18 | Videohub | nothing now | The router page as it was before it became VW (2026-10-26). Nothing opens it since 2026-10-27; its Back key goes to VW. Deleting it renumbers the pages after it (SQ7's fader folders, 19–24, since 2026-10-27), so rebuild those after a delete |
-| 19–24 | DCA 1-4, DCA 5-8, Leads, BGV, Lav, FX | SQ7 faders | SQ7 sub-pages since 2026-10-27 (Sam: "more faders", "folders for this stuff"). One knob per fader: turn for level, 1 dB a click; press to mute. The strip above shows the name and the desk's own dB (`level_<MSB>.<LSB>` from the allenheath-sq module), red when muted. DCA 1–4 and 5–8 are the DCA masters. Leads (CH 1–4), BGV (CH 5–8) and Lav (CH 13–14) are those inputs' level into Main (LR), on the channels the Dante page names. FX is FX returns 1–4 into Main. `tools/sq7-faders.js` |
+| 19–24 | DCA 1-4, DCA 5-8, Leads, BGV, Lav, FX | SQ7 faders | SQ7 sub-pages since 2026-10-27 (Sam: "more faders", "folders for this stuff"). One knob per fader: turn for level, 1 dB a click; press to mute. The strip above shows the name and the desk's own dB (`level_<MSB>.<LSB>` from the allenheath-sq module), red when muted. DCA 1–4 and 5–8 are the DCA masters. Leads (CH 24–27), BGV 1–4 (CH 28–31) and Lav (CH 36–37) are those inputs' level into Main (LR), on the channels the showfile patches them to (copy of 2026-11-08, scenes 81 TCB Sam and 82 Devan; `PATCH` in `src/sq7-faders.js`). The Dante page's numbers are Dante sockets, which the desk's input patch moves; until 2026-11-18 these folders drove CH 1–8 and 13–14, the drum mics and electric guitars. FX is FX returns 1–4 into Main. `tools/sq7-faders.js` |
 | 25–27 | Booth, Booth Dante, Booth System | the booth's Stream Deck + | Added 2026-11-05, the only pages that deck can reach. Booth: Projectors, PA, MA2 Go Back / Go Next / Blackout, Dante and System keys, the Lights level on strip and dial 1. Booth Dante: seven subscription tiles on keys, with sample rate and Josue on the strip. Booth System: seven System tiles on keys, with Storage on the strip. On both, the bottom-right key goes back to Booth, and so do strip and dial 4. Every key is a copy of the XL key that does the same job |
 | 28–30 | Booth Tracks, Booth Slides, Booth Routing | the booth's Stream Deck + | Further Booth sub-pages |
 | 31–32 | Neo Audio, Neo Scenes | the booth's **Stream Deck Neo** | Added 2026-11-18 (`src/neo.js`, `tools/neo-pages.js`). Neo Audio: TCB Sam (SQ scene 81), Vox hot mute (the vocal DCAs), FX mute, tracks Play/Pause, Vol −/+ and the track title. Neo Scenes: five other scenes, Vox hot mute again, the Main LR readout and Home. The left touch point goes to Audio, the right to Scenes. The info screen is the mic-battery warning: blank while every pack is fine, flashing amber at 2 bars and red at 1 or less |
@@ -116,7 +116,7 @@ when the patch is not normal. On the rig since 2026-10-11, `tools/dante-page.js`
 design. Repatch in Dante Controller and `SOURCES` in `src/dante.js` has to follow, or the page
 reports the new patch as broken.
 
-| Dante device | Address | Into SQ7 |
+| Dante device | Address | Into SQ7 (Dante socket, not channel) |
 |---|---|---|
 | `AllenHth-0e0184` — SQ7 Dante card, 64×64, clock leader | 10.23.0.70 | — |
 | `ULXD4Q-LEADS-1-4` | 10.23.0.14 | 1-4 |

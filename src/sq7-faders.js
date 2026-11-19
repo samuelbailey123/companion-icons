@@ -17,7 +17,13 @@
  * `level_79.32`, CH 1 `level_64.0`, FX 1 `level_64.60`. With the desk off the module keeps its
  * last values, and Companion marks the keys with its connection warning.
  *
- * Channel numbers are the Dante page's (src/dante.js): Leads on CH 1-4, BGV on 5-8, Lav on 13-14.
+ * CHANNELS ARE THE SHOWFILE'S, NOT DANTE'S. An input fader drives a channel, and the desk's input
+ * patch decides which channel a source lands on. The Dante page's numbers (src/dante.js) are the
+ * Dante sockets, which the patch moves: Leads arrive on sockets 1-4 but sit on CH 24-27. PATCH is
+ * the channel names of the current patch, read from the showfile copy of 2026-11-08 (SCENE080.DAT,
+ * scene 81 TCB Sam, and SCENE081.DAT, scene 82 Devan, the live state; ~/Documents/SQ7). Until
+ * 2026-11-18 these folders drove CH 1-8 and 13-14, the drum mics and the electric guitars.
+ * If the desk is repatched, change PATCH.
  */
 import { GRID_SIZE, KNOB_COLS, KNOB_ROW, STRIP_ROW } from './layout.js'
 import { folderFor, navRow } from './navrow.js'
@@ -38,13 +44,22 @@ export const KINDS = {
 	fxr: { level: 'fxrlev_to_mix', mute: 'mute_fx_return', lr: true, variable: (n) => `level_64.${0x3b + n}` },
 }
 
+/** Input channel by the desk's channel name, in the current patch ("Triumph New Patch"). */
+export const PATCH = {
+	'Lead 1': 24, 'Lead 2': 25, 'Lead 3': 26, 'Lead 4': 27,
+	'BGV 1': 28, 'BGV 2': 29, 'BGV 3': 30, 'BGV 4': 31, 'BGV 5': 32, 'BGV 6': 33,
+	'Host 1': 34, 'Host 2': 35, 'Lav 1': 36, 'Lav 2': 37,
+}
+
+const patched = (...labels) => labels.map((label) => ({ n: PATCH[label], label }))
+
 /** The folders, in the order their keys sit on SQ7's bottom row. */
 export const FOLDERS = [
 	{ name: 'DCA 1-4', kind: 'dca', faders: [1, 2, 3, 4].map((n) => ({ n, label: `DCA ${n}` })) },
 	{ name: 'DCA 5-8', kind: 'dca', faders: [5, 6, 7, 8].map((n) => ({ n, label: `DCA ${n}` })) },
-	{ name: 'Leads', kind: 'input', faders: [1, 2, 3, 4].map((n) => ({ n, label: `Lead ${n}` })) },
-	{ name: 'BGV', kind: 'input', faders: [5, 6, 7, 8].map((n, i) => ({ n, label: `BGV ${i + 1}` })) },
-	{ name: 'Lav', kind: 'input', faders: [13, 14].map((n, i) => ({ n, label: `Lav ${i + 1}` })) },
+	{ name: 'Leads', kind: 'input', faders: patched('Lead 1', 'Lead 2', 'Lead 3', 'Lead 4') },
+	{ name: 'BGV', kind: 'input', faders: patched('BGV 1', 'BGV 2', 'BGV 3', 'BGV 4') },
+	{ name: 'Lav', kind: 'input', faders: patched('Lav 1', 'Lav 2') },
 	{ name: 'FX', kind: 'fxr', faders: [1, 2, 3, 4].map((n) => ({ n, label: `FX ${n}` })) },
 ]
 

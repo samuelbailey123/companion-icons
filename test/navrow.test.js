@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FOLDERS, NAV_ORDER, assertNavCoverage, navRow } from '../src/navrow.js'
+import { FOLDERS, NAV_ORDER, OTHER_DECKS, assertNavCoverage, navRow } from '../src/navrow.js'
 import { COLUMNS } from '../src/layout.js'
 import { ICONS } from '../src/variants.js'
 
@@ -125,6 +125,11 @@ describe('coverage checks', () => {
 		expect(() => assertNavCoverage([...Object.keys(NUMBERS), 'Lyrics'], COLUMNS)).toThrow(
 			/unreachable from the folder row: Lyrics/
 		)
+	})
+
+	it('lets the other decks’ pages through, the rig’s pages as of 2026-11-18', () => {
+		expect(() => assertNavCoverage([...Object.keys(NUMBERS), ...OTHER_DECKS], COLUMNS)).not.toThrow()
+		expect(OTHER_DECKS).toEqual(expect.arrayContaining(['Booth', 'Booth Routing', 'Neo Audio', 'Neo Clears']))
 	})
 
 	it('catches a folder pointing at a page that is gone', () => {
