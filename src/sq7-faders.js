@@ -4,7 +4,8 @@
  * Sam, 2026-10-27: "add more options to the SQ7 page, like more faders", "we can make folders for
  * this stuff too". He chose DCA 1-8, the vocal mic inputs and FX returns 1-4, in folders opened
  * from SQ7. The + XL has six knobs, so each folder holds at most six faders: DCA 1-4 and DCA 5-8
- * (four each, so both pages look the same), Leads, BGV, Lav and FX.
+ * (four each, so both pages look the same), Leads, BGV, Lav and FX. BGV holds all six BGV mics
+ * (Sam, 2026-11-18).
  *
  * EACH KNOB IS ONE FADER. Turn it and the level moves 1 dB a click (SQ7's own knobs step 3 dB, too
  * coarse for a vocal). Press it and the fader mutes or unmutes, as SQ7's Stream, Foyer and Main
@@ -58,7 +59,7 @@ export const FOLDERS = [
 	{ name: 'DCA 1-4', kind: 'dca', faders: [1, 2, 3, 4].map((n) => ({ n, label: `DCA ${n}` })) },
 	{ name: 'DCA 5-8', kind: 'dca', faders: [5, 6, 7, 8].map((n) => ({ n, label: `DCA ${n}` })) },
 	{ name: 'Leads', kind: 'input', faders: patched('Lead 1', 'Lead 2', 'Lead 3', 'Lead 4') },
-	{ name: 'BGV', kind: 'input', faders: patched('BGV 1', 'BGV 2', 'BGV 3', 'BGV 4') },
+	{ name: 'BGV', kind: 'input', faders: patched('BGV 1', 'BGV 2', 'BGV 3', 'BGV 4', 'BGV 5', 'BGV 6') },
 	{ name: 'Lav', kind: 'input', faders: patched('Lav 1', 'Lav 2') },
 	{ name: 'FX', kind: 'fxr', faders: [1, 2, 3, 4].map((n) => ({ n, label: `FX ${n}` })) },
 ]
