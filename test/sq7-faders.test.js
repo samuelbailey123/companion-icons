@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { KNOB_COLS, KNOB_ROW, STRIP_ROW } from '../src/layout.js'
 import { NAV_ORDER, SUB_PAGES, assertNavCoverage } from '../src/navrow.js'
-import { ENTRY_ROW, FOLDERS, KINDS, MARK, MODULE_ID, MUTED, STEP, buildConfig, entryKey, findSq, folderPage, knob, strip } from '../src/sq7-faders.js'
+import { ENTRY_ROW, FOLDERS, KINDS, MARK, MODULE_ID, MUTED, PATCH, STEP, buildConfig, entryKey, findSq, folderPage, knob, strip } from '../src/sq7-faders.js'
 
 const SQ = '_fzcz3CsH4D8mW9YLpuOb'
 const instances = { [SQ]: { moduleId: MODULE_ID, label: 'SQ' }, other: { moduleId: 'bmd-atem', label: 'atem' }, gone: null }
@@ -19,11 +19,15 @@ describe('the folders', () => {
 		expect(FOLDERS.every((f) => f.faders.length <= KNOB_COLS.length)).toBe(true)
 	})
 
-	it('put the vocal mics on the channels the Dante page names', () => {
-		const channels = (name) => FOLDERS.find((f) => f.name === name).faders.map((f) => f.n)
-		expect(channels('Leads')).toEqual([1, 2, 3, 4])
-		expect(channels('BGV')).toEqual([5, 6, 7, 8])
-		expect(channels('Lav')).toEqual([13, 14])
+	it('put the vocal mics on the channels the showfile patches them to, not the Dante sockets', () => {
+		const faders = (name) => FOLDERS.find((f) => f.name === name).faders.map((f) => [f.label, f.n])
+		expect(faders('Leads')).toEqual([['Lead 1', 24], ['Lead 2', 25], ['Lead 3', 26], ['Lead 4', 27]])
+		expect(faders('BGV')).toEqual([['BGV 1', 28], ['BGV 2', 29], ['BGV 3', 30], ['BGV 4', 31]])
+		expect(faders('Lav')).toEqual([['Lav 1', 36], ['Lav 2', 37]])
+	})
+
+	it('name only channels the patch has', () => {
+		for (const f of FOLDERS.filter((f) => f.kind === 'input')) for (const { label, n } of f.faders) expect(Number.isInteger(n) && PATCH[label] === n, label).toBe(true)
 	})
 
 	it('are SQ7 sub-pages, so the folder row accepts them', () => {

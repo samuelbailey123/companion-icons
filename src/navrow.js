@@ -189,6 +189,16 @@ export const SUB_PAGES = {
 	Videohub: 'VW',
 }
 
+/**
+ * Pages for the other decks: the booth's Stream Deck + and the two Stream Deck Neos. They have
+ * their own keys between them and are never on the XL's folder row, so the coverage check skips
+ * them. Without this every tool that checks a live export refused it once they were added.
+ */
+export const OTHER_DECKS = [
+	'Booth', 'Booth Dante', 'Booth System', 'Booth Tracks', 'Booth Slides', 'Booth Routing',
+	'Neo Audio', 'Neo Scenes', 'Neo Timers', 'Neo Clears',
+]
+
 /** The folder-row page a page belongs to: itself, or its parent for a sub-page. */
 export const folderFor = (pageName) => SUB_PAGES[pageName] ?? pageName
 
@@ -209,7 +219,7 @@ export function assertNavCoverage(pageNames, columns) {
 	const orphans = pageNames.filter((n) => n in SUB_PAGES && !pageNames.includes(SUB_PAGES[n]))
 	if (orphans.length) throw new Error(`sub-pages whose parent page is missing: ${orphans.join(', ')}`)
 
-	const missing = pageNames.filter((n) => !NAV_ORDER.includes(n) && !(n in SUB_PAGES))
+	const missing = pageNames.filter((n) => !NAV_ORDER.includes(n) && !(n in SUB_PAGES) && !OTHER_DECKS.includes(n))
 	if (missing.length) throw new Error(`pages unreachable from the folder row: ${missing.join(', ')}`)
 
 	const phantom = NAV_ORDER.filter((n) => !pageNames.includes(n))
