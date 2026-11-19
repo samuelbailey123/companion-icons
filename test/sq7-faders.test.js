@@ -22,7 +22,7 @@ describe('the folders', () => {
 	it('put the vocal mics on the channels the showfile patches them to, not the Dante sockets', () => {
 		const faders = (name) => FOLDERS.find((f) => f.name === name).faders.map((f) => [f.label, f.n])
 		expect(faders('Leads')).toEqual([['Lead 1', 24], ['Lead 2', 25], ['Lead 3', 26], ['Lead 4', 27]])
-		expect(faders('BGV')).toEqual([['BGV 1', 28], ['BGV 2', 29], ['BGV 3', 30], ['BGV 4', 31]])
+		expect(faders('BGV')).toEqual([['BGV 1', 28], ['BGV 2', 29], ['BGV 3', 30], ['BGV 4', 31], ['BGV 5', 32], ['BGV 6', 33]])
 		expect(faders('Lav')).toEqual([['Lav 1', 36], ['Lav 2', 37]])
 	})
 
@@ -102,6 +102,17 @@ describe('a folder page', () => {
 
 	it('leaves the key rows empty', () => {
 		for (const row of [1, 2, 3]) expect(page.controls[row]).toBeUndefined()
+	})
+
+	it('fills every knob for the six BGV mics, each styled like the rest', () => {
+		const bgv = folderPage(SQ, FOLDERS.find((f) => f.name === 'BGV'), numbers)
+		expect(Object.keys(bgv.controls[KNOB_ROW]).map(Number)).toEqual(KNOB_COLS)
+		expect(Object.keys(bgv.controls[STRIP_ROW]).map(Number)).toEqual(KNOB_COLS)
+		const k5 = bgv.controls[KNOB_ROW][KNOB_COLS[4]]
+		expect(text(k5, 'text0')).toBe('BGV 5')
+		expect(set(k5, 'down')[0].options.strip.value).toBe(31)
+		expect(text(bgv.controls[STRIP_ROW][KNOB_COLS[5]], 'text1')).toBe('$(SQ:level_64.32) dB')
+		expect(k5.style).toEqual(knob(SQ, 'input', { n: 32, label: 'BGV 5' }).style)
 	})
 
 	it('refuses a folder with more faders than knobs', () => {
